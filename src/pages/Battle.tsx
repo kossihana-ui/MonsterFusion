@@ -2,7 +2,13 @@ import { useState } from "react";
 import type { BattleAction, GameAdapter, Monster } from "../shared/types";
 import { createBattle } from "../mocks/game";
 import { Portrait } from "../components/MonsterView";
-export function Battle({
+export function Battle(props: { monsters: Monster[]; adapter: GameAdapter }) {
+  if (props.monsters.length < 2) {
+    return <section className="panel"><h1>バトルアリーナ</h1><p>バトルにはモンスターが2体必要です。「モンスター登録」から32×32のPNGを登録してください。</p></section>;
+  }
+  return <BattleSession {...props} />;
+}
+function BattleSession({
   monsters,
   adapter,
 }: {

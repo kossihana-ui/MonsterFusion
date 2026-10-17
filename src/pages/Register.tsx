@@ -25,12 +25,16 @@ export function Register({ onRegister }: { onRegister: (m: Monster) => void }) {
         r.onerror = reject;
         r.readAsDataURL(file);
       });
-      await new Promise<void>((resolve, reject) => {
+      const dimensions = await new Promise<{ width: number; height: number }>((resolve, reject) => {
         const img = new Image();
-        img.onload = () => resolve();
+        img.onload = () => resolve({ width: img.naturalWidth, height: img.naturalHeight });
         img.onerror = reject;
         img.src = data;
       });
+      if (dimensions.width !== 32 || dimensions.height !== 32) {
+        setError(`登録できる画像は32×32ピクセルのPNGのみです。選択した画像は${dimensions.width}×${dimensions.height}ピクセルです。`);
+        return;
+      }
       setImage(data);
     } catch {
       setError("PNG画像を読み込めませんでした。");
@@ -75,8 +79,8 @@ export function Register({ onRegister }: { onRegister: (m: Monster) => void }) {
               <span>＋</span>
             )}
           </div>
-          <strong>{reading ? "読み込み中…" : "PNGを選んでアップロード"}</strong>
-          <span>透過PNG対応 · 最大5MB</span>
+          <strong>{reading ? "読み込み中…" : "32×32のPNGを選んでアップロード"}</strong>
+          <span>32×32ピクセル限定 · 透過PNG対応 · 最大5MB</span>
           <input
             type="file"
             accept="image/png"

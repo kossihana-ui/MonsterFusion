@@ -82,7 +82,11 @@ export function Collection({
         ))}
       </div>
       {filtered.length === 0 && (
-        <div className="empty">該当するモンスターが見つかりません。</div>
+        <div className="empty">
+          {monsters.length === 0
+            ? "まだモンスターがいません。32×32のPNGを登録して始めましょう。"
+            : "該当するモンスターが見つかりません。"}
+        </div>
       )}
       <div className="tip">
         ✧ <span>小さなヒント</span>{" "}
