@@ -112,6 +112,34 @@ export {
   graftRandomRecessiveDetailed,
 } from './graft.ts';
 
+// Appearance (sprite composition: which part, where, how big, what colour).
+export type {
+  AnchorName,
+  AppearanceConfig,
+  BodyRig,
+  ColorMapping,
+  LayerKind,
+  Palette,
+  Point,
+  SpriteComposition,
+  SpriteLayer,
+} from './appearance.ts';
+export {
+  appearanceKey,
+  BODY_PALETTES,
+  BODY_RIGS,
+  CANVAS_SIZE,
+  colorMappings,
+  composeAppearance,
+  createAppearanceConfig,
+  DEFAULT_APPEARANCE_CONFIG,
+  ELEMENT_ACCENTS,
+  paletteFor,
+  REFERENCE_PALETTE,
+  requiredPartKeys,
+  SIZE_SCALES,
+} from './appearance.ts';
+
 // Starters.
 export type { StarterSpec, TendencySpec } from './starters.ts';
 export {

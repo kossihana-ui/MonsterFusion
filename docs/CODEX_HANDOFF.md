@@ -291,6 +291,19 @@ import は `from '@core/core/index.ts'` の形になります。
 
 **お願い**: coreの不具合はUI側ではなく、core本体（このリポジトリ、ブランチ `claude-core`）を直してください。テストもこちらにあります。
 
+## 8.6 融合した子の見た目
+
+`composeAppearance(phenotype)` が、描くべきレイヤー（パーツ・座標・倍率・パレット）を返します。UI側はそれを描くだけで、何世代融合しても正しい見た目を生成できます。
+
+```ts
+import { composeAppearance } from '@core/core/appearance.ts';
+const { layers, colorMappings, key } = composeAppearance(monster.phenotype);
+```
+
+必要なパーツ画像は**35枚**です（体色はパレット変換、サイズは拡大縮小で済むため増えません）。アンカーポイント、パレットスワップ、描画コード例、段階的な進め方は [SPRITE_COMPOSITION.md](SPRITE_COMPOSITION.md) にまとめてあります。
+
+現在 `src/mocks/game.ts:61` で子に親Aの画像を流用している箇所が、これで置き換えられます。
+
 ## 9. コマンド
 
 ```bash
