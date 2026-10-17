@@ -1,4 +1,4 @@
-import type { Monster } from "../shared/types";
+import type { Monster } from "../shared/ui";
 import { Portrait, Stats } from "../components/MonsterView";
 export function Detail({
   monster,

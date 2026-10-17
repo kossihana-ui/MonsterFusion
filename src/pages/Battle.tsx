@@ -1,5 +1,5 @@
 import { useState } from "react";
-import type { BattleAction, GameAdapter, Monster } from "../shared/types";
+import type { BattleAction, GameAdapter, Monster } from "../shared/ui";
 import { createBattle } from "../mocks/game";
 import { Portrait } from "../components/MonsterView";
 export function Battle(props: { monsters: Monster[]; adapter: GameAdapter }) {
@@ -39,7 +39,7 @@ function BattleSession({
           <h1>バトルアリーナ</h1>
           <p>1対1の模擬戦で、モンスターの力を試そう。</p>
         </div>
-        <span className="badge">デモバトル</span>
+        <span className="badge">模擬バトル</span>
       </div>
       <label className="battle-select">
         出場モンスター
@@ -50,7 +50,7 @@ function BattleSession({
             setState(
               createBattle(
                 monsters.find((m) => m.id === e.target.value)!,
-                state.enemy,
+                monsters.find((m) => m.id !== e.target.value)!,
               ),
             )
           }
@@ -104,7 +104,7 @@ function BattleSession({
             ? `TURN ${state.turn}`
             : state.status === "won"
               ? "VICTORY — 勝利！"
-              : "DEFEAT — 敗北"}
+              : state.status === "draw" ? "DRAW — 引き分け" : "DEFEAT — 敗北"}
         </h2>
         <div role="log">
           {state.logs.map((log, i) => (

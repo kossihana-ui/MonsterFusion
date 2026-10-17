@@ -1,5 +1,5 @@
 import { useState } from "react";
-import type { Monster } from "../shared/types";
+import type { Monster } from "../shared/ui";
 import { MonsterCard } from "../components/MonsterView";
 export function Collection({
   monsters,

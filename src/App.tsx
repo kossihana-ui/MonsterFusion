@@ -4,8 +4,8 @@ import { Detail } from "./pages/Detail";
 import { Fusion } from "./pages/Fusion";
 import { Battle } from "./pages/Battle";
 import { Register } from "./pages/Register";
-import { initialMonsters, mockAdapter } from "./mocks/game";
-import type { GameAdapter, Monster } from "./shared/types";
+import { initialMonsters, gameAdapter } from "./mocks/game";
+import type { GameAdapter, Monster } from "./shared/ui";
 type Page = "collection" | "fusion" | "battle" | "register" | "detail";
 const tabs: { id: Page; label: string; icon: string; english: string }[] = [
   {
@@ -19,7 +19,7 @@ const tabs: { id: Page; label: string; icon: string; english: string }[] = [
   { id: "register", label: "モンスター登録", icon: "＋", english: "REGISTER" },
 ];
 export default function App({
-  adapter = mockAdapter,
+  adapter = gameAdapter,
 }: {
   adapter?: GameAdapter;
 }) {

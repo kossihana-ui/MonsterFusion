@@ -1,5 +1,6 @@
 import { useState } from "react";
-import type { Monster } from "../shared/types";
+import type { Monster } from "../shared/ui";
+import { registerUploadedMonster } from "../mocks/game";
 export function Register({ onRegister }: { onRegister: (m: Monster) => void }) {
   const [name, setName] = useState("");
   const [image, setImage] = useState("");
@@ -56,16 +57,7 @@ export function Register({ onRegister }: { onRegister: (m: Monster) => void }) {
         onSubmit={(e) => {
           e.preventDefault();
           if (!image || !name.trim() || reading) return;
-          onRegister({
-            id: crypto.randomUUID(),
-            name: name.trim(),
-            image,
-            generation: 1,
-            stats: { hp: 100, attack: 20, defense: 20, magic: 20, speed: 20 },
-            genes: { element: "無", body: "未分類", potential: "未知" },
-            traits: [],
-            parentIds: [],
-          });
+          onRegister(registerUploadedMonster(name.trim(), image));
           setSuccess(`${name.trim()}を図鑑に登録しました。`);
           setName("");
           setImage("");
@@ -102,7 +94,7 @@ export function Register({ onRegister }: { onRegister: (m: Monster) => void }) {
           />
         </label>
         <p className="muted">
-          第1世代として登録されます。能力値はデモ用の初期値です。
+          第0世代として登録されます。画像解析は未接続のため、能力・遺伝情報と画像の見た目は一致しません。
         </p>
         {error && <p role="alert">{error}</p>}
         {success && (

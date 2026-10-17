@@ -1,5 +1,5 @@
-import type { Monster } from "../shared/types";
-import { statLabels } from "../shared/types";
+import type { Monster } from "../shared/ui";
+import { statLabels } from "../shared/ui";
 export function Portrait({
   monster,
   large = false,

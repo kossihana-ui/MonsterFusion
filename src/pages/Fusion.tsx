@@ -1,5 +1,5 @@
 import { useState } from "react";
-import type { FusionResult, GameAdapter, Monster } from "../shared/types";
+import type { FusionResult, GameAdapter, Monster } from "../shared/ui";
 import { Portrait } from "../components/MonsterView";
 export function Fusion({
   monsters,
@@ -40,7 +40,7 @@ export function Fusion({
           <h1>融合のアトリエ</h1>
           <p>ふたつの命から、まだ見ぬ可能性へ。</p>
         </div>
-        <span className="badge">デモ融合</span>
+        <span className="badge">融合</span>
       </div>
       <div className={`fusion-grid ${busy ? "is-fusing" : ""}`}>
         {[
@@ -102,6 +102,7 @@ export function Fusion({
             <h2>{result.child.name}</h2>
             <p>第 {result.child.generation} 世代</p>
             <p>親：{result.parents.map((p) => p.name).join(" × ")}</p>
+            <p>子の画像は親Aの仮表示です。特徴に応じたパーツ合成は準備中です。</p>
             <span className="badge">図鑑に登録しました</span>
           </>
         ) : (

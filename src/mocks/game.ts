@@ -1,55 +1,80 @@
-import type { BattleState, GameAdapter, Monster } from "../shared/types";
-// The demo starts empty; uploaded monsters are kept only for this session.
-export const initialMonsters: Monster[] = [];
-export function createBattle(player: Monster, enemy: Monster): BattleState {
+import {
+  createStarterMonsters, createSeededRandom, findStarterSpec,
+  createMonsterFromAnalysis, canFuse, fuse, createDuel, stepTurn,
+  createBasicPolicy,
+} from '../core/index.ts';
+import type { Monster as CoreMonster, BattleState as CoreBattleState } from '../core/index.ts';
+import type { Monster, BattleState, GameAdapter } from '../shared/ui';
+
+// UI presentation adapter. Core objects are kept intact and never edited here.
+const context = { rng: createSeededRandom(12345) };
+const records = new Map<string, CoreMonster>();
+const art = new Map<string, string>();
+const starterArt: Record<string,string> = {
+  'moss-v2-64.png': new URL('./assets/starters/moss-v2-64.png', import.meta.url).href,
+  'ignis-v2-64.png': new URL('./assets/starters/ignis-v2-64.png', import.meta.url).href,
+  'aqua-v2-64.png': new URL('./assets/starters/aqua-v2-64.png', import.meta.url).href,
+};
+const names: Record<string,string> = {'starter-moss':'モス','starter-ignis':'イグニス','starter-aqua':'アクア'};
+const elements: Record<string,string> = {earth:'森',fire:'炎',water:'水',neutral:'無',wind:'風',light:'光',dark:'闇'};
+const bodies: Record<string,string> = {round:'丸型',muscular:'筋肉質',finned:'魚型',slim:'細身',serpentine:'蛇型',winged:'翼型'};
+export function getCoreMonster(id: string): CoreMonster {
+  const monster = records.get(id);
+  if (!monster) throw new Error('モンスターが見つかりません。');
+  return monster;
+}
+function present(monster: CoreMonster, image: string): Monster {
+  records.set(monster.id, monster);
+  art.set(monster.id, image);
   return {
-    player,
-    enemy,
-    playerHp: player.stats.hp,
-    enemyHp: enemy.stats.hp,
-    turn: 1,
-    logs: ["模擬バトル開始。行動を選んでください。"],
-    status: "active",
+    id:monster.id, name:names[monster.id] ?? monster.name, image,
+    generation:monster.generation, stats:monster.stats,
+    genes:{element:elements[monster.phenotype.element],body:bodies[monster.phenotype.bodyShape],potential:`進化ランク ${monster.tier} / 隠れ遺伝子あり`},
+    traits:monster.traits.map(tag=>({id:tag,name:tag,description:tag})),
+    parentIds:[monster.parentAId,monster.parentBId].filter((id): id is string=>id!==null),
   };
 }
-// Demonstration only. Replace this adapter with the real core integration.
-export const mockAdapter: GameAdapter = {
-  async fuseMonsters(a, b) {
-    const child: Monster = {
-      ...a,
-      id: crypto.randomUUID(),
-      name: `${a.genes.element}${b.genes.element}の幼獣`,
-      generation: Math.max(a.generation, b.generation) + 1,
-      image: a.image, // Demo only: reuse the uploaded parent image until core rendering is connected.
-      parentIds: [a.id, b.id],
-      genes: {
-        ...a.genes,
-        potential: `${a.genes.element} × ${b.genes.element}`,
-      },
-      stats: { ...a.stats },
-      traits: [...a.traits],
-    };
-    return { child, parents: [a, b] };
+export const initialMonsters = createStarterMonsters(context).map(monster => {
+  const spec = findStarterSpec(monster.id)!;
+  return present(monster,starterArt[spec.art]);
+});
+export function registerUploadedMonster(name:string,image:string): Monster {
+  // Uploaded art has not been analysed. Creation and stat consistency belong to core.
+  return present(createMonsterFromAnalysis({confidence:0,notes:'Uploaded image; visual analysis pending'},context,{name}),image);
+}
+function presentBattle(coreState:CoreBattleState,player:Monster,enemy:Monster):BattleState {
+  const outcome=coreState.outcome;
+  return {player,enemy,coreState,playerHp:coreState.combatants.find(c=>c.side===0)!.hp,
+    enemyHp:coreState.combatants.find(c=>c.side===1)!.hp,turn:coreState.turn+1,
+    logs:coreState.log.map(entry=>entry.message),
+    status:outcome.status==='ongoing'?'active':outcome.status==='draw'?'draw':outcome.winningSide===0?'won':'lost'};
+}
+export function createBattle(player:Monster,enemy:Monster):BattleState {
+  return presentBattle(createDuel(getCoreMonster(player.id),getCoreMonster(enemy.id)),player,enemy);
+}
+export const gameAdapter:GameAdapter = {
+  async fuseMonsters(a,b) {
+    const parentA=getCoreMonster(a.id),parentB=getCoreMonster(b.id);
+    const check=canFuse(parentA,parentB);
+    if(!check.ok) throw new Error(check.message);
+    const child=fuse(parentA,parentB,context);
+    // Composite phenotype rendering is pending; keep the parent illustration as a preview.
+    return {child:present(child,art.get(a.id)!),parents:[a,b]};
   },
-  async calculateBattleTurn(s, action) {
-    if (s.status !== "active") return s;
-    const damage = action === "skill" ? 38 : action === "attack" ? 24 : 0;
-    const hit = action === "defend" ? 6 : 16;
-    const enemyHp = Math.max(0, s.enemyHp - damage);
-    const playerHp = enemyHp === 0 ? s.playerHp : Math.max(0, s.playerHp - hit);
-    return {
-      ...s,
-      enemyHp,
-      playerHp,
-      turn: s.turn + 1,
-      status: enemyHp === 0 ? "won" : playerHp === 0 ? "lost" : "active",
-      logs: [
-        ...s.logs,
-        `TURN ${s.turn} · ${action === "defend" ? "防御を固めた" : action === "skill" ? `星のスキル！ ${damage}ダメージ` : `攻撃！ ${damage}ダメージ`}`,
-        ...(enemyHp > 0
-          ? [`敵の反撃。${hit}ダメージを受けた。`]
-          : ["敵を倒した！"]),
-      ],
-    };
-  },
+  async calculateBattleTurn(state,action) {
+    if(state.status!=='active')return state;
+    const coreState=state.coreState;
+    if(!coreState)throw new Error('バトル状態がありません。');
+    const enemyPolicy=createBasicPolicy(context.rng);
+    const next=stepTurn(coreState, actor=>actor.side===0?{
+      chooseAction(current,battle) {
+        const target=battle.combatants.find(c=>c.side!==current.side&&c.hp>0);
+        if(action==='defend'||!target)return {kind:'defend'};
+        const skill=current.skills.find(s=>s.cost<=current.mp);
+        if(action==='skill'&&skill)return {kind:'skill',skillId:skill.id,targetId:target.id};
+        return {kind:'attack',targetId:target.id};
+      }
+    }:enemyPolicy,context.rng);
+    return presentBattle(next,state.player,state.enemy);
+  }
 };
