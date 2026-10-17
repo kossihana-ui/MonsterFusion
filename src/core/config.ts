@@ -349,6 +349,52 @@ export function createBattleConfig(overrides: Partial<BattleConfig> = {}): Battl
 }
 
 // ---------------------------------------------------------------------------
+// Gene graft
+// ---------------------------------------------------------------------------
+
+/**
+ * Gene grafting: slipping a recessive allele into a monster's carrier slot.
+ *
+ * The grafted allele always lands in `hidden`, which is never expressed, so a
+ * graft changes neither the look nor the stats of the monster it is applied
+ * to. What it changes is the lineage: the carrier can be passed on (see
+ * `atavismRate`) and surface in a descendant several generations later.
+ *
+ * Because nothing is expressed at graft time, these numbers cannot shift the
+ * balance of the monster being grafted. They only decide how deeply the gene
+ * is buried, and therefore how long it tends to stay latent.
+ */
+export interface GraftConfig {
+  /**
+   * Inclusive dominance range for a grafted allele. Deliberately below
+   * `GeneticsConfig.dominanceRange` so the gene is recessive against the
+   * alleles it will eventually meet.
+   */
+  readonly dominanceRange: readonly [number, number];
+  /**
+   * How far below the locus' weakest existing allele the graft is forced. This
+   * is what guarantees the graft is recessive even at a locus that happens to
+   * be weakly dominant already.
+   */
+  readonly recessiveMargin: number;
+  /** How many loci a single graft touches. */
+  readonly lociPerGraft: number;
+  /** Whether ability-tendency loci are eligible for a random graft. */
+  readonly includeNumericLoci: boolean;
+}
+
+export const DEFAULT_GRAFT_CONFIG: GraftConfig = {
+  dominanceRange: [0.02, 0.2],
+  recessiveMargin: 0.02,
+  lociPerGraft: 1,
+  includeNumericLoci: false,
+};
+
+export function createGraftConfig(overrides: Partial<GraftConfig> = {}): GraftConfig {
+  return { ...DEFAULT_GRAFT_CONFIG, ...overrides };
+}
+
+// ---------------------------------------------------------------------------
 // Bundle
 // ---------------------------------------------------------------------------
 
@@ -358,6 +404,7 @@ export interface GameConfig {
   readonly stats: StatsConfig;
   readonly fusion: FusionConfig;
   readonly battle: BattleConfig;
+  readonly graft: GraftConfig;
 }
 
 export const DEFAULT_GAME_CONFIG: GameConfig = {
@@ -365,6 +412,7 @@ export const DEFAULT_GAME_CONFIG: GameConfig = {
   stats: DEFAULT_STATS_CONFIG,
   fusion: DEFAULT_FUSION_CONFIG,
   battle: DEFAULT_BATTLE_CONFIG,
+  graft: DEFAULT_GRAFT_CONFIG,
 };
 
 /** Partial overrides, nested one level deep. */
@@ -373,6 +421,7 @@ export interface GameConfigOverrides {
   readonly stats?: Partial<StatsConfig>;
   readonly fusion?: Partial<FusionConfig>;
   readonly battle?: Partial<BattleConfig>;
+  readonly graft?: Partial<GraftConfig>;
 }
 
 export function createGameConfig(overrides: GameConfigOverrides = {}): GameConfig {
@@ -381,5 +430,6 @@ export function createGameConfig(overrides: GameConfigOverrides = {}): GameConfi
     stats: createStatsConfig(overrides.stats ?? {}),
     fusion: createFusionConfig(overrides.fusion ?? {}),
     battle: createBattleConfig(overrides.battle ?? {}),
+    graft: createGraftConfig(overrides.graft ?? {}),
   };
 }

@@ -4,10 +4,11 @@
 
 ## 1. 完了したこと
 
-ゲームロジック一式が `src/core/` に実装済みです。型チェック（`tsc --noEmit`）エラーなし、テスト61件すべて成功。
+ゲームロジック一式が `src/core/` に実装済みです。型チェック（`tsc --noEmit`）エラーなし、テスト105件すべて成功。
 
 - モンスターデータ構造 / 無限世代の融合
 - 遺伝（優性・劣性・隠れ遺伝子・隔世遺伝・突然変異・混合・能力傾向）
+- 遺伝子付与（劣性アレルを hidden 枠へ忍ばせる。見た目・能力は不変）
 - 能力値（上限あり、融合でインフレしない）
 - バトル（ターン制・1対1、N対N対応済み）
 - 保存形式（schemaVersion・検証・マイグレーション）
@@ -215,11 +216,60 @@ tier 3 で元の **約1.44倍**。tier 3 には元のモンスターが**8体**�
 - 進化しても **bodyColor と element は変わりません**。緑のMossは緑のまま大きくなります
 - tier の異なる相手と配合すると tier は低い方に落ちます（高ランクの使い回し防止）
 
+## 7.7 遺伝子付与（gene graft）
+
+劣性（低dominance）のアレルを `hidden` 枠へ忍ばせる機能です。実装済み。
+
+```ts
+import { graftRandomRecessive, graftGene, graftRandomRecessiveDetailed } from '../core/index.ts';
+
+// ランダムな locus にランダムな値を1つ（既定）
+const seeded = graftRandomRecessive(monster, context);
+
+// 件数と対象を指定（能力傾向4項目を含めるかは includeNumeric）
+const multi = graftRandomRecessive(monster, context, {
+  count: 3,
+  includeNumeric: false,
+  loci: ['horns', 'wings', 'crest'],   // 省略すると全locusが候補
+});
+
+// 値を指定（通常プールに無い値も入れられます＝レア遺伝子に使えます）
+const exact = graftGene(monster, 'crest', 'crown', context);
+const tendency = graftGene(monster, 'attackTendency', 90, context);
+
+// 何が入って何を押し出したかを知りたいとき
+const { monster: after, grafts } = graftRandomRecessiveDetailed(monster, context, { count: 2 });
+grafts[0];  // { locus, value, dominance, replaced }  replaced は上書きされた旧キャリア
+```
+
+**UI側で押さえてほしい点**
+
+- **付与した個体は一切変わりません**。`phenotype` / `stats` / `traits` / `mutationCount` は元と完全に同一で、id・名前・generation・tier・親id・createdAt もそのままです。`hidden` は発現しないので、バランスへの影響はゼロ（テストで保証）。つまり「使っても弱くならない・強くならない」アイテムとして出せます
+- **効果が出るのは子孫です**。`hidden` は `atavismRate` で子に渡り、`carrierFrom` が最も劣性のアレルをキャリアとして残すため、付与した遺伝子は潜ったまま何世代も受け継がれ、相手の dominance が弱いときに突然発現します。実測では既定設定で「8世代・200系統」のうち数系統で発現しました（＝レアな当たり演出向き）
+- **戻り値は新しい Monster です**。`monster = graftRandomRecessive(monster, context)` と入れ替えてください。元のオブジェクトは変更されません
+- **即座に見た目を変えたい用途には使えません**。それが欲しい場合は `createMonsterFromAnalysis` で作り直す方向になります
+- 付与後の「仕込みがある個体」であることをUIで見せたい場合、`monster.genes[locus].hidden` を直接読むのが確実です（`traits` には出ません。発現するまで本人は普通の個体だからです）
+- schemaVersion は変わりません（Monster の形は同じ）。付与済みの個体もそのまま保存・読込できます
+
+**調整**: 確率・係数は `config.graft` です。
+
+```ts
+const config = createGameConfig({
+  graft: {
+    dominanceRange: [0.02, 0.2],  // 付与されるアレルの dominance。既定の遺伝子より低い
+    recessiveMargin: 0.02,        // その locus の最弱アレルより必ずこれだけ下に押し下げる
+    lociPerGraft: 1,              // 一度に付与する locus 数
+    includeNumericLoci: false,    // 能力傾向（attack/defense/magic/speedTendency）を対象に含めるか
+  },
+});
+```
+
+`dominanceRange` を上げれば発現が早まり、下げればより深く潜ります（＝レア度の調整つまみ）。
+
 ## 8. 未実装 / 相談したいこと
 
 core側で未着手の部分です。UI設計に影響するものは早めに決めたいです。
 
-- **遺伝子付与**: 未実装。劣性（低dominance）のアレルをランダムに hidden 枠へ忍ばせる方式を予定。hidden は発現しないため、付与した個体の見た目・能力は変わらず、数世代後に子孫で発現します
 - **スキル**: 現在は属性由来の2種のみ（固有スキル＋通常攻撃）。種類を増やすか要相談
 - **状態異常・バフ/デバフ**: 未実装
 - **育成・レベルアップ**: 仕様に含まれていなかったため未実装

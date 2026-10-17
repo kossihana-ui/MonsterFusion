@@ -25,6 +25,7 @@ export type {
   FusionConfig,
   GameConfig,
   GeneticsConfig,
+  GraftConfig,
   StatsConfig,
 } from './config.ts';
 export {
@@ -32,12 +33,14 @@ export {
   createFusionConfig,
   createGameConfig,
   createGeneticsConfig,
+  createGraftConfig,
   createStatsConfig,
   DEFAULT_ALLELE_POOLS,
   DEFAULT_BATTLE_CONFIG,
   DEFAULT_FUSION_CONFIG,
   DEFAULT_GAME_CONFIG,
   DEFAULT_GENETICS_CONFIG,
+  DEFAULT_GRAFT_CONFIG,
   DEFAULT_STATS_CONFIG,
 } from './config.ts';
 
@@ -99,6 +102,15 @@ export {
   parentIdsOf,
   previewEvolution,
 } from './fusion.ts';
+
+// Gene graft (slipping a recessive allele into the carrier slot).
+export type { GraftOptions, GraftRecord, GraftResult } from './graft.ts';
+export {
+  graftGene,
+  graftGeneDetailed,
+  graftRandomRecessive,
+  graftRandomRecessiveDetailed,
+} from './graft.ts';
 
 // Starters.
 export type { StarterSpec, TendencySpec } from './starters.ts';
