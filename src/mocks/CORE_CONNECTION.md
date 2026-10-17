@@ -1,8 +1,8 @@
 # Claude coreとの接続
 
-`claude-core` の `e628700` から `src/core/` と `src/shared/types.ts` をそのまま取り込みました。coreの本実装は変更していません。更新時はClaude側の確定コミットと比較してください。
+隣接する `../MonsterFusion-Core/src` を `@core` エイリアスで直接参照します。UI内にcoreのコピーはありません。core側の変更は開発サーバー・型チェック・ビルドに直接反映されます。UI単独のクローンでは起動できないため、MonsterFusion-Core（claude-core）を隣に配置してください。
 
-`game.ts` は現在、モック処理ではなくUI用の接続アダプターです。coreへのimportは `src/core/index.ts` のみ。表示モデルは `src/shared/ui.ts` に分離しています。coreのMonsterは内部Mapに保持し、表示モデルを融合処理へ直接渡したり、core個体を書き換えたりしません。
+`game.ts` は現在、モック処理ではなくUI用の接続アダプターです。coreへのimportは `@core/core/index.ts` のみ。表示モデルは `src/shared/ui.ts` に分離しています。coreのMonsterは内部Mapに保持し、表示モデルを融合処理へ直接渡したり、core個体を書き換えたりしません。coreの不具合は本体リポジトリで修正・テストしてください。コピー同期とcheck:ui-syncは不要です。
 
 - 起動時：`createStarterMonsters` → `findStarterSpec` のart名で第2案のPNGを関連付け。
 - 融合：`canFuse` → `fuse`。

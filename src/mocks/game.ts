@@ -2,8 +2,8 @@ import {
   createStarterMonsters, createSeededRandom, findStarterSpec,
   createMonsterFromAnalysis, canFuse, fuse, createDuel, stepTurn,
   createBasicPolicy,
-} from '../core/index.ts';
-import type { Monster as CoreMonster, BattleState as CoreBattleState } from '../core/index.ts';
+} from '@core/core/index.ts';
+import type { Monster as CoreMonster, BattleState as CoreBattleState } from '@core/core/index.ts';
 import type { Monster, BattleState, GameAdapter } from '../shared/ui';
 
 // UI presentation adapter. Core objects are kept intact and never edited here.

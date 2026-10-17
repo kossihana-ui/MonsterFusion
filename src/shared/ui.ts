@@ -32,7 +32,7 @@ export interface FusionResult {
 }
 export type BattleAction = "attack" | "defend" | "skill";
 export interface BattleState {
-  coreState?: import('../core/index.ts').BattleState;
+  coreState?: import('@core/core/index.ts').BattleState;
   player: Monster;
   enemy: Monster;
   playerHp: number;
