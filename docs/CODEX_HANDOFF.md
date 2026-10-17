@@ -275,19 +275,21 @@ core側で未着手の部分です。UI設計に影響するものは早めに�
 - **育成・レベルアップ**: 仕様に含まれていなかったため未実装
 - **パーティ戦のUI**: エンジンはN対N対応済み。`createBattle([[a,b,c],[d,e,f]])` で動きます
 
-## 8.5 coreの同期について
+## 8.5 coreの参照方法
 
-UI側はcoreのソースをコピーして持っています（`MonsterFusion-UI/src/core/`）。確認時点では13ファイルすべて一致していました。
+UI側は `@core` エイリアスで、隣に置かれた `MonsterFusion-Core/src` を直接参照しています。
+coreのソースはUIリポジトリに複製されていません。core側を直せば、そのままUIに反映されます。
 
-ただしコピーである以上、片方を直すともう一方は古いままになり、気づく手段がありません。core側に検出用スクリプトを置きました。
-
-```bash
-npm run check:ui-sync
+```
+MonsterFusion-UI/vite.config.ts   resolve.alias['@core'] と server.fs.allow
+MonsterFusion-UI/tsconfig.json    paths: { "@core/*": [...] }
 ```
 
-恒久的な解消案（UIからcoreを直接参照する方法など）は [CORE_SYNC.md](CORE_SYNC.md) にまとめてあります。判断はUI側のビルド設定の話なのでCodex側にお任せします。
+import は `from '@core/core/index.ts'` の形になります。
 
-**お願い**: UIのコピーで見つけた不具合は、コピーではなく core 側を直してください。コピーへの修正は次の同期で消えます。
+**前提**: 2つのリポジトリが隣り合って配置されている必要があります（`C:\Dev\MonsterFusion-Core` と `C:\Dev\MonsterFusion-UI`）。
+
+**お願い**: coreの不具合はUI側ではなく、core本体（このリポジトリ、ブランチ `claude-core`）を直してください。テストもこちらにあります。
 
 ## 9. コマンド
 

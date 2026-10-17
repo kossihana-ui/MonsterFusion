@@ -10,8 +10,7 @@
   "scripts": {
     "typecheck": "tsc --noEmit",
     "test": "node --test \"tests/**/*.test.ts\"",
-    "check": "npm run typecheck && npm test",
-    "check:ui-sync": "node scripts/check-ui-sync.mjs"
+    "check": "npm run typecheck && npm test"
   },
   "devDependencies": {
     "typescript": "^5.6.3",
