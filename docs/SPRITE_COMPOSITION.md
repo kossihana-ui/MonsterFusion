@@ -23,6 +23,8 @@ child.phenotype
 | 部位 | 頭と胴の2分割 | 7レイヤー（体・角・翼・尻尾・目・頭部装飾・口） |
 | 素材 | 全モンスター分のイラスト | **35枚のパーツ** |
 
+**import は必ず `@core/core/index.ts` 経由にしてください。** 内部ファイルを直接指すと、core側の構成変更で壊れます。本資料の例もすべて index.ts 経由に統一してあります。
+
 ## 1. 担当範囲
 
 | | 担当 | 内容 |
@@ -34,7 +36,7 @@ child.phenotype
 ## 2. core が返すもの
 
 ```ts
-import { composeAppearance } from '@core/core/appearance.ts';
+import { composeAppearance } from '@core/core/index.ts';
 
 const composition = composeAppearance(monster.phenotype);
 ```
@@ -70,7 +72,7 @@ const composition = composeAppearance(monster.phenotype);
 **体側（core が持つ）**: 体型ごとに、角・翼・尻尾・目・頭部装飾・口の取り付け位置を定義しています。`BODY_RIGS` としてエクスポート済みです。
 
 ```ts
-import { BODY_RIGS } from '@core/core/appearance.ts';
+import { BODY_RIGS } from '@core/core/index.ts';
 
 BODY_RIGS.round.anchors.horns   // { x: 32, y: 23 }
 BODY_RIGS.serpentine.anchors.horns  // { x: 26, y: 14 }
@@ -98,7 +100,7 @@ BODY_RIGS.serpentine.headScale  // 0.75（蛇型は頭が小さいので角も�
 **パーツは固定の参照色5色だけで描いてください。** 実行時にモンスターの色へ置換します。
 
 ```ts
-import { REFERENCE_PALETTE } from '@core/core/appearance.ts';
+import { REFERENCE_PALETTE } from '@core/core/index.ts';
 
 {
   outline: '#1b2030',   // 輪郭
@@ -243,7 +245,7 @@ DS世代のスプライトが生きて見える理由は、フレーム数では
 ## 9.2 使い方
 
 ```ts
-import { composeAppearance, poseAt, animationDuration } from '@core/core/animation.ts';
+import { composeAppearance, poseAt, animationDuration } from '@core/core/index.ts';
 
 const composition = composeAppearance(monster.phenotype);   // 1回だけ
 const pose = poseAt(composition, { animation: 'attack', timeMs: elapsed });

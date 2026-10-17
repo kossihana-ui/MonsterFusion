@@ -296,7 +296,7 @@ import は `from '@core/core/index.ts'` の形になります。
 `composeAppearance(phenotype)` が、描くべきレイヤー（パーツ・座標・倍率・パレット）を返します。UI側はそれを描くだけで、何世代融合しても正しい見た目を生成できます。
 
 ```ts
-import { composeAppearance } from '@core/core/appearance.ts';
+import { composeAppearance } from '@core/core/index.ts';
 const { layers, colorMappings, key } = composeAppearance(monster.phenotype);
 ```
 
