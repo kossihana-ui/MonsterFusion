@@ -3,6 +3,7 @@ import { test } from 'node:test';
 
 import { createBattleConfig, DEFAULT_BATTLE_CONFIG } from '../src/core/config.ts';
 import {
+  computeDamage,
   createBasicPolicy,
   createBattle,
   createCombatant,
@@ -91,25 +92,31 @@ test('the faster combatant acts first', () => {
 
 test('defending reduces incoming damage', () => {
   const [a, b] = twoMonsters(31);
-  const attacker = createScriptedPolicy([{ kind: 'attack' }]);
-  const defender = createScriptedPolicy([{ kind: 'defend' }]);
-  const attackerOnly = createScriptedPolicy([{ kind: 'attack' }]);
-  const victimOnly = createScriptedPolicy([{ kind: 'attack' }]);
+  const attacker = createCombatant(a, 0);
+  const open = createCombatant(b, 1);
+  const braced = { ...createCombatant(b, 1), defending: true };
 
-  const damageTaken = (policies: Parameters<typeof stepTurn>[1], seed: number): number => {
-    const state = stepTurn(createDuel(a, b), policies, createSeededRandom(seed));
-    const victim = state.combatants.find((c) => c.side === 1);
-    assert.ok(victim);
-    return victim.maxHp - victim.hp;
-  };
-
-  let defendedLower = 0;
+  // Same seed on both calls, so the crit roll and the variance roll match and
+  // the only difference left is the defend multiplier.
   for (let seed = 0; seed < 25; seed++) {
-    const withDefend = damageTaken([attacker, defender], seed);
-    const withoutDefend = damageTaken([attackerOnly, victimOnly], seed);
-    if (withDefend < withoutDefend) defendedLower++;
+    const hitOpen = computeDamage(attacker, open, {}, createSeededRandom(seed));
+    const hitBraced = computeDamage(attacker, braced, {}, createSeededRandom(seed));
+    assert.ok(
+      hitBraced.damage < hitOpen.damage,
+      `seed ${seed}: defending took ${hitBraced.damage}, open took ${hitOpen.damage}`,
+    );
   }
-  assert.ok(defendedLower >= 20, `defend helped in only ${defendedLower}/25 samples`);
+});
+
+test('a defend action is recorded on the combatant and in the log', () => {
+  const [a, b] = twoMonsters(31);
+  const next = stepTurn(
+    createDuel(a, b),
+    createScriptedPolicy([{ kind: 'defend' }]),
+    createSeededRandom(1),
+  );
+  assert.ok(next.combatants.every((c) => c.defending));
+  assert.ok(next.log.some((e) => e.kind === 'defend'));
 });
 
 test('skills cost MP and fall back to a plain attack when it runs out', () => {

@@ -94,6 +94,15 @@ export {
   parentIdsOf,
 } from './fusion.ts';
 
+// Starters.
+export type { StarterSpec, TendencySpec } from './starters.ts';
+export {
+  createStarterMonster,
+  createStarterMonsters,
+  findStarterSpec,
+  STARTER_SPECS,
+} from './starters.ts';
+
 // Battle.
 export type { CombatantOptions, DamageResult, PolicyResolver } from './battle.ts';
 export {

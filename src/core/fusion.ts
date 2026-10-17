@@ -113,6 +113,11 @@ export interface CreateMonsterOptions {
   readonly name?: string;
   /** Supply a genome instead of rolling one. */
   readonly genes?: MonsterGenes;
+  /**
+   * Pin the id instead of drawing one from the context. Used by the starters,
+   * whose ids must stay stable across sessions and saves.
+   */
+  readonly id?: MonsterId;
 }
 
 /** Creates a generation-0 monster with a freshly rolled genome. */
@@ -126,7 +131,7 @@ export function createRootMonster(
   const traits = deriveTraits(phenotype, 0, 0);
 
   return assemble({
-    id: ctx.nextId(),
+    id: options.id ?? ctx.nextId(),
     name: options.name ?? createMonsterName(ctx.rng, ctx.config.fusion.nameSyllables),
     parentAId: null,
     parentBId: null,

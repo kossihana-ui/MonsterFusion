@@ -1,6 +1,6 @@
 # UI側（Codex）への引き継ぎ
 
-ブランチ `claude-core` / コミット `40957b2` 時点の内容です。
+ブランチ `claude-core` の内容です。スターター3体の対応（schemaVersion 2）まで反映済み。
 
 ## 1. 完了したこと
 
@@ -91,15 +91,17 @@ const loaded = deserializeSaveFile(json); // { ok: true, value } | { ok: false, 
 | 項目 | 選択肢 |
 |---|---|
 | `bodyColor` | red / blue / green / yellow / purple / white / black |
-| `bodyShape` | slim / round / muscular / serpentine / winged |
+| `bodyShape` | slim / round / muscular / serpentine / winged / **finned** |
 | `size` | tiny / small / medium / large / giant |
 | `horns` | none / single / twin / crown / spiral |
 | `wings` | none / feathered / membrane / crystal / ethereal |
-| `tail` | none / short / long / spiked / twin |
-| `eyes` | normal / sharp / round / multi / glowing |
+| `tail` | none / short / long / spiked / twin / **vine** |
+| `eyes` | normal / sharp / round / multi / glowing / **slit** |
+| **`crest`**（頭部装飾） | none / flower / fin / crystal / mane / antenna |
+| **`jaw`**（口部） | normal / fangs / tusks / beak / maw |
 | `element` | neutral / fire / water / earth / wind / light / dark |
 
-**重要**: 融合で生まれる子の見た目はこの組み合わせの中から決まります。組み合わせ総数は 7×5×5×5×5×5×5×7 = 約38万通りあるため、**1体ずつ描き下ろす方式では融合後の絵が足りなくなります**。パーツ合成（体型＋色＋角＋羽＋尻尾＋目を重ねる）で描画する設計を推奨します。
+**重要**: 融合で生まれる子の見た目はこの組み合わせの中から決まります。組み合わせ総数は1000万通りを超えるため、**1体ずつ描き下ろす方式では融合後の絵が足りなくなります**。パーツ合成（体型＋色＋角＋羽＋尻尾＋目＋頭部装飾＋口を重ねる、計10レイヤー）で描画する設計を推奨します。語彙を増やしてもレイヤーが1枚増えるだけで、組み合わせ数には比例しません。
 
 能力値はこの見た目から算出されます（例: giant → HP+20/速度-12、fire → 攻撃+7/防御-3）。係数は `src/core/config.ts` の `DEFAULT_STATS_CONFIG.visual` にあります。
 
@@ -138,11 +140,41 @@ const starter = createMonsterFromAnalysis({
 
 本物の解析APIを繋ぐときも同じ関数のままで動きます（`RemoteMonsterAnalyzer` でハンドラを差し替える形。APIキーはリポジトリに置かず、環境変数またはサーバー側プロキシから渡します）。
 
+## 7.5 スターター3体
+
+core側に用意済みです。idは固定値なので、セーブと画像の対応が毎回同じになります。
+
+```ts
+import { createStarterMonsters, STARTER_SPECS, findStarterSpec } from '../core/index.ts';
+
+const starters = createStarterMonsters(context);   // Moss / Ignis / Aqua の3体
+findStarterSpec('starter-aqua')?.art;              // 'aqua-v2-64.png'
+```
+
+| | Moss | Ignis | Aqua |
+|---|---|---|---|
+| id | `starter-moss` | `starter-ignis` | `starter-aqua` |
+| art | moss-v2-64.png | ignis-v2-64.png | aqua-v2-64.png |
+| bodyColor | green | red | blue |
+| bodyShape | round | muscular | finned |
+| size | small | small | small |
+| horns | none | spiral | none |
+| wings | none | none | none |
+| tail | vine | spiked | long |
+| eyes | round | slit | glowing |
+| crest | flower | none | fin |
+| jaw | normal | fangs | maw |
+| element | earth | fire | water |
+| 能力合計 | 380 | 387 | 389 |
+| 性格 | 魔法・防御寄り | 攻撃寄り | 速度・攻撃寄り |
+
+見た目は固定ですが、**隠れ遺伝子はランダム**です。同じMossでもプレイヤーごとに持っている劣性遺伝子が違うため、融合した子は変わります。
+
 ## 8. 未実装 / 相談したいこと
 
 core側で未着手の部分です。UI設計に影響するものは早めに決めたいです。
 
-- **スターターモンスター**: 未作成。見た目の組み合わせを決めてもらえればcore側で用意します（整合性を保つため、UI側で手書きしないでください）
+- **同種配合による上位種・遺伝子付与**: 提案を受けて検討中。方針未定
 - **スキル**: 現在は属性由来の2種のみ（固有スキル＋通常攻撃）。種類を増やすか要相談
 - **状態異常・バフ/デバフ**: 未実装
 - **育成・レベルアップ**: 仕様に含まれていなかったため未実装

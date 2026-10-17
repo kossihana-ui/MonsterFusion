@@ -15,6 +15,8 @@ const maxedPhenotype: MonsterPhenotype = {
   wings: 'ethereal',
   tail: 'spiked',
   eyes: 'glowing',
+  crest: 'mane',
+  jaw: 'maw',
   element: 'dark',
   attackTendency: 100,
   defenseTendency: 100,

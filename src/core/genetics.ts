@@ -351,6 +351,11 @@ export function deriveTraits(
   if (phenotype.horns !== 'none') traits.push('horned');
   if (phenotype.tail === 'spiked' || phenotype.tail === 'twin') traits.push('tailed-weapon');
   if (phenotype.eyes === 'glowing' || phenotype.eyes === 'multi') traits.push('keen-sight');
+  if (phenotype.crest !== 'none') traits.push('crested');
+  if (phenotype.crest === 'flower' || phenotype.tail === 'vine') traits.push('floral');
+  if (phenotype.jaw === 'fangs' || phenotype.jaw === 'tusks' || phenotype.jaw === 'maw') {
+    traits.push('fanged');
+  }
   if (phenotype.size === 'giant' || phenotype.size === 'large') traits.push('heavyweight');
   if (phenotype.size === 'tiny' || phenotype.size === 'small') traits.push('lightweight');
   if (phenotype.element !== 'neutral') traits.push(`element-${phenotype.element}`);

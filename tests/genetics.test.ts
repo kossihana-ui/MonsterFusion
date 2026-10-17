@@ -155,7 +155,7 @@ test('numeric tendencies stay inside the configured range over 200 fusions', () 
 test('traits are derived, bounded, and never accumulate across generations', () => {
   const { chain } = fusionChain(60, 303);
   for (const monster of chain) {
-    assert.ok(monster.traits.length <= 12, `trait list grew to ${monster.traits.length}`);
+    assert.ok(monster.traits.length <= 16, `trait list grew to ${monster.traits.length}`);
     assert.equal(new Set(monster.traits).size, monster.traits.length, 'traits must be unique');
   }
 });
@@ -192,6 +192,8 @@ const baseline = {
   wings: 'feathered',
   tail: 'spiked',
   eyes: 'glowing',
+  crest: 'mane',
+  jaw: 'fangs',
   element: 'fire',
   attackTendency: 80,
   defenseTendency: 40,

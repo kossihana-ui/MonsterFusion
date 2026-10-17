@@ -12,7 +12,7 @@
 export type MonsterId = string;
 
 /** Current on-disk / on-wire schema version for persisted monsters. */
-export const SCHEMA_VERSION = 1;
+export const SCHEMA_VERSION = 2;
 
 // ---------------------------------------------------------------------------
 // Visual / categorical gene vocabulary
@@ -27,7 +27,13 @@ export type BodyColor =
   | 'white'
   | 'black';
 
-export type BodyShape = 'slim' | 'round' | 'muscular' | 'serpentine' | 'winged';
+export type BodyShape =
+  | 'slim'
+  | 'round'
+  | 'muscular'
+  | 'serpentine'
+  | 'winged'
+  | 'finned';
 
 export type BodySize = 'tiny' | 'small' | 'medium' | 'large' | 'giant';
 
@@ -35,9 +41,21 @@ export type HornType = 'none' | 'single' | 'twin' | 'crown' | 'spiral';
 
 export type WingType = 'none' | 'feathered' | 'membrane' | 'crystal' | 'ethereal';
 
-export type TailType = 'none' | 'short' | 'long' | 'spiked' | 'twin';
+export type TailType = 'none' | 'short' | 'long' | 'spiked' | 'twin' | 'vine';
 
-export type EyeType = 'normal' | 'sharp' | 'round' | 'multi' | 'glowing';
+export type EyeType = 'normal' | 'sharp' | 'round' | 'multi' | 'glowing' | 'slit';
+
+/** Head ornament: what sits on top of the head, horns aside. */
+export type CrestType =
+  | 'none'
+  | 'flower'
+  | 'fin'
+  | 'crystal'
+  | 'mane'
+  | 'antenna';
+
+/** Mouth shape. Drives the bite-oriented stat nudges. */
+export type JawType = 'normal' | 'fangs' | 'tusks' | 'beak' | 'maw';
 
 export type Element =
   | 'neutral'
@@ -57,6 +75,8 @@ export type CategoricalLocus =
   | 'wings'
   | 'tail'
   | 'eyes'
+  | 'crest'
+  | 'jaw'
   | 'element';
 
 /** Loci whose allele values are numeric 0..100 ability tendencies. */
@@ -76,6 +96,8 @@ export const CATEGORICAL_LOCI: readonly CategoricalLocus[] = [
   'wings',
   'tail',
   'eyes',
+  'crest',
+  'jaw',
   'element',
 ];
 
@@ -95,6 +117,8 @@ export interface CategoricalLocusValues {
   wings: WingType;
   tail: TailType;
   eyes: EyeType;
+  crest: CrestType;
+  jaw: JawType;
   element: Element;
 }
 
@@ -144,6 +168,8 @@ export interface MonsterPhenotype {
   wings: WingType;
   tail: TailType;
   eyes: EyeType;
+  crest: CrestType;
+  jaw: JawType;
   element: Element;
   attackTendency: number;
   defenseTendency: number;
@@ -232,16 +258,24 @@ export interface MonsterImage {
   readonly height?: number;
 }
 
-/** What an image analyser reports back. */
+/**
+ * What an image analyser reports back.
+ *
+ * Every appearance field is optional: an analysis is partial by nature, and a
+ * model that cannot make out a feature should omit it rather than guess. Any
+ * omitted locus keeps its randomly rolled allele.
+ */
 export interface MonsterVisualAnalysis {
-  readonly bodyColor: BodyColor;
-  readonly bodyShape: BodyShape;
-  readonly size: BodySize;
-  readonly horns: HornType;
-  readonly wings: WingType;
-  readonly tail: TailType;
-  readonly eyes: EyeType;
-  readonly element: Element;
+  readonly bodyColor?: BodyColor;
+  readonly bodyShape?: BodyShape;
+  readonly size?: BodySize;
+  readonly horns?: HornType;
+  readonly wings?: WingType;
+  readonly tail?: TailType;
+  readonly eyes?: EyeType;
+  readonly crest?: CrestType;
+  readonly jaw?: JawType;
+  readonly element?: Element;
   /** 0..1 overall confidence of the analysis. */
   readonly confidence: number;
   readonly notes?: string;

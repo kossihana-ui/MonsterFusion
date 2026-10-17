@@ -77,13 +77,81 @@ test('an older schema with no migration registered fails loudly', () => {
   assert.throws(() => migrateToCurrent({ schemaVersion: 0 }), /No migration from schema version 0/);
 });
 
+test('a version 1 save gains the crest and jaw loci instead of being rejected', () => {
+  const { chain } = fusionChain(2, 9);
+  const payload = JSON.parse(serializeSaveFile(chain)) as Record<string, unknown>;
+
+  // Rewind the payload to what version 1 looked like.
+  payload.schemaVersion = 1;
+  const legacy = (payload.monsters as Record<string, unknown>[]).map((monster) => {
+    const genes = { ...(monster.genes as Record<string, unknown>) };
+    const phenotype = { ...(monster.phenotype as Record<string, unknown>) };
+    delete genes.crest;
+    delete genes.jaw;
+    delete phenotype.crest;
+    delete phenotype.jaw;
+    return { ...monster, schemaVersion: 1, genes, phenotype };
+  });
+  payload.monsters = legacy;
+
+  const restored = deserializeSaveFile(JSON.stringify(payload));
+  assert.equal(restored.ok, true);
+  if (!restored.ok) return;
+
+  assert.equal(restored.value.schemaVersion, SCHEMA_VERSION);
+  for (const monster of restored.value.monsters) {
+    assert.equal(monster.phenotype.crest, 'none');
+    assert.equal(monster.phenotype.jaw, 'normal');
+    assert.equal(monster.genes.crest.a.value, 'none');
+    assert.equal(monster.genes.jaw.b.value, 'normal');
+  }
+});
+
+test('a migrated version 1 monster can still be fused with a new one', () => {
+  const context = testContext(12);
+  const modern = createRootMonster(context);
+  const legacyJson = JSON.stringify({
+    ...JSON.parse(serializeMonster(modern)),
+    schemaVersion: 1,
+    id: 'legacy',
+    genes: stripV2(modern.genes as unknown as Record<string, unknown>),
+    phenotype: stripV2(modern.phenotype as unknown as Record<string, unknown>),
+  });
+
+  const loaded = deserializeMonster(legacyJson);
+  assert.equal(loaded.ok, true);
+  if (!loaded.ok) return;
+
+  const child = fuse(loaded.value, modern, context);
+  assert.equal(child.generation, 1);
+  assert.ok(child.phenotype.crest);
+  assert.ok(child.phenotype.jaw);
+});
+
+function stripV2(source: Record<string, unknown>): Record<string, unknown> {
+  const copy = { ...source };
+  delete copy.crest;
+  delete copy.jaw;
+  return copy;
+}
+
 test('registered migrations are applied in order', () => {
+  const applied: number[] = [];
   const migrations = {
-    0: (data: Record<string, unknown>) => ({ ...data, addedAtV1: true }),
+    0: (data: Record<string, unknown>) => {
+      applied.push(0);
+      return { ...data, addedAtV1: true };
+    },
+    1: (data: Record<string, unknown>) => {
+      applied.push(1);
+      return { ...data, addedAtV2: true };
+    },
   };
   const migrated = migrateToCurrent({ schemaVersion: 0, id: 'x' }, migrations);
   assert.equal(migrated.schemaVersion, SCHEMA_VERSION);
   assert.equal(migrated.addedAtV1, true);
+  assert.equal(migrated.addedAtV2, true);
+  assert.deepEqual(applied, [0, 1], 'migrations must run oldest first');
 });
 
 test('malformed payloads are reported, not thrown', () => {

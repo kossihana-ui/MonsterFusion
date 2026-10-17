@@ -72,6 +72,8 @@ export class LocalMockMonsterAnalyzer implements MonsterAnalyzer {
       wings: pick(rng, this.pools.wings),
       tail: pick(rng, this.pools.tail),
       eyes: pick(rng, this.pools.eyes),
+      crest: pick(rng, this.pools.crest),
+      jaw: pick(rng, this.pools.jaw),
       element: pick(rng, this.pools.element),
       confidence: this.confidence,
       notes: 'local-mock: derived from the image fingerprint, not from vision',

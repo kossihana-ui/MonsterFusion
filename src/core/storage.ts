@@ -91,11 +91,49 @@ export function normalizeMonster(monster: Monster): Monster {
 /** Transforms a payload from version `n` to version `n + 1`. */
 export type Migration = (data: Record<string, unknown>) => Record<string, unknown>;
 
+/** Defaults for the loci introduced by schema version 2. */
+const V2_DEFAULTS: Readonly<Record<string, string>> = { crest: 'none', jaw: 'normal' };
+
+function addV2Loci(monster: Record<string, unknown>): Record<string, unknown> {
+  const genes = isRecord(monster.genes) ? { ...monster.genes } : {};
+  const phenotype = isRecord(monster.phenotype) ? { ...monster.phenotype } : {};
+
+  for (const [locus, fallback] of Object.entries(V2_DEFAULTS)) {
+    if (!(locus in genes)) {
+      // A fixed, mid-dominance pair: the monster expresses the default and has
+      // nothing unusual to pass on at the new locus.
+      genes[locus] = {
+        a: { value: fallback, dominance: 0.5 },
+        b: { value: fallback, dominance: 0.5 },
+        hidden: null,
+      };
+    }
+    if (!(locus in phenotype)) phenotype[locus] = fallback;
+  }
+
+  return { ...monster, genes, phenotype };
+}
+
 /**
- * Keyed by the version the migration upgrades *from*. Version 1 is the first
- * schema, so this is empty; add `1: (data) => ...` when the shape changes.
+ * Keyed by the version the migration upgrades *from*.
+ *
+ * 1 -> 2 added the `crest` and `jaw` loci. Monsters saved under version 1 get
+ * them filled with the neutral defaults, so old saves keep loading and old
+ * monsters stay fusable with new ones.
  */
-export const MIGRATIONS: Readonly<Record<number, Migration>> = {};
+export const MIGRATIONS: Readonly<Record<number, Migration>> = {
+  1: (data) => {
+    if (Array.isArray(data.monsters)) {
+      return {
+        ...data,
+        monsters: data.monsters.map((entry) =>
+          isRecord(entry) ? addV2Loci(entry) : entry,
+        ),
+      };
+    }
+    return addV2Loci(data);
+  },
+};
 
 export function migrateToCurrent(
   data: Record<string, unknown>,

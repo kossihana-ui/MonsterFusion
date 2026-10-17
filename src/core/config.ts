@@ -11,9 +11,11 @@ import type {
   BodyShape,
   BodySize,
   CategoricalLocus,
+  CrestType,
   Element,
   EyeType,
   HornType,
+  JawType,
   MonsterStats,
   NumericLocus,
   TailType,
@@ -33,6 +35,8 @@ export interface AllelePools {
   wings: readonly WingType[];
   tail: readonly TailType[];
   eyes: readonly EyeType[];
+  crest: readonly CrestType[];
+  jaw: readonly JawType[];
   element: readonly Element[];
 }
 
@@ -71,12 +75,14 @@ export interface GeneticsConfig {
 
 export const DEFAULT_ALLELE_POOLS: AllelePools = {
   bodyColor: ['red', 'blue', 'green', 'yellow', 'purple', 'white', 'black'],
-  bodyShape: ['slim', 'round', 'muscular', 'serpentine', 'winged'],
+  bodyShape: ['slim', 'round', 'muscular', 'serpentine', 'winged', 'finned'],
   size: ['tiny', 'small', 'medium', 'large', 'giant'],
   horns: ['none', 'single', 'twin', 'crown', 'spiral'],
   wings: ['none', 'feathered', 'membrane', 'crystal', 'ethereal'],
-  tail: ['none', 'short', 'long', 'spiked', 'twin'],
-  eyes: ['normal', 'sharp', 'round', 'multi', 'glowing'],
+  tail: ['none', 'short', 'long', 'spiked', 'twin', 'vine'],
+  eyes: ['normal', 'sharp', 'round', 'multi', 'glowing', 'slit'],
+  crest: ['none', 'flower', 'fin', 'crystal', 'mane', 'antenna'],
+  jaw: ['normal', 'fangs', 'tusks', 'beak', 'maw'],
   element: ['neutral', 'fire', 'water', 'earth', 'wind', 'light', 'dark'],
 };
 
@@ -155,6 +161,7 @@ export const DEFAULT_STATS_CONFIG: StatsConfig = {
       muscular: { attack: 10, defense: 4, magic: -6 },
       serpentine: { speed: 5, magic: 4, defense: -3 },
       winged: { speed: 10, hp: -5 },
+      finned: { speed: 7, magic: 3, defense: -2 },
     },
     horns: {
       none: {},
@@ -176,6 +183,7 @@ export const DEFAULT_STATS_CONFIG: StatsConfig = {
       long: { speed: 4 },
       spiked: { attack: 6 },
       twin: { speed: 3, magic: 4 },
+      vine: { magic: 5, hp: 2 },
     },
     eyes: {
       normal: {},
@@ -183,6 +191,22 @@ export const DEFAULT_STATS_CONFIG: StatsConfig = {
       round: { hp: 4 },
       multi: { magic: 5, speed: 3 },
       glowing: { magic: 8 },
+      slit: { hp: 3, defense: 3 },
+    },
+    crest: {
+      none: {},
+      flower: { magic: 7, hp: 3 },
+      fin: { speed: 5 },
+      crystal: { defense: 6, magic: 3 },
+      mane: { attack: 5, hp: 3 },
+      antenna: { magic: 6, speed: 2 },
+    },
+    jaw: {
+      normal: {},
+      fangs: { attack: 5 },
+      tusks: { attack: 7, speed: -2 },
+      beak: { attack: 4, speed: 2 },
+      maw: { attack: 9, defense: -3 },
     },
     element: {
       neutral: { hp: 6 },
