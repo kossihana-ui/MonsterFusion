@@ -26,7 +26,7 @@ import type {
   MonsterVisualAnalysis,
   FusionRecord,
 } from '../shared/types.ts';
-import { SCHEMA_VERSION } from '../shared/types.ts';
+import { CATEGORICAL_LOCI, SCHEMA_VERSION, SIZE_LADDER } from '../shared/types.ts';
 import type { GameConfig } from './config.ts';
 import { DEFAULT_GAME_CONFIG } from './config.ts';
 import {
@@ -99,6 +99,7 @@ function assemble(
     stats: MonsterStats;
     mutationCount: number;
     createdAt: number;
+    tier: number;
     fusionHistory: readonly FusionRecord[];
   },
 ): Monster {
@@ -142,6 +143,7 @@ export function createRootMonster(
     stats: computeStats(phenotype, 0, ctx.config.stats),
     mutationCount: 0,
     createdAt: ctx.now(),
+    tier: 0,
     fusionHistory: [],
   });
 }
@@ -168,10 +170,80 @@ export type FusionRejection =
   | { readonly ok: false; readonly reason: 'same-monster'; readonly message: string }
   | { readonly ok: false; readonly reason: 'schema-mismatch'; readonly message: string };
 
-export type FusionCheck = { readonly ok: true } | FusionRejection;
+/** What an upcoming fusion would do, so the UI can preview it. */
+export interface EvolutionPreview {
+  /** Share of appearance loci the parents already share, 0..1. */
+  readonly similarity: number;
+  readonly willEvolve: boolean;
+  /** The tier the child will have. */
+  readonly tier: number;
+  /** Why an otherwise-similar pair cannot evolve, if that is the case. */
+  readonly blockedBy?: 'tier-mismatch' | 'max-tier' | 'max-size' | 'not-similar';
+}
 
-/** Validates a pairing before fusing. Pure. */
-export function canFuse(parentA: Monster, parentB: Monster): FusionCheck {
+export type FusionCheck =
+  | { readonly ok: true; readonly evolution: EvolutionPreview }
+  | FusionRejection;
+
+/** Share of appearance loci on which two monsters look the same, 0..1. */
+export function appearanceSimilarity(parentA: Monster, parentB: Monster): number {
+  let matches = 0;
+  for (const locus of CATEGORICAL_LOCI) {
+    const a = (parentA.phenotype as unknown as Record<string, unknown>)[locus];
+    const b = (parentB.phenotype as unknown as Record<string, unknown>)[locus];
+    if (a === b) matches++;
+  }
+  return matches / CATEGORICAL_LOCI.length;
+}
+
+function sizeIndex(size: string): number {
+  const index = SIZE_LADDER.indexOf(size as (typeof SIZE_LADDER)[number]);
+  return index < 0 ? 0 : index;
+}
+
+/**
+ * Decides whether a pairing is an evolution.
+ *
+ * Two monsters evolve when they are alike enough, stand at the same tier, and
+ * still have room to grow - both on the tier ladder and on the size ladder. A
+ * monster that is already `giant` has nowhere left to go, which is what caps
+ * the whole mechanic without an arbitrary number.
+ */
+export function previewEvolution(
+  parentA: Monster,
+  parentB: Monster,
+  config: GameConfig = DEFAULT_GAME_CONFIG,
+): EvolutionPreview {
+  const similarity = appearanceSimilarity(parentA, parentB);
+  const tier = Math.min(parentA.tier, parentB.tier);
+
+  if (similarity < config.fusion.evolveThreshold) {
+    return { similarity, willEvolve: false, tier, blockedBy: 'not-similar' };
+  }
+  if (parentA.tier !== parentB.tier) {
+    return { similarity, willEvolve: false, tier, blockedBy: 'tier-mismatch' };
+  }
+  if (parentA.tier >= config.fusion.maxTier) {
+    return { similarity, willEvolve: false, tier, blockedBy: 'max-tier' };
+  }
+
+  const baseSize = Math.max(
+    sizeIndex(parentA.phenotype.size),
+    sizeIndex(parentB.phenotype.size),
+  );
+  if (baseSize + 1 >= SIZE_LADDER.length) {
+    return { similarity, willEvolve: false, tier, blockedBy: 'max-size' };
+  }
+
+  return { similarity, willEvolve: true, tier: parentA.tier + 1 };
+}
+
+/** Validates a pairing before fusing, and previews the evolution. Pure. */
+export function canFuse(
+  parentA: Monster,
+  parentB: Monster,
+  config: GameConfig = DEFAULT_GAME_CONFIG,
+): FusionCheck {
   if (parentA.id === parentB.id) {
     return {
       ok: false,
@@ -186,7 +258,7 @@ export function canFuse(parentA: Monster, parentB: Monster): FusionCheck {
       message: `Schema versions differ: ${parentA.schemaVersion} vs ${parentB.schemaVersion}.`,
     };
   }
-  return { ok: true };
+  return { ok: true, evolution: previewEvolution(parentA, parentB, config) };
 }
 
 /** Merges both parents' bounded histories plus the new record, then trims. */
@@ -216,6 +288,14 @@ export interface FusionResult {
   readonly mutationCount: number;
   readonly mutatedLoci: readonly string[];
   readonly atavismLoci: readonly string[];
+  /**
+   * Appearance loci the child inherited verbatim because the parents already
+   * agreed on them. Empty for an ordinary cross; on an evolution this is what
+   * the UI can show as "kept from the parents".
+   */
+  readonly lockedLoci: readonly string[];
+  /** What the fusion turned out to be, matching `canFuse`'s preview. */
+  readonly evolution: EvolutionPreview;
 }
 
 /**
@@ -230,15 +310,37 @@ export function fuseDetailed(
   context: MonsterContext,
   options: CreateMonsterOptions = {},
 ): FusionResult {
-  const check = canFuse(parentA, parentB);
+  const check = canFuse(parentA, parentB, context.config ?? DEFAULT_GAME_CONFIG);
   if (!check.ok) throw new Error(check.message);
 
   const ctx = resolve(context);
+  const evolution = previewEvolution(parentA, parentB, ctx.config);
+
+  // An evolution keeps everything the parents already agree on and steps the
+  // size and the crest up, so the result is a bigger, crowned version of the
+  // same creature rather than a re-roll.
+  const locked: Record<string, unknown> = {};
+  if (evolution.willEvolve) {
+    for (const locus of CATEGORICAL_LOCI) {
+      const a = (parentA.phenotype as unknown as Record<string, unknown>)[locus];
+      const b = (parentB.phenotype as unknown as Record<string, unknown>)[locus];
+      if (a === b) locked[locus] = a;
+    }
+    const baseSize = Math.max(
+      sizeIndex(parentA.phenotype.size),
+      sizeIndex(parentB.phenotype.size),
+    );
+    locked.size = SIZE_LADDER[baseSize + 1];
+    const crest = ctx.config.fusion.crestLadder[evolution.tier];
+    if (crest !== undefined) locked.crest = crest;
+  }
+
   const inheritance = inheritGenes(
     parentA.genes,
     parentB.genes,
     ctx.rng,
     ctx.config.genetics,
+    { locked },
   );
   const phenotype = expressGenes(inheritance.genes, ctx.rng, ctx.config.genetics);
   const traits = deriveTraits(
@@ -260,18 +362,34 @@ export function fuseDetailed(
     createdAt,
   };
 
+  // An evolution is the same creature grown up, so it keeps the parent's name
+  // and only changes its title. An ordinary cross gets a fresh name.
+  const baseName =
+    options.name ??
+    (evolution.willEvolve
+      ? parentA.name
+      : createMonsterName(ctx.rng, ctx.config.fusion.nameSyllables));
+
   const child = assemble({
     id,
-    name: options.name ?? createMonsterName(ctx.rng, ctx.config.fusion.nameSyllables),
+    name: evolution.willEvolve
+      ? applyTierTitle(baseName, evolution.tier, ctx.config.fusion.tierTitles)
+      : baseName,
     parentAId: parentA.id,
     parentBId: parentB.id,
     generation,
     genes: inheritance.genes,
     phenotype,
     traits,
-    stats: computeStats(phenotype, inheritance.mutationCount, ctx.config.stats),
+    stats: computeStats(
+      phenotype,
+      inheritance.mutationCount,
+      ctx.config.stats,
+      evolution.tier,
+    ),
     mutationCount: inheritance.mutationCount,
     createdAt,
+    tier: evolution.tier,
     fusionHistory: mergeHistory(parentA, parentB, record, ctx.config.fusion.historyLimit),
   });
 
@@ -280,7 +398,29 @@ export function fuseDetailed(
     mutationCount: inheritance.mutationCount,
     mutatedLoci: inheritance.mutatedLoci,
     atavismLoci: inheritance.atavismLoci,
+    lockedLoci: inheritance.lockedLoci,
+    evolution,
   };
+}
+
+/**
+ * Prefixes the tier title, replacing any title the base name already carries
+ * so "King Great Moss" can never happen.
+ */
+export function applyTierTitle(
+  name: string,
+  tier: number,
+  titles: readonly string[],
+): string {
+  let bare = name;
+  for (const title of titles) {
+    if (title && bare.startsWith(`${title} `)) {
+      bare = bare.slice(title.length + 1);
+      break;
+    }
+  }
+  const title = titles[tier];
+  return title ? `${title} ${bare}` : bare;
 }
 
 /** `fuseDetailed` when only the child is wanted. */

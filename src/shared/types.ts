@@ -12,7 +12,7 @@
 export type MonsterId = string;
 
 /** Current on-disk / on-wire schema version for persisted monsters. */
-export const SCHEMA_VERSION = 2;
+export const SCHEMA_VERSION = 3;
 
 // ---------------------------------------------------------------------------
 // Visual / categorical gene vocabulary
@@ -37,6 +37,15 @@ export type BodyShape =
 
 export type BodySize = 'tiny' | 'small' | 'medium' | 'large' | 'giant';
 
+/** Smallest to largest. Evolution walks this ladder one step at a time. */
+export const SIZE_LADDER: readonly BodySize[] = [
+  'tiny',
+  'small',
+  'medium',
+  'large',
+  'giant',
+];
+
 export type HornType = 'none' | 'single' | 'twin' | 'crown' | 'spiral';
 
 export type WingType = 'none' | 'feathered' | 'membrane' | 'crystal' | 'ethereal';
@@ -52,7 +61,9 @@ export type CrestType =
   | 'fin'
   | 'crystal'
   | 'mane'
-  | 'antenna';
+  | 'antenna'
+  /** The royal crest an evolved monster wears. See `crestLadder` in config. */
+  | 'crown';
 
 /** Mouth shape. Drives the bite-oriented stat nudges. */
 export type JawType = 'normal' | 'fangs' | 'tusks' | 'beak' | 'maw';
@@ -235,6 +246,12 @@ export interface Monster {
   readonly parentBId: MonsterId | null;
   /** 0 for roots; max(parentA, parentB) + 1 for fused monsters. */
   readonly generation: number;
+  /**
+   * Evolution rank. 0 for an ordinary monster; raised only by fusing two
+   * same-rank monsters that are alike enough (see `evolveThreshold`). Higher
+   * tiers raise the stat caps and wear a larger body and a crest to match.
+   */
+  readonly tier: number;
   readonly genes: MonsterGenes;
   readonly phenotype: MonsterPhenotype;
   readonly traits: readonly MonsterTrait[];

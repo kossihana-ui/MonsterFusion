@@ -74,6 +74,7 @@ export function normalizeMonster(monster: Monster): Monster {
     parentAId: monster.parentAId,
     parentBId: monster.parentBId,
     generation: monster.generation,
+    tier: monster.tier,
     genes: monster.genes,
     phenotype: monster.phenotype,
     traits: [...monster.traits],
@@ -90,6 +91,11 @@ export function normalizeMonster(monster: Monster): Monster {
 
 /** Transforms a payload from version `n` to version `n + 1`. */
 export type Migration = (data: Record<string, unknown>) => Record<string, unknown>;
+
+/** Fills the `tier` field introduced by schema version 3. */
+function addV3Tier(monster: Record<string, unknown>): Record<string, unknown> {
+  return 'tier' in monster ? monster : { ...monster, tier: 0 };
+}
 
 /** Defaults for the loci introduced by schema version 2. */
 const V2_DEFAULTS: Readonly<Record<string, string>> = { crest: 'none', jaw: 'normal' };
@@ -117,23 +123,32 @@ function addV2Loci(monster: Record<string, unknown>): Record<string, unknown> {
 /**
  * Keyed by the version the migration upgrades *from*.
  *
- * 1 -> 2 added the `crest` and `jaw` loci. Monsters saved under version 1 get
- * them filled with the neutral defaults, so old saves keep loading and old
- * monsters stay fusable with new ones.
+ * - 1 -> 2 added the `crest` and `jaw` loci, filled with neutral defaults.
+ * - 2 -> 3 added `tier`, which an unevolved monster has at 0.
+ *
+ * Old saves therefore keep loading, and old monsters stay fusable with new
+ * ones.
  */
 export const MIGRATIONS: Readonly<Record<number, Migration>> = {
-  1: (data) => {
+  1: perMonster(addV2Loci),
+  2: perMonster(addV3Tier),
+};
+
+/**
+ * Lifts a per-monster transform to a migration, so one function covers both a
+ * save file and a bare monster payload.
+ */
+function perMonster(transform: (monster: Record<string, unknown>) => Record<string, unknown>): Migration {
+  return (data) => {
     if (Array.isArray(data.monsters)) {
       return {
         ...data,
-        monsters: data.monsters.map((entry) =>
-          isRecord(entry) ? addV2Loci(entry) : entry,
-        ),
+        monsters: data.monsters.map((entry) => (isRecord(entry) ? transform(entry) : entry)),
       };
     }
-    return addV2Loci(data);
-  },
-};
+    return transform(data);
+  };
+}
 
 export function migrateToCurrent(
   data: Record<string, unknown>,
@@ -287,6 +302,7 @@ export function validateMonster(value: unknown): ValidationResult<Monster> {
       parentAId: (parentAId as MonsterId | null) ?? null,
       parentBId: (parentBId as MonsterId | null) ?? null,
       generation: value.generation as number,
+      tier: typeof value.tier === 'number' && value.tier >= 0 ? value.tier : 0,
       genes,
       phenotype: value.phenotype as Monster['phenotype'],
       traits: Array.isArray(value.traits) ? (value.traits.filter((t) => typeof t === 'string') as string[]) : [],

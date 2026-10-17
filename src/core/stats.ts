@@ -24,8 +24,10 @@ export interface StatBreakdown {
   readonly fromTendencies: MonsterStats;
   readonly fromVisual: MonsterStats;
   readonly fromMutation: MonsterStats;
-  /** Before soft cap and hard caps. */
+  /** Before the tier ramp, the soft cap and the hard caps. */
   readonly raw: MonsterStats;
+  /** The multiplier the evolution tier applies to `raw`. 1 at tier 0. */
+  readonly tierScale: number;
   /** After every cap: the value actually stored on the monster. */
   readonly final: MonsterStats;
   /** True when the hard total cap had to scale the stats down. */
@@ -70,12 +72,31 @@ function applySoftCap(value: number, cap: number, ratio: number): number {
   return threshold + headroom * (1 - Math.exp(-excess / headroom));
 }
 
+/**
+ * The caps that apply at a given evolution tier.
+ *
+ * Tier 0 is the plain config. Each tier raises every ceiling by
+ * `tierCapBonus`, which is what lets an evolved monster's larger body actually
+ * show up in its stats instead of being clipped away.
+ */
+export function statCapsForTier(
+  config: StatsConfig = DEFAULT_STATS_CONFIG,
+  tier = 0,
+): { statCap: MonsterStats; totalCap: number } {
+  const scale = 1 + Math.max(0, tier) * config.tierCapBonus;
+  const statCap = zeroStats();
+  for (const key of STAT_KEYS) statCap[key] = Math.round(config.statCap[key] * scale);
+  return { statCap, totalCap: Math.round(config.totalCap * scale) };
+}
+
 /** Full, inspectable derivation. `computeStats` is the thin wrapper over this. */
 export function computeStatBreakdown(
   phenotype: MonsterPhenotype,
   mutationCount = 0,
   config: StatsConfig = DEFAULT_STATS_CONFIG,
+  tier = 0,
 ): StatBreakdown {
+  const caps = statCapsForTier(config, tier);
   const base: MonsterStats = { ...config.base };
 
   const fromTendencies = zeroStats();
@@ -100,18 +121,22 @@ export function computeStatBreakdown(
 
   const raw = sumStats(sumStats(base, fromTendencies), sumStats(fromVisual, fromMutation));
 
+  // The evolution ramp. Bounded by maxTier, and still subject to every cap.
+  const tierScale = 1 + Math.max(0, tier) * config.tierStatBonus;
+
   const capped = zeroStats();
   for (const key of STAT_KEYS) {
-    const cap = config.statCap[key];
-    const soft = applySoftCap(Math.max(raw[key], 0), cap, config.softCapRatio);
+    const cap = caps.statCap[key];
+    const scaled = Math.max(raw[key], 0) * tierScale;
+    const soft = applySoftCap(scaled, cap, config.softCapRatio);
     capped[key] = Math.round(clamp(soft, 1, cap));
   }
 
   let totalCapApplied = false;
   const total = statTotal(capped);
-  if (total > config.totalCap) {
+  if (total > caps.totalCap) {
     totalCapApplied = true;
-    const scale = config.totalCap / total;
+    const scale = caps.totalCap / total;
     for (const key of STAT_KEYS) {
       capped[key] = Math.max(1, Math.floor(capped[key] * scale));
     }
@@ -123,6 +148,7 @@ export function computeStatBreakdown(
     fromVisual,
     fromMutation,
     raw,
+    tierScale,
     final: capped,
     totalCapApplied,
   };
@@ -133,25 +159,31 @@ export function computeStats(
   phenotype: MonsterPhenotype,
   mutationCount = 0,
   config: StatsConfig = DEFAULT_STATS_CONFIG,
+  tier = 0,
 ): MonsterStats {
-  return computeStatBreakdown(phenotype, mutationCount, config).final;
+  return computeStatBreakdown(phenotype, mutationCount, config, tier).final;
 }
 
 /** True when `stats` respects every cap in `config`. Used by balance tests. */
 export function withinCaps(
   stats: MonsterStats,
   config: StatsConfig = DEFAULT_STATS_CONFIG,
+  tier = 0,
 ): boolean {
+  const caps = statCapsForTier(config, tier);
   for (const key of STAT_KEYS) {
-    if (stats[key] > config.statCap[key]) return false;
+    if (stats[key] > caps.statCap[key]) return false;
     if (stats[key] < 1) return false;
   }
-  return statTotal(stats) <= config.totalCap;
+  return statTotal(stats) <= caps.totalCap;
 }
 
 /** The theoretical ceiling, for UI gauges. */
-export function maxPossibleStats(config: StatsConfig = DEFAULT_STATS_CONFIG): MonsterStats {
-  return { ...config.statCap };
+export function maxPossibleStats(
+  config: StatsConfig = DEFAULT_STATS_CONFIG,
+  tier = 0,
+): MonsterStats {
+  return statCapsForTier(config, tier).statCap;
 }
 
 export function statKeys(): readonly StatKey[] {

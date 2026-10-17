@@ -10,7 +10,8 @@ src/core/random.ts    Random interface + seeded mulberry32
 src/core/config.ts    every probability and coefficient (no hard-coded numbers elsewhere)
 src/core/genetics.ts  dominance, recessives, hidden genes, atavism, mutation, blending
 src/core/stats.ts     phenotype -> HP/attack/defense/magic/speed, with caps
-src/core/fusion.ts    monster creation and unlimited-generation fusion
+src/core/fusion.ts    monster creation, unlimited-generation fusion, evolution
+src/core/starters.ts  the three starter monsters, with ids fixed to the UI art
 src/core/battle.ts    turn-based battle, 1v1 today, N-vs-N already supported
 src/core/analyzer.ts  MonsterAnalyzer interface + offline LocalMockMonsterAnalyzer
 src/core/storage.ts   schemaVersion, serialise/validate/migrate
@@ -95,6 +96,11 @@ creation never depends on the API being up.
 - **No stat inflation.** Tendency genes live in 0..100 and are inherited by
   blending toward the parental mean; a soft cap compresses the top quarter
   asymptotically; hard per-stat and total caps apply last.
+- **Evolution is bounded by its own ladder.** Two alike monsters of the same
+  tier fuse into a bigger, stronger version of themselves. Tier N costs 2^N
+  base monsters while buying a linear gain, and the size ladder ends at
+  `giant`, so the mechanic caps itself at roughly 1.4x without an arbitrary
+  number.
 - **Reproducible.** Every stochastic path takes an injected `Random`. Same seed,
   same monster, same battle, log line for log line.
 - **Pure.** Genetics, stats, fusion and damage are pure functions of their

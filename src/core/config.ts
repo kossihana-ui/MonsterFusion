@@ -81,7 +81,7 @@ export const DEFAULT_ALLELE_POOLS: AllelePools = {
   wings: ['none', 'feathered', 'membrane', 'crystal', 'ethereal'],
   tail: ['none', 'short', 'long', 'spiked', 'twin', 'vine'],
   eyes: ['normal', 'sharp', 'round', 'multi', 'glowing', 'slit'],
-  crest: ['none', 'flower', 'fin', 'crystal', 'mane', 'antenna'],
+  crest: ['none', 'flower', 'fin', 'crystal', 'mane', 'antenna', 'crown'],
   jaw: ['normal', 'fangs', 'tusks', 'beak', 'maw'],
   element: ['neutral', 'fire', 'water', 'earth', 'wind', 'light', 'dark'],
 };
@@ -137,6 +137,17 @@ export interface StatsConfig {
    * extra points are discounted asymptotically, so each generation buys less.
    */
   readonly softCapRatio: number;
+  /**
+   * How much every cap rises per evolution tier, so a larger body is not
+   * immediately swallowed by the ceiling. The total raise is bounded by
+   * `FusionConfig.maxTier`.
+   */
+  readonly tierCapBonus: number;
+  /**
+   * How much stronger each evolution tier is, before caps. This is the ramp
+   * the player actually feels; the cap bonus above only makes room for it.
+   */
+  readonly tierStatBonus: number;
 }
 
 export const DEFAULT_STATS_CONFIG: StatsConfig = {
@@ -200,6 +211,7 @@ export const DEFAULT_STATS_CONFIG: StatsConfig = {
       crystal: { defense: 6, magic: 3 },
       mane: { attack: 5, hp: 3 },
       antenna: { magic: 6, speed: 2 },
+      crown: { hp: 5, attack: 4, defense: 4, magic: 4 },
     },
     jaw: {
       normal: {},
@@ -223,6 +235,8 @@ export const DEFAULT_STATS_CONFIG: StatsConfig = {
   statCap: { hp: 300, attack: 150, defense: 150, magic: 150, speed: 150 },
   totalCap: 700,
   softCapRatio: 0.75,
+  tierCapBonus: 0.12,
+  tierStatBonus: 0.12,
 };
 
 export function createStatsConfig(overrides: Partial<StatsConfig> = {}): StatsConfig {
@@ -241,10 +255,35 @@ export interface FusionConfig {
   readonly historyLimit: number;
   /** Syllables used to name a fused monster. */
   readonly nameSyllables: readonly string[];
+  /**
+   * Share of appearance loci two parents must share for the fusion to be an
+   * evolution rather than an ordinary cross. 0.7 means 7 of the 10 loci.
+   */
+  readonly evolveThreshold: number;
+  /**
+   * Hard ceiling on the evolution rank. The size ladder imposes its own limit
+   * as well: a monster that is already `giant` has nowhere left to grow.
+   */
+  readonly maxTier: number;
+  /**
+   * Optional: force the crest of an evolved monster, by tier.
+   *
+   * Empty by default, and deliberately so. Overwriting the crest erases a
+   * species' signature feature - an evolved Moss would lose the flower that
+   * makes it a Moss. Rank is carried by `Monster.tier` instead, which the UI
+   * renders as an insignia over the inherited look.
+   */
+  readonly crestLadder: readonly CrestType[];
+  /** Title prefixed to an evolved monster's name, by tier. */
+  readonly tierTitles: readonly string[];
 }
 
 export const DEFAULT_FUSION_CONFIG: FusionConfig = {
   historyLimit: 8,
+  evolveThreshold: 0.7,
+  maxTier: 3,
+  crestLadder: [],
+  tierTitles: ['', 'Great', 'King', 'Emperor'],
   nameSyllables: [
     'ga', 'ru', 'do', 'za', 'mi', 'ne', 'vo', 'ky', 'ra', 'su',
     'bel', 'dra', 'nox', 'lum', 'fer', 'tis',

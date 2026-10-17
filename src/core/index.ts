@@ -14,6 +14,7 @@ export {
   CATEGORICAL_LOCI,
   NUMERIC_LOCI,
   SCHEMA_VERSION,
+  SIZE_LADDER,
   STAT_KEYS,
 } from '../shared/types.ts';
 
@@ -54,7 +55,7 @@ export {
 } from './random.ts';
 
 // Genetics.
-export type { InheritanceResult } from './genetics.ts';
+export type { InheritanceOptions, InheritanceResult } from './genetics.ts';
 export {
   allelesAt,
   createGenesFromAnalysis,
@@ -71,6 +72,7 @@ export {
   computeStatBreakdown,
   computeStats,
   maxPossibleStats,
+  statCapsForTier,
   statTotal,
   withinCaps,
 } from './stats.ts';
@@ -78,12 +80,15 @@ export {
 // Fusion.
 export type {
   CreateMonsterOptions,
+  EvolutionPreview,
   FusionCheck,
   FusionResult,
   MonsterContext,
 } from './fusion.ts';
 export {
   ancestorIds,
+  appearanceSimilarity,
+  applyTierTitle,
   canFuse,
   createIdFromRandom,
   createMonsterFromAnalysis,
@@ -92,6 +97,7 @@ export {
   fuse,
   fuseDetailed,
   parentIdsOf,
+  previewEvolution,
 } from './fusion.ts';
 
 // Starters.

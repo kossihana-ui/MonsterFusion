@@ -136,22 +136,24 @@ function stripV2(source: Record<string, unknown>): Record<string, unknown> {
 }
 
 test('registered migrations are applied in order', () => {
+  // Built from SCHEMA_VERSION so this test keeps working after the next bump.
   const applied: number[] = [];
-  const migrations = {
-    0: (data: Record<string, unknown>) => {
-      applied.push(0);
-      return { ...data, addedAtV1: true };
-    },
-    1: (data: Record<string, unknown>) => {
-      applied.push(1);
-      return { ...data, addedAtV2: true };
-    },
-  };
+  const migrations: Record<number, (data: Record<string, unknown>) => Record<string, unknown>> = {};
+  for (let from = 0; from < SCHEMA_VERSION; from++) {
+    migrations[from] = (data) => {
+      applied.push(from);
+      return { ...data, [`addedAtV${from + 1}`]: true };
+    };
+  }
+
   const migrated = migrateToCurrent({ schemaVersion: 0, id: 'x' }, migrations);
   assert.equal(migrated.schemaVersion, SCHEMA_VERSION);
-  assert.equal(migrated.addedAtV1, true);
-  assert.equal(migrated.addedAtV2, true);
-  assert.deepEqual(applied, [0, 1], 'migrations must run oldest first');
+  assert.deepEqual(
+    applied,
+    Array.from({ length: SCHEMA_VERSION }, (_unused, i) => i),
+    'migrations must run oldest first, with none skipped',
+  );
+  assert.equal(migrated[`addedAtV${SCHEMA_VERSION}`], true);
 });
 
 test('malformed payloads are reported, not thrown', () => {

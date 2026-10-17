@@ -1,6 +1,6 @@
 # UI側（Codex）への引き継ぎ
 
-ブランチ `claude-core` の内容です。スターター3体の対応（schemaVersion 2）まで反映済み。
+ブランチ `claude-core` の内容です。スターター3体と系統進化（schemaVersion 3）まで反映済み。
 
 ## 1. 完了したこと
 
@@ -97,7 +97,7 @@ const loaded = deserializeSaveFile(json); // { ok: true, value } | { ok: false, 
 | `wings` | none / feathered / membrane / crystal / ethereal |
 | `tail` | none / short / long / spiked / twin / **vine** |
 | `eyes` | normal / sharp / round / multi / glowing / **slit** |
-| **`crest`**（頭部装飾） | none / flower / fin / crystal / mane / antenna |
+| **`crest`**（頭部装飾） | none / flower / fin / crystal / mane / antenna / crown |
 | **`jaw`**（口部） | normal / fangs / tusks / beak / maw |
 | `element` | neutral / fire / water / earth / wind / light / dark |
 
@@ -170,11 +170,56 @@ findStarterSpec('starter-aqua')?.art;              // 'aqua-v2-64.png'
 
 見た目は固定ですが、**隠れ遺伝子はランダム**です。同じMossでもプレイヤーごとに持っている劣性遺伝子が違うため、融合した子は変わります。
 
+## 7.6 系統進化（キングスライム方式）
+
+似た者同士を配合すると進化します。
+
+```ts
+import { canFuse, previewEvolution, fuseDetailed } from '../core/index.ts';
+
+const check = canFuse(a, b);
+if (check.ok && check.evolution.willEvolve) {
+  // 演出を出す。check.evolution.tier が進化後のランク
+}
+
+const result = fuseDetailed(a, b, context);
+result.evolution.willEvolve;   // 進化したか
+result.evolution.similarity;   // 一致率 0..1（UIのゲージに使えます）
+result.evolution.blockedBy;    // 'not-similar' | 'tier-mismatch' | 'max-tier' | 'max-size'
+result.lockedLoci;             // 親から確定継承された見た目の項目
+```
+
+**成立条件**: 見た目10項目の**7割以上が一致**し、両親の tier が同じで、まだ成長余地があること。
+
+**起きること**
+
+1. 一致している見た目は**そのまま継承**（突然変異も起きません）→ これが「安定」の実体
+2. `size` が1段階上がる small → medium → large → giant
+3. 能力が tier ごとに +12%（上限も +12% 引き上げ）
+4. 名前に称号が付く `Moss` → `Great Moss` → `King Moss` → `Emperor Moss`
+
+実測値（Moss系統）:
+
+| tier | 名前 | size | HP | 攻撃 | 防御 | 魔法 | 速度 | 合計 |
+|---|---|---|---|---|---|---|---|---|
+| 0 | Moss | small | 105 | 52 | 83 | 91 | 49 | 380 |
+| 1 | Great Moss | medium | 125 | 59 | 92 | 104 | 48 | 428 |
+| 2 | King Moss | large | 150 | 74 | 99 | 114 | 45 | 482 |
+| 3 | Emperor Moss | giant | 178 | 87 | 116 | 125 | 41 | 547 |
+
+tier 3 で元の **約1.44倍**。tier 3 には元のモンスターが**8体**必要なので、コストは指数・強さは線形で自然に歯止めがかかります。`size` が giant に達すると物理的に打ち止めです。
+
+**UI側の対応が必要な点**
+
+- **ランク表示は `monster.tier` を見てください**。王冠などの記章はUI側で重ねる想定です。`crest` は上書きしません（上書きするとMossが花を失い、種の個性が消えるため）
+- 進化しても **bodyColor と element は変わりません**。緑のMossは緑のまま大きくなります
+- tier の異なる相手と配合すると tier は低い方に落ちます（高ランクの使い回し防止）
+
 ## 8. 未実装 / 相談したいこと
 
 core側で未着手の部分です。UI設計に影響するものは早めに決めたいです。
 
-- **同種配合による上位種・遺伝子付与**: 提案を受けて検討中。方針未定
+- **遺伝子付与**: 未実装。劣性（低dominance）のアレルをランダムに hidden 枠へ忍ばせる方式を予定。hidden は発現しないため、付与した個体の見た目・能力は変わらず、数世代後に子孫で発現します
 - **スキル**: 現在は属性由来の2種のみ（固有スキル＋通常攻撃）。種類を増やすか要相談
 - **状態異常・バフ/デバフ**: 未実装
 - **育成・レベルアップ**: 仕様に含まれていなかったため未実装

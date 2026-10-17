@@ -192,6 +192,16 @@ export function allelesAt(genes: MonsterGenes, locus: NumericLocus | Categorical
 // Inheritance
 // ---------------------------------------------------------------------------
 
+/**
+ * Loci the caller wants to come out at a known value, used by evolution: when
+ * two parents already look alike, the shared features are passed on verbatim
+ * instead of being re-rolled, which is what makes an evolution predictable.
+ */
+export interface InheritanceOptions {
+  /** locus -> the value the child must express. Mutation is skipped there. */
+  readonly locked?: Readonly<Record<string, unknown>>;
+}
+
 export interface InheritanceResult {
   readonly genes: MonsterGenes;
   /** How many loci mutated. Feeds the mutation stat bonus and the traits. */
@@ -199,6 +209,8 @@ export interface InheritanceResult {
   readonly mutatedLoci: readonly (CategoricalLocus | NumericLocus)[];
   /** Loci where the child received a parent's hidden carrier (atavism). */
   readonly atavismLoci: readonly (CategoricalLocus | NumericLocus)[];
+  /** Loci that were pinned by `InheritanceOptions.locked`. */
+  readonly lockedLoci: readonly CategoricalLocus[];
 }
 
 /** Picks the gamete a parent contributes at one locus. */
@@ -263,12 +275,16 @@ export function inheritGenes(
   parentBGenes: MonsterGenes,
   rng: Random,
   config: GeneticsConfig = DEFAULT_GENETICS_CONFIG,
+  options: InheritanceOptions = {},
 ): InheritanceResult {
   const a = parentAGenes as unknown as LooseGenes;
   const b = parentBGenes as unknown as LooseGenes;
   const child: LooseGenes = {};
   const mutatedLoci: (CategoricalLocus | NumericLocus)[] = [];
   const atavismLoci: (CategoricalLocus | NumericLocus)[] = [];
+  const lockedLoci: CategoricalLocus[] = [];
+  const locked = options.locked ?? {};
+  const [, domHi] = config.dominanceRange;
 
   for (const locus of CATEGORICAL_LOCI) {
     const pairA = a[locus] as AnyPair;
@@ -282,6 +298,17 @@ export function inheritGenes(
       b: fromB.allele,
       hidden: carrierFrom(pairA, pairB, [fromA.allele, fromB.allele]),
     };
+
+    const lockedValue = locked[locus];
+    if (lockedValue !== undefined) {
+      // Pin both active alleles so the locus is guaranteed to express, and
+      // keep the carrier: the recessive variety is not lost by evolving.
+      pair.a = { value: lockedValue, dominance: domHi };
+      pair.b = { value: lockedValue, dominance: domHi };
+      lockedLoci.push(locus);
+      child[locus] = pair;
+      continue;
+    }
 
     if (chance(rng, config.mutationRate)) {
       mutateCategorical(chance(rng, 0.5) ? pair.a : pair.b, rng, config, locus);
@@ -329,6 +356,7 @@ export function inheritGenes(
     mutationCount: mutatedLoci.length,
     mutatedLoci,
     atavismLoci,
+    lockedLoci,
   };
 }
 
@@ -352,6 +380,7 @@ export function deriveTraits(
   if (phenotype.tail === 'spiked' || phenotype.tail === 'twin') traits.push('tailed-weapon');
   if (phenotype.eyes === 'glowing' || phenotype.eyes === 'multi') traits.push('keen-sight');
   if (phenotype.crest !== 'none') traits.push('crested');
+  if (phenotype.crest === 'crown') traits.push('royal');
   if (phenotype.crest === 'flower' || phenotype.tail === 'vine') traits.push('floral');
   if (phenotype.jaw === 'fangs' || phenotype.jaw === 'tusks' || phenotype.jaw === 'maw') {
     traits.push('fanged');
