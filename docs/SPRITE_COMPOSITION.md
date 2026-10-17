@@ -214,3 +214,139 @@ core側は最初から全部返しますが、UI側で「素材が無いレイ�
 アンカー座標・サイズ倍率・パレットは全て core 側の `src/core/appearance.ts` にあります。描いてみて位置が合わない場合は、具体的に（「蛇型の角が3px下」など）言ってください。数値を直せば全体に反映されます。
 
 `createAppearanceConfig()` でUI側から上書きすることもできますが、恒久的な調整はcore側に入れる方が良いです。
+
+---
+
+# 9. アニメーション
+
+`poseAt()` が、ある瞬間に各レイヤーがどこにいるかを返します。**追加の素材は不要です。**
+
+## 9.1 なぜレイヤー分割でぬるぬる動くのか
+
+DS世代のスプライトが生きて見える理由は、フレーム数ではなく**パーツが別々のタイミングで動く**ことにあります。体が踏み込んだ後、ワンテンポ遅れて尻尾と翼が付いてくる。この「追従の遅れ（secondary motion）」が重さと生命感を作ります。
+
+実測値です（攻撃モーション）。
+
+```
+  t(ms)   体X     尻尾X   尻尾の角度
+     0       0       0       0
+   120   3.424   0.505  -1.188     ← 体が引く。尻尾はまだ動き出さない
+   180   3.462   2.397  -5.639     ← 尻尾がようやく追いつく
+   240  -2.577   2.944  -6.927     ← 体は踏み込み済み。尻尾は後ろに残る
+   300  -5.452   2.805  -6.776     ← 最大到達。尻尾はまだ戻れていない
+   360  -2.097  -4.595   2.975     ← 体が戻る途中で尻尾が追い越す
+   480  -0.033  -1.469   1.344     ← 収束
+```
+
+1枚絵では原理的に不可能で、レイヤーに分けた今だけ無料で手に入ります。
+
+## 9.2 使い方
+
+```ts
+import { composeAppearance, poseAt, animationDuration } from '@core/core/animation.ts';
+
+const composition = composeAppearance(monster.phenotype);   // 1回だけ
+const pose = poseAt(composition, { animation: 'attack', timeMs: elapsed });
+```
+
+```ts
+{
+  animation: 'attack',
+  elapsed: 180, progress: 0.346, finished: false,
+  layers: [
+    { kind:'tail', part:'tail/spiked', anchor:{...}, scale:1,
+      transform:{ offsetX:2.397, offsetY:-0.36, scaleX:1, scaleY:1, rotation:-5.639, opacity:1 } },
+    ...
+  ],
+  flash: 0,
+}
+```
+
+`anchor` と `scale` は `composeAppearance` が返したものと同じです。`transform` が今フレームの差分です。
+
+## 9.3 クリップ
+
+| 名前 | 長さ | 内容 |
+|---|---|---|
+| `idle` | 2600ms ループ | 呼吸＋瞬き。**終わりません**（`finished` は常に false） |
+| `attack` | 520ms 単発 | 引き → 踏み込み → 戻り |
+| `hurt` | 340ms 単発 | のけぞり＋白フラッシュ |
+
+単発クリップは終了後、最終フレームを保持したまま `finished: true` を返します。UI側はそれを見て `idle` に戻してください。長さは `animationDuration(name)` で取れるので、バトルの演出尺と合わせられます。
+
+## 9.4 描画ループ
+
+`composeAppearance` の描画に `transform` を足すだけです。
+
+```ts
+function drawPose(ctx: CanvasRenderingContext2D, pose: Pose) {
+  ctx.clearRect(0, 0, 64, 64);
+
+  for (const layer of pose.layers) {
+    const t = layer.transform;
+    const part = partImage(t.partOverride ?? layer.part);
+    const origin = partOrigin(layer.part);
+
+    ctx.save();
+    ctx.globalAlpha = t.opacity;
+    ctx.translate(layer.anchor.x + t.offsetX, layer.anchor.y + t.offsetY);
+    if (t.rotation) ctx.rotate((t.rotation * Math.PI) / 180);
+    ctx.scale(t.scaleX * (layer.flipX ? -1 : 1), t.scaleY);
+    ctx.drawImage(
+      part,
+      -origin.x * layer.scale, -origin.y * layer.scale,
+      part.width * layer.scale, part.height * layer.scale,
+    );
+    ctx.restore();
+  }
+
+  if (pose.flash > 0) {                       // 被弾の白フラッシュ
+    ctx.save();
+    ctx.globalCompositeOperation = 'source-atop';
+    ctx.globalAlpha = pose.flash;
+    ctx.fillStyle = '#ffffff';
+    ctx.fillRect(0, 0, 64, 64);
+    ctx.restore();
+  }
+}
+```
+
+**重要**: 回転と拡縮は**アンカー基準**で適用してください（`translate` してから `rotate`/`scale`）。原点基準でやると角が頭から外れます。
+
+`ctx.imageSmoothingEnabled = false` は維持してください。ただし回転が入るフレームだけは、ドット絵として許容できるか確認してください。気になる場合は `DEFAULT_LAYER_MOTION` の `sway` を0にすれば回転が消えます。
+
+## 9.5 瞬き
+
+既定では**素材不要**です。目のレイヤーを縦に潰して閉じを表現します（`blinkStyle: 'squash'`）。
+
+専用の閉じ目を描く場合は `createAnimationConfig({ blinkStyle: 'swap' })` にすると、`transform.partOverride` に `eyes/round-closed` のようなキーが入ります。6枚追加になります。
+
+- 間隔は平均3.4秒、±1.5秒のゆらぎ付き（等間隔だとメトロノームに見えるため）
+- 1回130ms。目を閉じている時間は全体の8%未満
+- `eyes/slit`（糸目）は**元から閉じているので瞬きしません**
+
+## 9.6 パーティで同期させない
+
+複数体を並べると、全員が同じ呼吸・同じ瞬きをして不気味になります。`phase` に個体ごとに違う数値を渡してください。
+
+```ts
+poseAt(composition, { animation: 'idle', timeMs, phase: combatantIndex * 900 });
+```
+
+## 9.7 向き
+
+`facingRight: true` で左右反転します。バトルで対面させるときに使ってください。移動方向と回転方向が正しく反転します。
+
+## 9.8 調整
+
+すべて `createAnimationConfig()` で上書きできます。
+
+```ts
+createAnimationConfig({
+  attackDurationMs: 700,        // もっとためる
+  breathAmplitude: 0.08,        // 呼吸を大きく
+  motion: { tail: { follow: 0.85, lagMs: 200, breathe: 0, sway: 12 } },  // 尻尾をもっと遅らせる
+});
+```
+
+`lagMs` が追従の遅れ、`sway` が揺れの角度です。**この2つがぬるぬる感を決めます。** 動かしてみて物足りなければ、まずこの数値を上げてください。恒久的な調整は core 側（`src/core/animation.ts`）に入れます。

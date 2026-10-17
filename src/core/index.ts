@@ -140,6 +140,27 @@ export {
   SIZE_SCALES,
 } from './appearance.ts';
 
+// Animation (where each layer sits at a given moment).
+export type {
+  AnimationConfig,
+  AnimationName,
+  LayerMotion,
+  Pose,
+  PosedLayer,
+  PoseOptions,
+  PoseTransform,
+} from './animation.ts';
+export {
+  animationDuration,
+  createAnimationConfig,
+  DEFAULT_ANIMATION_CONFIG,
+  DEFAULT_LAYER_MOTION,
+  isBlinking,
+  poseAt,
+  REST_TRANSFORM,
+  restPose,
+} from './animation.ts';
+
 // Starters.
 export type { StarterSpec, TendencySpec } from './starters.ts';
 export {

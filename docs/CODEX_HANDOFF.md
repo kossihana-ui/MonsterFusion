@@ -304,6 +304,8 @@ const { layers, colorMappings, key } = composeAppearance(monster.phenotype);
 
 現在 `src/mocks/game.ts:61` で子に親Aの画像を流用している箇所が、これで置き換えられます。
 
+さらに `poseAt()` で、呼吸・瞬き・攻撃・被弾のアニメーションが**素材追加なし**で動きます。パーツが別レイヤーなので、尻尾や翼が体に遅れて付いてくる動き（DS世代のスプライトが生きて見える理由）が出せます。同じく [SPRITE_COMPOSITION.md](SPRITE_COMPOSITION.md) の9章にまとめてあります。
+
 ## 9. コマンド
 
 ```bash
