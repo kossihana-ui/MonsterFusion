@@ -4,6 +4,8 @@
   "version": "0.1.0",
   "type": "module",
   "scripts": {
+    "sprites:build": "node src/mocks/assets/parts/build-parts.mjs",
+    "sprites:check": "node scripts/check-sprites.mjs",
     "dev": "vite --host 0.0.0.0",
     "build": "tsc -b && vite build",
     "typecheck": "tsc --noEmit",

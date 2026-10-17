@@ -17,6 +17,7 @@ export interface MonsterTrait {
   description: string;
 }
 export interface Monster {
+  phenotype?: import("@core/core/index.ts").MonsterPhenotype;
   id: string;
   name: string;
   image: string;
@@ -32,7 +33,7 @@ export interface FusionResult {
 }
 export type BattleAction = "attack" | "defend" | "skill";
 export interface BattleState {
-  coreState?: import('@core/core/index.ts').BattleState;
+  coreState?: import("@core/core/index.ts").BattleState;
   player: Monster;
   enemy: Monster;
   playerHp: number;

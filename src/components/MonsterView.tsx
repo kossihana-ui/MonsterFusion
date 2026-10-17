@@ -1,16 +1,36 @@
 import type { Monster } from "../shared/ui";
 import { statLabels } from "../shared/ui";
+import { MonsterSprite } from "./MonsterSprite";
+import type { SpriteMotion } from "./MonsterSprite";
 export function Portrait({
   monster,
   large = false,
+  facingRight = false,
+  motion,
 }: {
   monster: Monster;
   large?: boolean;
+  facingRight?: boolean;
+  motion?: SpriteMotion;
 }) {
   return (
     <div className={`portrait ${large ? "large" : ""}`}>
       <div className="sprite-glow" />
-      <img src={monster.image} alt={monster.name} />
+      {monster.phenotype ? (
+        <MonsterSprite
+          phenotype={monster.phenotype}
+          name={monster.name}
+          id={monster.id}
+          facingRight={facingRight}
+          motion={motion}
+        />
+      ) : (
+        <img
+          src={monster.image}
+          alt={monster.name}
+          style={{ transform: facingRight ? "scaleX(-1)" : undefined }}
+        />
+      )}
     </div>
   );
 }

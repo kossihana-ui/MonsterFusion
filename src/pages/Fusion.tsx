@@ -89,8 +89,8 @@ export function Fusion({
           {monsters.length < 2
             ? "融合には2体必要です。32×32のPNGを登録してください。"
             : a === b
-            ? "異なる2体を選んでください。"
-            : "デモでは親を残したまま、新しい個体が図鑑に加わります。"}
+              ? "異なる2体を選んでください。"
+              : "デモでは親を残したまま、新しい個体が図鑑に加わります。"}
         </p>
       </div>
       {error && <p role="alert">{error}</p>}
@@ -102,7 +102,6 @@ export function Fusion({
             <h2>{result.child.name}</h2>
             <p>第 {result.child.generation} 世代</p>
             <p>親：{result.parents.map((p) => p.name).join(" × ")}</p>
-            <p>子の画像は親Aの仮表示です。特徴に応じたパーツ合成は準備中です。</p>
             <span className="badge">図鑑に登録しました</span>
           </>
         ) : (
