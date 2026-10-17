@@ -1,0 +1,160 @@
+# UI側（Codex）への引き継ぎ
+
+ブランチ `claude-core` / コミット `40957b2` 時点の内容です。
+
+## 1. 完了したこと
+
+ゲームロジック一式が `src/core/` に実装済みです。型チェック（`tsc --noEmit`）エラーなし、テスト61件すべて成功。
+
+- モンスターデータ構造 / 無限世代の融合
+- 遺伝（優性・劣性・隠れ遺伝子・隔世遺伝・突然変異・混合・能力傾向）
+- 能力値（上限あり、融合でインフレしない）
+- バトル（ターン制・1対1、N対N対応済み）
+- 保存形式（schemaVersion・検証・マイグレーション）
+- 画像解析インターフェース（API不要のローカル仮実装付き）
+
+## 2. import は1箇所だけ
+
+```ts
+import { ... } from '../core/index.ts';
+```
+
+`src/core/index.ts` が公開APIです。`genetics.ts` や `stats.ts` を直接importしないでください（内部実装の変更で壊れます）。型も同じ場所から取れます。
+
+```ts
+import type { Monster, MonsterStats, BattleState, BattleLogEntry } from '../core/index.ts';
+```
+
+## 3. 最小の使い方
+
+```ts
+import {
+  createRootMonster, fuse, canFuse,
+  createDuel, stepTurn, simulateDuel, createBasicPolicy,
+  createSeededRandom, createSystemRandom,
+  serializeSaveFile, deserializeSaveFile,
+} from '../core/index.ts';
+
+// ゲームセッションごとに1つ。開発中は seed 固定が楽です。
+const context = { rng: createSeededRandom(12345) };
+
+// モンスター生成
+const a = createRootMonster(context, { name: 'Alpha' });
+const b = createRootMonster(context, { name: 'Beta' });
+
+// 融合（先に canFuse で検証できる）
+const check = canFuse(a, b);           // { ok: true } | { ok: false, reason, message }
+const child = fuse(a, b, context);     // child.generation === 1
+const next  = fuse(child, a, context); // 何世代でも可
+
+// バトル（1ターンずつ進める＝アニメーション向き）
+let state = createDuel(a, b);
+const policy = createBasicPolicy(context.rng);
+state = stepTurn(state, policy, context.rng);
+// state.outcome.status: 'ongoing' | 'win' | 'draw'
+// state.log: BattleLogEntry[]（差分描画は前回の log.length 以降を見る）
+
+// 一括実行（結果だけ欲しいとき）
+const result = simulateDuel(a, b, createSeededRandom(7));
+
+// 保存 / 読込
+const json = serializeSaveFile([a, b, child, next]);
+const loaded = deserializeSaveFile(json); // { ok: true, value } | { ok: false, errors }
+```
+
+## 4. UI側で守ってほしいこと
+
+### Monster オブジェクトを手で作らない / 書き換えない
+
+`Monster` は `genes` → `phenotype` → `stats` が整合した状態で作られます。手書きのJSONや直接代入で作ると、能力値が遺伝子と噛み合わない・隠れ遺伝子が空になる、といった不整合が入り、融合すると子孫にまで伝播します。生成は必ず `createRootMonster` / `fuse` / `createMonsterFromAnalysis` を通してください。
+
+### 表示は `phenotype` と `stats` を読むだけ
+
+- 見た目 → `monster.phenotype`
+- 能力値 → `monster.stats`
+- タグ → `monster.traits`（`'winged'`, `'mutant'`, `'element-fire'` などの文字列配列）
+
+`genes` は融合計算用の内部データです。図鑑などで見せる場合は参考程度に。
+
+### `stepTurn` の戻り値は新しい state
+
+入力した state は変更されません。`state = stepTurn(state, ...)` と代入し直してください。前の state を保持しておけばリプレイや巻き戻しもできます。
+
+### 乱数は context.rng 経由
+
+`Math.random()` をUI側で混ぜると再現性が壊れます。本番は `createSystemRandom()`、開発・テストは `createSeededRandom(seed)` を使ってください。同じseedなら融合結果もバトルログも1行単位で同一になります。
+
+## 5. 見た目の語彙（画像素材の設計に直結します）
+
+`phenotype` が取る値はこの組み合わせに限定されます。
+
+| 項目 | 選択肢 |
+|---|---|
+| `bodyColor` | red / blue / green / yellow / purple / white / black |
+| `bodyShape` | slim / round / muscular / serpentine / winged |
+| `size` | tiny / small / medium / large / giant |
+| `horns` | none / single / twin / crown / spiral |
+| `wings` | none / feathered / membrane / crystal / ethereal |
+| `tail` | none / short / long / spiked / twin |
+| `eyes` | normal / sharp / round / multi / glowing |
+| `element` | neutral / fire / water / earth / wind / light / dark |
+
+**重要**: 融合で生まれる子の見た目はこの組み合わせの中から決まります。組み合わせ総数は 7×5×5×5×5×5×5×7 = 約38万通りあるため、**1体ずつ描き下ろす方式では融合後の絵が足りなくなります**。パーツ合成（体型＋色＋角＋羽＋尻尾＋目を重ねる）で描画する設計を推奨します。
+
+能力値はこの見た目から算出されます（例: giant → HP+20/速度-12、fire → 攻撃+7/防御-3）。係数は `src/core/config.ts` の `DEFAULT_STATS_CONFIG.visual` にあります。
+
+## 6. 調整したいときは config
+
+ロジックを書き換える必要はありません。
+
+```ts
+import { createGameConfig } from '../core/index.ts';
+
+const config = createGameConfig({
+  genetics: { mutationRate: 0.2, atavismRate: 0.3 },
+  stats: { totalCap: 600 },
+  battle: { criticalChance: 0.1, maxTurns: 100 },
+});
+const context = { rng: createSystemRandom(), config };
+```
+
+確率・係数・上限はすべて `src/core/config.ts` に集約してあります。バランス調整の要望はこのファイルの値への指定としてもらえると反映が早いです。
+
+## 7. 画像解析の現状
+
+`LocalMockMonsterAnalyzer` は**画像を実際には見ていません**。ファイルのハッシュから機械的に見た目を決める仮実装です（APIキーなしで動かすため）。赤い龍の絵を渡しても中身は一致しません。
+
+見た目を意図通りにしたい場合は、画像ではなくデータとして渡してください。
+
+```ts
+import { createMonsterFromAnalysis } from '../core/index.ts';
+
+const starter = createMonsterFromAnalysis({
+  bodyColor: 'red', bodyShape: 'muscular', size: 'large',
+  horns: 'twin', wings: 'membrane', tail: 'spiked',
+  eyes: 'sharp', element: 'fire', confidence: 1,
+}, context, { name: 'イグニス' });
+```
+
+本物の解析APIを繋ぐときも同じ関数のままで動きます（`RemoteMonsterAnalyzer` でハンドラを差し替える形。APIキーはリポジトリに置かず、環境変数またはサーバー側プロキシから渡します）。
+
+## 8. 未実装 / 相談したいこと
+
+core側で未着手の部分です。UI設計に影響するものは早めに決めたいです。
+
+- **スターターモンスター**: 未作成。見た目の組み合わせを決めてもらえればcore側で用意します（整合性を保つため、UI側で手書きしないでください）
+- **スキル**: 現在は属性由来の2種のみ（固有スキル＋通常攻撃）。種類を増やすか要相談
+- **状態異常・バフ/デバフ**: 未実装
+- **育成・レベルアップ**: 仕様に含まれていなかったため未実装
+- **パーティ戦のUI**: エンジンはN対N対応済み。`createBattle([[a,b,c],[d,e,f]])` で動きます
+
+## 9. コマンド
+
+```bash
+npm install
+npm run typecheck   # tsc --noEmit
+npm test            # node --test
+npm run check       # 両方
+```
+
+Node 24 の型ストリッピングで `.ts` を直接実行しています。ビルド手順はありません。import は拡張子付き（`'../core/index.ts'`）で書いてください。
