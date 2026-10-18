@@ -97,42 +97,90 @@ BODY_RIGS.serpentine.headScale  // 0.75（蛇型は頭が小さいので角も�
 
 ## 4. パレットスワップ
 
-**パーツは固定の参照色5色だけで描いてください。** 実行時にモンスターの色へ置換します。
+**パーツは固定の参照色だけで描いてください。** 実行時にモンスターの色へ置換します。
+
+### 4.1 素材ごとにチャンネルが分かれています
+
+当初、全パーツを体色1本のランプで塗る設計にしていました。**これは誤りでした** — 角も腹も翼も同じ色になり、キャラクターが単色に潰れます。素材別に分割し直しました。
+
+| チャンネル | 用途 | 色の決まり方 |
+|---|---|---|
+| `outline` | 全パーツ共通の輪郭 | 体色ごと |
+| `body` | 主な体表 | **`bodyColor` 遺伝子** |
+| `belly` | 腹・胸・口周り | 体色ごと（明るく彩度低め） |
+| `keratin` | 角・爪・牙・嘴 | **全モンスター共通の象牙色** |
+| `membrane` | 翼膜・ひれ | 体色ごと（薄く明るめ） |
+| `eye` | 目 | 琥珀色。**発光する目だけ属性色** |
+| `accent` | 宝石・発光・属性エフェクト | 属性ごと |
+
+`body` 以外を使う判断は**描き手に委ねます**。腹を塗りたければ `belly` のランプで塗ってください。
+
+実際の出力例:
+
+```
+緑・土   体 #4aa83c | 腹 #d0d898 | 角 #d8c9a0 | 翼膜 #6ab87a | 目 #e0a030
+赤・炎   体 #d6402e | 腹 #e8c0a0 | 角 #d8c9a0 | 翼膜 #d4707a | 目 #e0a030
+青・水   体 #2e7ad6 | 腹 #b0d0e8 | 角 #d8c9a0 | 翼膜 #5aaed4 | 目 #e0a030
+```
+
+**角の色はどの体色でも変わりません。** 角が体色に染まると角に見えなくなるためです。
+
+### 4.2 参照色（全17色）
+
+各チャンネルは3段（影・基本・ハイライト）です。
 
 ```ts
-import { REFERENCE_PALETTE } from '@core/core/index.ts';
+import { REFERENCE_PALETTE, referenceColors } from '@core/core/index.ts';
 
 {
-  outline: '#1b2030',   // 輪郭
-  shade:   '#4a4a6a',   // 影
-  base:    '#8a8ab0',   // 基本色
-  light:   '#c8c8e0',   // ハイライト
-  accent:  '#ff00ff',   // 属性色（宝石・発光部のみ。体には使わない）
+  outline:  '#1b2030',
+  body:     { shade:'#4a4a6a', base:'#8a8ab0', light:'#c8c8e0' },   // 紫がかった灰
+  belly:    { shade:'#6a5a3a', base:'#b09a6a', light:'#e0d0a0' },   // 茶
+  keratin:  { shade:'#3a5a4a', base:'#6aa88a', light:'#a8e0c0' },   // 緑
+  membrane: { shade:'#5a3a6a', base:'#a06ac0', light:'#d0a8e8' },   // 紫
+  eye:      { shade:'#7a2a2a', base:'#d04a4a', light:'#f09a9a' },   // 赤
+  accent:   '#ff00ff',
 }
 ```
 
-わざと見分けのつく値にしてあります。塗り間違いがレビューで一目で分かります。アンチエイリアスは禁止です（中間色が変換から漏れます）。
+チャンネル同士が**まったく違う色相**になっているのは意図的です。塗り間違い（腹の色で角を塗ってしまった等）が一目で分かりますし、見逃すと実行時に妙な色で出ます。
 
-`composition.colorMappings` が `from` → `to` の対応表です。canvas での実装例:
+`referenceColors()` が全17色を返すので、**素材チェッカーを書けます**。これ以外の色が1pxでもあれば弾いてください。アンチエイリアスの中間色もこれで検出できます。
+
+### 4.3 1パーツあたり2〜3チャンネル
+
+17色全部を1枚で使う必要はありません。実際には:
+
+- 体 → `body` + `belly` + `outline`（4〜7色）
+- 角 → `keratin` + `outline`（4色）
+- 翼 → `membrane` + `outline`（4色）
+- 目 → `eye` + `outline`（4色）
+- 口 → `keratin`（牙）+ `body`（口の内側は `belly` でも可）
+
+当時のドット絵も1パーツあたり3〜5色程度です。色数を絞ることが、むしろ密度のある見た目につながります。
+
+### 4.4 実装
+
+`composition.colorMappings` が17組の `from` → `to` を返します。
 
 ```ts
 function recolor(image: ImageData, mappings: ColorMapping[]): ImageData {
   const lut = new Map<number, [number, number, number]>();
-  for (const { from, to } of mappings) {
-    lut.set(hexToInt(from), hexToRgb(to));
-  }
+  for (const { from, to } of mappings) lut.set(hexToInt(from), hexToRgb(to));
+
   const d = image.data;
   for (let i = 0; i < d.length; i += 4) {
     if (d[i + 3] === 0) continue;                       // 透明はそのまま
     const key = (d[i] << 16) | (d[i + 1] << 8) | d[i + 2];
     const to = lut.get(key);
     if (to) { d[i] = to[0]; d[i + 1] = to[1]; d[i + 2] = to[2]; }
+    // 一致しない色は参照色の塗り間違いです。開発中は目立つ色で潰すと見つかります。
   }
   return image;
 }
 ```
 
-`accent` は属性色です。炎なら橙、闇なら紫になります。**体の色には使わないでください** — 体は `bodyColor` 遺伝子が決めます。
+`body` + `bodyColor` をキーにすれば、変換結果はパーツ単位でキャッシュできます。
 
 ## 5. 描画の流れ
 

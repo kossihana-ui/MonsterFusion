@@ -8,8 +8,9 @@ import {
   colorMappings,
   composeAppearance,
   createAppearanceConfig,
+  EYE_RAMP,
   paletteFor,
-  REFERENCE_PALETTE,
+  referenceColors,
   requiredPartKeys,
   SIZE_SCALES,
 } from '../src/core/appearance.ts';
@@ -152,23 +153,63 @@ test('every body shape has a rig with every anchor', () => {
 test('the palette comes from the colour gene, never from image analysis', () => {
   const green = composeAppearance({ ...basePhenotype, bodyColor: 'green' });
   const red = composeAppearance({ ...basePhenotype, bodyColor: 'red' });
-  assert.notEqual(green.palette.base, red.palette.base);
+  assert.notEqual(green.palette.body.base, red.palette.body.base);
 
-  // Element only tints the accent, never the body.
+  // Element only tints the accent, never the hide.
   const fire = composeAppearance({ ...basePhenotype, element: 'fire' });
-  assert.equal(fire.palette.base, green.palette.base);
+  assert.equal(fire.palette.body.base, green.palette.body.base);
   assert.notEqual(fire.palette.accent, green.palette.accent);
+});
+
+test('a monster is not one flat colour', () => {
+  const palette = composeAppearance(basePhenotype).palette;
+  const bases = [
+    palette.body.base,
+    palette.belly.base,
+    palette.keratin.base,
+    palette.membrane.base,
+    palette.eye.base,
+  ];
+  assert.equal(
+    new Set(bases).size,
+    bases.length,
+    'hide, belly, horn, wing and eye must each read as their own material',
+  );
+
+  // Horns are ivory whatever the creature is made of: a horn that takes the
+  // hide colour stops reading as a horn.
+  const green = composeAppearance({ ...basePhenotype, bodyColor: 'green' });
+  const purple = composeAppearance({ ...basePhenotype, bodyColor: 'purple' });
+  assert.deepEqual(green.palette.keratin, purple.palette.keratin);
+});
+
+test('glowing eyes are lit by the element, plain eyes are amber', () => {
+  const amber = composeAppearance({ ...basePhenotype, eyes: 'round', element: 'fire' });
+  const lit = composeAppearance({ ...basePhenotype, eyes: 'glowing', element: 'fire' });
+
+  assert.equal(amber.palette.eye.base, EYE_RAMP.base, 'an ordinary eye stays amber');
+  assert.equal(lit.palette.eye.base, amber.palette.accent, 'a glowing eye takes the element');
+  assert.notEqual(lit.palette.eye.base, lit.palette.body.base);
 });
 
 test('every body colour has a full palette and a complete mapping', () => {
   for (const bodyColor of DEFAULT_ALLELE_POOLS.bodyColor) {
     for (const element of DEFAULT_ALLELE_POOLS.element) {
       const palette = paletteFor(bodyColor, element);
-      for (const tone of ['outline', 'shade', 'base', 'light', 'accent'] as const) {
-        assert.match(palette[tone], /^#[0-9a-f]{6}$/i, `${bodyColor}.${tone}`);
+      assert.match(palette.outline, /^#[0-9a-f]{6}$/i, `${bodyColor}.outline`);
+      assert.match(palette.accent, /^#[0-9a-f]{6}$/i, `${bodyColor}.accent`);
+      for (const channel of ['body', 'belly', 'keratin', 'membrane', 'eye'] as const) {
+        for (const tone of ['shade', 'base', 'light'] as const) {
+          assert.match(
+            palette[channel][tone],
+            /^#[0-9a-f]{6}$/i,
+            `${bodyColor}.${channel}.${tone}`,
+          );
+        }
       }
+
       const mappings = colorMappings(palette);
-      assert.equal(mappings.length, 5);
+      assert.equal(mappings.length, 17, 'outline + accent + five three-step ramps');
       for (const mapping of mappings) {
         assert.match(mapping.from, /^#[0-9a-f]{6}$/i);
         assert.match(mapping.to, /^#[0-9a-f]{6}$/i);
@@ -177,9 +218,39 @@ test('every body colour has a full palette and a complete mapping', () => {
   }
 });
 
-test('the reference palette has no duplicate tones', () => {
-  const tones = Object.values(REFERENCE_PALETTE);
-  assert.equal(new Set(tones).size, tones.length, 'a duplicate would make the swap ambiguous');
+test('each ramp goes dark to light', () => {
+  const luminance = (hex: string): number => {
+    const n = Number.parseInt(hex.slice(1), 16);
+    return ((n >> 16) & 255) * 0.299 + ((n >> 8) & 255) * 0.587 + (n & 255) * 0.114;
+  };
+  for (const bodyColor of DEFAULT_ALLELE_POOLS.bodyColor) {
+    const palette = paletteFor(bodyColor, 'neutral');
+    for (const channel of ['body', 'belly', 'keratin', 'membrane', 'eye'] as const) {
+      const ramp = palette[channel];
+      assert.ok(
+        luminance(ramp.shade) < luminance(ramp.base),
+        `${bodyColor}.${channel}: shade is not darker than base`,
+      );
+      assert.ok(
+        luminance(ramp.base) < luminance(ramp.light),
+        `${bodyColor}.${channel}: light is not brighter than base`,
+      );
+    }
+    assert.ok(
+      luminance(palette.outline) < luminance(palette.body.shade),
+      `${bodyColor}: the outline must be the darkest tone`,
+    );
+  }
+});
+
+test('no two reference colours collide', () => {
+  const colors = referenceColors();
+  assert.equal(
+    new Set(colors).size,
+    colors.length,
+    'a duplicate would make the swap ambiguous',
+  );
+  assert.equal(colors.length, 17);
 });
 
 test('the appearance key ignores everything that is not drawn', () => {

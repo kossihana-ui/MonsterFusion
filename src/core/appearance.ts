@@ -193,39 +193,124 @@ export const BODY_RIGS: Readonly<Record<BodyShape, BodyRig>> = {
 // ---------------------------------------------------------------------------
 
 /**
- * The four tones a part is authored in. The renderer swaps these exact values
- * for the monster's own palette, so one sprite serves every body colour.
+ * A three-step ramp: one material, lit, mid and in shadow.
+ *
+ * Pixel art of this era gets its richness from several short ramps rather than
+ * one long one. Three steps is what a 64x64 sprite can actually show.
  */
-export interface Palette {
-  readonly outline: string;
+export interface Ramp {
   readonly shade: string;
   readonly base: string;
   readonly light: string;
-  /** Element tint for glows, gems and energy. Not used for the body itself. */
+}
+
+/**
+ * A monster's full palette, split by material.
+ *
+ * Everything used to be recoloured to a single body ramp, which flattened the
+ * creature into one colour: horns, belly and wings all came out the same.
+ * Splitting it by material is what gives a monster of this era its read - a
+ * green body with a cream belly, ivory horns and a translucent wing, all at
+ * once.
+ *
+ * A part is authored in whichever channels it needs, usually two or three.
+ */
+export interface Palette {
+  /** Shared by every part, so the silhouette reads as one creature. */
+  readonly outline: string;
+  /** The main hide. The `bodyColor` gene decides this one. */
+  readonly body: Ramp;
+  /** Underside, chest and muzzle. Lighter and less saturated than the body. */
+  readonly belly: Ramp;
+  /** Horns, claws, beaks, tusks and fangs. Ivory, barely tinted by the hide. */
+  readonly keratin: Ramp;
+  /** Wing membranes and fins. Related to the body but thinner and brighter. */
+  readonly membrane: Ramp;
+  /** Eyes. Amber by default; a glowing eye takes the element colour instead. */
+  readonly eye: Ramp;
+  /** Element tint for glows, gems and energy. Never the hide. */
   readonly accent: string;
 }
 
 /**
- * The reference ramp every part asset must be drawn in. Deliberately a set of
- * flat, unmistakable values so a mis-coloured pixel is obvious in review.
+ * The reference palette every part asset is drawn in.
+ *
+ * The channels are deliberately unrelated hues - brown belly, green keratin,
+ * purple membrane, red eye - so a pixel in the wrong channel is obvious at a
+ * glance instead of surviving review and then recolouring wrongly in play.
  */
 export const REFERENCE_PALETTE: Palette = {
   outline: '#1b2030',
-  shade: '#4a4a6a',
-  base: '#8a8ab0',
-  light: '#c8c8e0',
+  body: { shade: '#4a4a6a', base: '#8a8ab0', light: '#c8c8e0' },
+  belly: { shade: '#6a5a3a', base: '#b09a6a', light: '#e0d0a0' },
+  keratin: { shade: '#3a5a4a', base: '#6aa88a', light: '#a8e0c0' },
+  membrane: { shade: '#5a3a6a', base: '#a06ac0', light: '#d0a8e8' },
+  eye: { shade: '#7a2a2a', base: '#d04a4a', light: '#f09a9a' },
   accent: '#ff00ff',
 };
 
-export const BODY_PALETTES: Readonly<Record<BodyColor, Omit<Palette, 'accent'>>> = {
-  red: { outline: '#2a1016', shade: '#8c2020', base: '#d6402e', light: '#f58a5a' },
-  blue: { outline: '#0e1b32', shade: '#1b4a8c', base: '#2e7ad6', light: '#6fb8f5' },
-  green: { outline: '#122a14', shade: '#2a6b2e', base: '#4aa83c', light: '#8fd96a' },
-  yellow: { outline: '#33280c', shade: '#9c7a14', base: '#e0b526', light: '#f7e07a' },
-  purple: { outline: '#201033', shade: '#5a2a8c', base: '#8f4ad6', light: '#c08af5' },
-  white: { outline: '#2a2a33', shade: '#9a9aa8', base: '#dcdce6', light: '#ffffff' },
-  black: { outline: '#08080c', shade: '#2a2a36', base: '#44445a', light: '#70708c' },
+/** What a body colour means for the hide, the belly and a wing membrane. */
+export interface HidePalette {
+  readonly outline: string;
+  readonly body: Ramp;
+  readonly belly: Ramp;
+  readonly membrane: Ramp;
+}
+
+export const BODY_PALETTES: Readonly<Record<BodyColor, HidePalette>> = {
+  red: {
+    outline: '#2a1016',
+    body: { shade: '#8c2020', base: '#d6402e', light: '#f58a5a' },
+    belly: { shade: '#a8705a', base: '#e8c0a0', light: '#f8e4d0' },
+    membrane: { shade: '#8c3a4a', base: '#d4707a', light: '#f0a8b0' },
+  },
+  blue: {
+    outline: '#0e1b32',
+    body: { shade: '#1b4a8c', base: '#2e7ad6', light: '#6fb8f5' },
+    belly: { shade: '#5a7a9a', base: '#b0d0e8', light: '#dceaf8' },
+    membrane: { shade: '#2a6a8c', base: '#5aaed4', light: '#9fd8f0' },
+  },
+  green: {
+    outline: '#122a14',
+    body: { shade: '#2a6b2e', base: '#4aa83c', light: '#8fd96a' },
+    belly: { shade: '#7a8a50', base: '#d0d898', light: '#eef0cc' },
+    membrane: { shade: '#3a7a4a', base: '#6ab87a', light: '#a8e0b0' },
+  },
+  yellow: {
+    outline: '#33280c',
+    body: { shade: '#9c7a14', base: '#e0b526', light: '#f7e07a' },
+    belly: { shade: '#a08a40', base: '#e8d8a0', light: '#f8f0d8' },
+    membrane: { shade: '#b08a2a', base: '#e8c860', light: '#f8e8a8' },
+  },
+  purple: {
+    outline: '#201033',
+    body: { shade: '#5a2a8c', base: '#8f4ad6', light: '#c08af5' },
+    belly: { shade: '#7a6a9a', base: '#c8b8e0', light: '#e8e0f4' },
+    membrane: { shade: '#6a3a9c', base: '#a86ae0', light: '#d0a8f0' },
+  },
+  white: {
+    outline: '#2a2a33',
+    body: { shade: '#9a9aa8', base: '#dcdce6', light: '#ffffff' },
+    belly: { shade: '#b0b0bc', base: '#ececf2', light: '#fdfdff' },
+    membrane: { shade: '#a8a8c0', base: '#e0e0ee', light: '#fafaff' },
+  },
+  black: {
+    outline: '#08080c',
+    body: { shade: '#2a2a36', base: '#44445a', light: '#70708c' },
+    belly: { shade: '#3a3a4a', base: '#5a5a72', light: '#8a8aa4' },
+    membrane: { shade: '#30303f', base: '#4e4e66', light: '#7c7c98' },
+  },
 };
+
+/**
+ * Horn and claw colour hardly varies between creatures in this style, so it is
+ * shared rather than derived. It is what keeps a horn reading as a horn
+ * instead of as another lump of hide.
+ */
+export const KERATIN_RAMP: Ramp = { shade: '#8a7a5c', base: '#d8c9a0', light: '#f3ead0' };
+
+/** Amber, the default eye. A glowing eye swaps to the element accent. */
+export const EYE_RAMP: Ramp = { shade: '#7a4a10', base: '#e0a030', light: '#ffe9a0' };
 
 export const ELEMENT_ACCENTS: Readonly<Record<Element, string>> = {
   neutral: '#cfd6e0',
@@ -237,9 +322,30 @@ export const ELEMENT_ACCENTS: Readonly<Record<Element, string>> = {
   dark: '#9a5ad6',
 };
 
+export interface PaletteOptions {
+  /** A glowing eye is lit by the element rather than being plain amber. */
+  readonly glowingEyes?: boolean;
+}
+
 /** The palette a monster's parts are recoloured to. */
-export function paletteFor(bodyColor: BodyColor, element: Element): Palette {
-  return { ...BODY_PALETTES[bodyColor], accent: ELEMENT_ACCENTS[element] };
+export function paletteFor(
+  bodyColor: BodyColor,
+  element: Element,
+  options: PaletteOptions = {},
+): Palette {
+  const hide = BODY_PALETTES[bodyColor];
+  const accent = ELEMENT_ACCENTS[element];
+  return {
+    outline: hide.outline,
+    body: hide.body,
+    belly: hide.belly,
+    keratin: KERATIN_RAMP,
+    membrane: hide.membrane,
+    eye: options.glowingEyes
+      ? { shade: hide.outline, base: accent, light: '#ffffff' }
+      : EYE_RAMP,
+    accent,
+  };
 }
 
 /** One reference colour and what it becomes. The renderer applies these. */
@@ -248,14 +354,28 @@ export interface ColorMapping {
   readonly to: string;
 }
 
+const RAMP_CHANNELS = ['body', 'belly', 'keratin', 'membrane', 'eye'] as const;
+const TONES = ['shade', 'base', 'light'] as const;
+
 export function colorMappings(palette: Palette): ColorMapping[] {
-  return [
+  const mappings: ColorMapping[] = [
     { from: REFERENCE_PALETTE.outline, to: palette.outline },
-    { from: REFERENCE_PALETTE.shade, to: palette.shade },
-    { from: REFERENCE_PALETTE.base, to: palette.base },
-    { from: REFERENCE_PALETTE.light, to: palette.light },
     { from: REFERENCE_PALETTE.accent, to: palette.accent },
   ];
+  for (const channel of RAMP_CHANNELS) {
+    for (const tone of TONES) {
+      mappings.push({ from: REFERENCE_PALETTE[channel][tone], to: palette[channel][tone] });
+    }
+  }
+  return mappings;
+}
+
+/**
+ * Every colour a part asset is allowed to contain. An asset linter can reject
+ * anything else, which catches an anti-aliased edge before it ships.
+ */
+export function referenceColors(): string[] {
+  return colorMappings(REFERENCE_PALETTE).map((mapping) => mapping.from);
 }
 
 // ---------------------------------------------------------------------------
@@ -330,8 +450,12 @@ export interface SpriteComposition {
 export interface AppearanceConfig {
   readonly rigs: Readonly<Record<BodyShape, BodyRig>>;
   readonly sizeScales: Readonly<Record<BodySize, number>>;
-  readonly bodyPalettes: Readonly<Record<BodyColor, Omit<Palette, 'accent'>>>;
+  readonly bodyPalettes: Readonly<Record<BodyColor, HidePalette>>;
   readonly elementAccents: Readonly<Record<Element, string>>;
+  /** Horn and claw colour, shared by every monster. */
+  readonly keratin: Ramp;
+  /** Default eye colour, used unless the eyes glow. */
+  readonly eye: Ramp;
   /** Wings drawn behind the body rather than in front. */
   readonly wingsBehind: Readonly<Record<WingType, boolean>>;
 }
@@ -341,6 +465,8 @@ export const DEFAULT_APPEARANCE_CONFIG: AppearanceConfig = {
   sizeScales: SIZE_SCALES,
   bodyPalettes: BODY_PALETTES,
   elementAccents: ELEMENT_ACCENTS,
+  keratin: KERATIN_RAMP,
+  eye: EYE_RAMP,
   wingsBehind: {
     none: true,
     feathered: true,
@@ -423,9 +549,20 @@ export function composeAppearance(
 
   layers.sort((a, b) => a.z - b.z);
 
-  const palette = {
-    ...config.bodyPalettes[phenotype.bodyColor],
-    accent: config.elementAccents[phenotype.element],
+  const hide = config.bodyPalettes[phenotype.bodyColor];
+  const accent = config.elementAccents[phenotype.element];
+  const palette: Palette = {
+    outline: hide.outline,
+    body: hide.body,
+    belly: hide.belly,
+    keratin: config.keratin,
+    membrane: hide.membrane,
+    // A glowing eye is the one place the element reaches the creature itself.
+    eye:
+      phenotype.eyes === 'glowing'
+        ? { shade: hide.outline, base: accent, light: '#ffffff' }
+        : config.eye,
+    accent,
   };
 
   return {
