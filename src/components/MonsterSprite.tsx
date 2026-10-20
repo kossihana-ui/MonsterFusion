@@ -1,7 +1,8 @@
 import { useEffect, useRef, useState } from "react";
-import { poseAt } from "@core/core/index.ts";
+import { poseAt, restPose } from "@core/core/index.ts";
 import type { AnimationName, MonsterPhenotype } from "@core/core/index.ts";
 import { compositionFor, drawPose, prepareParts } from "./sprites/renderer";
+import { drawIllustration, prepareIllustration } from "./sprites/illustration";
 import "../styles/sprites.css";
 
 export interface SpriteMotion {
@@ -14,12 +15,14 @@ export function MonsterSprite({
   id,
   facingRight = false,
   motion,
+  image,
 }: {
   phenotype: MonsterPhenotype;
   name: string;
   id: string;
   facingRight?: boolean;
   motion?: SpriteMotion;
+  image?: string;
 }) {
   const ref = useRef<HTMLCanvasElement>(null);
   const [failed, setFailed] = useState(false);
@@ -42,17 +45,18 @@ export function MonsterSprite({
       visible = entries[0]?.isIntersecting ?? true;
     });
     observer.observe(canvas);
-    prepareParts(composition)
-      .then((assets) => {
+    Promise.all([image ? prepareIllustration(image) : Promise.resolve(null),
+      image ? Promise.resolve(new Map<string, HTMLCanvasElement>()) : prepareParts(composition)])
+      .then(([illustration, assets]) => {
         if (disposed) return;
-        if (!assets.has(`body/${phenotype.bodyShape}`)) {
+        if (!illustration && !assets.has(`body/${phenotype.bodyShape}`)) {
           setFailed(true);
           return;
         }
         const tick = (now: number) => {
           if (disposed) return;
           if (visible && !document.hidden) {
-            let pose = poseAt(composition, {
+            let pose = reduced.matches ? restPose(composition) : poseAt(composition, {
               animation: reduced.matches ? "idle" : animation,
               timeMs: reduced.matches ? 0 : now - started,
               phase: reduced.matches ? 0 : phase,
@@ -65,7 +69,8 @@ export function MonsterSprite({
                 phase,
                 facingRight,
               });
-            drawPose(ctx, pose, assets, facingRight);
+            if (illustration) drawIllustration(ctx, pose, illustration, facingRight);
+            else drawPose(ctx, pose, assets, facingRight);
           }
           frame = requestAnimationFrame(tick);
         };
@@ -79,14 +84,14 @@ export function MonsterSprite({
       cancelAnimationFrame(frame);
       observer.disconnect();
     };
-  }, [phenotype, id, facingRight, animation, sequence]);
+  }, [phenotype, id, facingRight, animation, sequence, image]);
   return (
     <>
       <canvas
         ref={ref}
         className="monster-sprite"
-        width={64}
-        height={64}
+        width={image ? 256 : 64}
+        height={image ? 256 : 64}
         role="img"
         aria-label={`${name}のドット絵`}
       />

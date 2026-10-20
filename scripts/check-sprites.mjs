@@ -21,7 +21,7 @@ try {
     core.requiredPartKeys().sort(),
   );
   const colors = new Set(
-    Object.values(core.REFERENCE_PALETTE).map((v) => v.slice(1).toLowerCase()),
+    core.referenceColors().map((v) => v.slice(1).toLowerCase()),
   );
   for (const [key, spec] of Object.entries(manifest)) {
     const png = readFileSync(resolve("src/mocks/assets/parts", key + ".png"));

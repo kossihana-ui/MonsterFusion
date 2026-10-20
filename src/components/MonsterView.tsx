@@ -23,6 +23,7 @@ export function Portrait({
           id={monster.id}
           facingRight={facingRight}
           motion={motion}
+          image={monster.image || undefined}
         />
       ) : (
         <img
