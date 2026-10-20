@@ -5,9 +5,14 @@ starter image to `MonsterSprite`; `illustration.ts` splits Moss at draw time int
 body, flower and vine layers, retaining the original RGBA values. Two-pixel
 underlaps at the joints reduce gaps. Anchors are in original image coordinates.
 
-All layers inherit the body movement once. Flower and vine add their own
-anchor-based sway from core's `poseAt`. Attack/hurt timing and battle decisions
-remain in core. Reduced-motion mode uses `restPose`. A 256 × 256 backing canvas
+While idle, Moss's body stays planted. The flower swings ±5 degrees over 3.1s;
+the vine uses a separate 2.3s cycle (±8 degrees plus a small secondary oscillation).
+Both rotate about their attachment, without moving the whole image. These are
+UI-only decorative clocks, independent of game randomness.
+During attack/hurt, all layers inherit body movement once and add secondary
+anchor-based sway from core's `poseAt`. Timing and battle decisions remain in
+core. Reduced-motion mode uses `restPose` and disables the decorative clocks.
+A 256 × 256 backing canvas
 allows quarter-source-pixel movement; source artwork is still 64 × 64 and
 interpolation is disabled.
 

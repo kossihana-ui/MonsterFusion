@@ -16,7 +16,12 @@ globalThis.Image = class extends Image {
 };
 const server = await createServer({ server: { middlewareMode: true }, appType: "custom" });
 try {
-  const { prepareIllustration, drawIllustration } = await server.ssrLoadModule("/src/components/sprites/illustration.ts");
+  const { prepareIllustration, drawIllustration, illustrationIdleAngle } = await server.ssrLoadModule("/src/components/sprites/illustration.ts");
+  assert.equal(illustrationIdleAngle("body", 775), 0, "Body must stay planted");
+  assert.ok(illustrationIdleAngle("crest", 775) > 4.9, "Flower swings independently");
+  assert.ok(illustrationIdleAngle("tail", 1550) < 0 &&
+    Math.abs(illustrationIdleAngle("crest", 1550)) < 0.001,
+    "Tail keeps moving when the flower returns to centre");
   const core = await server.ssrLoadModule("@core/core/index.ts");
   const monsters = core.createStarterMonsters({ rng: core.createSeededRandom(12345) });
   const sheet = createCanvas(1024, 768), sc = sheet.getContext("2d");
@@ -38,7 +43,7 @@ try {
       const c = createCanvas(256, 256);
       drawIllustration(c.getContext("2d"), core.poseAt(composition, {
         animation: "idle", timeMs: col * 650,
-      }), parts, false);
+      }), parts, false, col * 650);
       frames.push(c.toBuffer("image/png"));
       sc.drawImage(c, col * 256, row * 256);
     }

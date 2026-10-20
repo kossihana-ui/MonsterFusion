@@ -69,7 +69,8 @@ export function MonsterSprite({
                 phase,
                 facingRight,
               });
-            if (illustration) drawIllustration(ctx, pose, illustration, facingRight);
+            if (illustration) drawIllustration(ctx, pose, illustration, facingRight,
+              reduced.matches ? null : now - started + phase);
             else drawPose(ctx, pose, assets, facingRight);
           }
           frame = requestAnimationFrame(tick);

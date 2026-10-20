@@ -9,6 +9,18 @@ export interface IllustrationPart {
 const mossUrl = new URL("../../mocks/assets/starters/moss-v2-64.png", import.meta.url).href;
 const cache = new Map<string, Promise<IllustrationPart[]>>();
 
+// Presentation-only idle motion. Each attachment has its own clock rather than
+// being a smaller copy of the body's breathing cycle. Null means truly still.
+export function illustrationIdleAngle(kind: Region, timeMs: number): number {
+  const turn = Math.PI * 2;
+  if (kind === "crest")
+    return 5 * Math.sin(timeMs / 3100 * turn);
+  if (kind === "tail")
+    return 8 * Math.sin(timeMs / 2300 * turn) +
+      1.5 * Math.sin(timeMs / 1150 * turn);
+  return 0;
+}
+
 // Source-space masks, not replacement artwork. Every original colour survives.
 // The split crosses the narrow flower stem and vine root, not the face.
 export function mossRegion(x: number, y: number): Region {
@@ -65,26 +77,33 @@ export function prepareIllustration(url: string): Promise<IllustrationPart[]> {
 export function drawIllustration(
   ctx: CanvasRenderingContext2D, pose: Pose,
   parts: IllustrationPart[], facingRight: boolean,
+  idleTimeMs: number | null = null,
 ) {
   ctx.clearRect(0, 0, ctx.canvas.width, ctx.canvas.height);
   ctx.imageSmoothingEnabled = false;
   const body = pose.layers.find(layer => layer.kind === "body")?.transform;
   if (!body) return;
+  const independentIdle = parts.length > 1 && pose.animation === "idle";
   ctx.save();
   // A 64-pixel source remains unchanged; a 4x drawing surface permits smoother
   // movement than rounding every position to one whole source pixel.
   ctx.scale(ctx.canvas.width / 64, ctx.canvas.height / 64);
-  ctx.translate(32 + body.offsetX, 54 + body.offsetY);
+  ctx.translate(32 + (independentIdle ? 0 : body.offsetX),
+    54 + (independentIdle ? 0 : body.offsetY));
   ctx.scale(facingRight ? -1 : 1, 1);
-  ctx.rotate(body.rotation * Math.PI / 180 * (facingRight ? -1 : 1));
-  ctx.scale(1 + (body.scaleX - 1) * .45, 1 + (body.scaleY - 1) * .45);
+  if (!independentIdle) {
+    ctx.rotate(body.rotation * Math.PI / 180 * (facingRight ? -1 : 1));
+    ctx.scale(1 + (body.scaleX - 1) * .45, 1 + (body.scaleY - 1) * .45);
+  }
   ctx.translate(-32, -54);
   for (const part of parts) {
     const local = pose.layers.find(layer => layer.kind === part.kind)?.transform;
     ctx.save();
     const [x, y] = part.anchor;
     ctx.translate(x, y);
-    if (part.kind !== "body" && local) {
+    if (independentIdle && idleTimeMs !== null) {
+      ctx.rotate(illustrationIdleAngle(part.kind, idleTimeMs) * Math.PI / 180);
+    } else if (!independentIdle && part.kind !== "body" && local) {
       // Inherit the body's movement once; only secondary sway is local.
       ctx.rotate((local.rotation - body.rotation) * .55 * Math.PI / 180 *
         (facingRight ? -1 : 1));
