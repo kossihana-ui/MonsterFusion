@@ -311,3 +311,108 @@ test('the rig and the scales are configurable', () => {
   const composition = composeAppearance({ ...basePhenotype, size: 'giant' }, config);
   assert.equal(composition.sizeScale, 2);
 });
+
+// ---------------------------------------------------------------------------
+// Rig invariants
+//
+// The rig was first written before any art existed, and the guesses showed:
+// eyes hung off faces, tails floated behind bodies, and a fitting pass once
+// put a jaw above the eyes because nothing said which way up a face is. These
+// lock in what the art cannot tell us but anatomy can.
+// ---------------------------------------------------------------------------
+
+test('every body wears its features the right way up', () => {
+  for (const [shape, rig] of Object.entries(BODY_RIGS)) {
+    const a = rig.anchors;
+    assert.ok(
+      a.crest.y <= a.horns.y,
+      `${shape}: the crest (${a.crest.y}) must sit above the horns (${a.horns.y})`,
+    );
+    assert.ok(
+      a.horns.y <= a.eyes.y,
+      `${shape}: horns (${a.horns.y}) do not grow below the eyes (${a.eyes.y})`,
+    );
+    assert.ok(
+      a.jaw.y > a.eyes.y,
+      `${shape}: the jaw (${a.jaw.y}) must sit below the eyes (${a.eyes.y})`,
+    );
+    assert.ok(
+      a.jaw.y - a.eyes.y <= 12,
+      `${shape}: the jaw is ${a.jaw.y - a.eyes.y}px below the eyes, which is off the face`,
+    );
+    assert.ok(
+      a.head.y > a.crest.y && a.head.y < a.jaw.y,
+      `${shape}: the head centre must lie between the crest and the jaw`,
+    );
+  }
+});
+
+test('the tail sits behind the body and the wings on it', () => {
+  for (const [shape, rig] of Object.entries(BODY_RIGS)) {
+    const a = rig.anchors;
+    assert.ok(
+      a.tail.x > a.wings.x,
+      `${shape}: the tail (${a.tail.x}) should be further back than the wings (${a.wings.x})`,
+    );
+    assert.ok(a.tail.y > a.eyes.y, `${shape}: the tail should not grow out of the head`);
+  }
+});
+
+test('head and limb scales stay in a sane range', () => {
+  for (const [shape, rig] of Object.entries(BODY_RIGS)) {
+    assert.ok(rig.headScale > 0.5 && rig.headScale <= 1.2, `${shape}: headScale ${rig.headScale}`);
+    assert.ok(rig.limbScale > 0.5 && rig.limbScale <= 1.5, `${shape}: limbScale ${rig.limbScale}`);
+  }
+});
+
+test('an anchor tracks the body it is attached to, at every size', () => {
+  // Both the body art and the anchors scale about the canvas centre, so a
+  // feature painted at a point on the body and the anchor meant to sit on it
+  // move together. If these ever diverge, parts drift apart as a monster grows
+  // - which is exactly how the first rig failed.
+  const centre = CANVAS_SIZE / 2;
+  for (const size of ['tiny', 'small', 'medium', 'large', 'giant'] as const) {
+    const scale = SIZE_SCALES[size];
+    for (const [shape, rig] of Object.entries(BODY_RIGS)) {
+      const composition = composeAppearance({
+        ...basePhenotype,
+        bodyShape: shape as never,
+        size,
+        horns: 'twin',
+      });
+      const body = composition.layers.find((l) => l.kind === 'body');
+      const horns = composition.layers.find((l) => l.kind === 'horns');
+      assert.ok(body && horns);
+
+      // Where the horn anchor sits relative to the body origin must be the
+      // unscaled offset times the scale, with no extra term.
+      const expectedX = centre + (rig.anchors.horns.x - centre) * scale;
+      const expectedY = centre + (rig.anchors.horns.y - centre) * scale;
+      assert.ok(
+        Math.abs(horns.anchor.x - expectedX) < 0.02 &&
+          Math.abs(horns.anchor.y - expectedY) < 0.02,
+        `${shape}/${size}: the horn anchor drifted from the body`,
+      );
+
+      // And the body itself must scale about the same point.
+      assert.ok(
+        Math.abs(body.anchor.x - (centre + (rig.origin.x - centre) * scale)) < 0.02,
+        `${shape}/${size}: the body does not scale about the canvas centre`,
+      );
+    }
+  }
+});
+
+test('scaling is applied once, not twice', () => {
+  const medium = composeAppearance({ ...basePhenotype, size: 'medium', horns: 'twin' });
+  const giant = composeAppearance({ ...basePhenotype, size: 'giant', horns: 'twin' });
+  const hornOf = (c: typeof medium) => c.layers.find((l) => l.kind === 'horns');
+  const a = hornOf(medium);
+  const b = hornOf(giant);
+  assert.ok(a && b);
+  const ratio = b.scale / a.scale;
+  assert.ok(
+    Math.abs(ratio - SIZE_SCALES.giant / SIZE_SCALES.medium) < 1e-6,
+    `the size scale was applied ${ratio.toFixed(2)}x instead of once`,
+  );
+});
