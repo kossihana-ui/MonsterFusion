@@ -140,6 +140,7 @@ export {
   EYE_RAMP,
   KERATIN_RAMP,
   paletteFor,
+  PART_SCALES,
   REFERENCE_PALETTE,
   referenceColors,
   requiredPartKeys,

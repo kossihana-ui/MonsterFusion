@@ -79,6 +79,15 @@ export interface BodyRig {
   readonly headScale: number;
   /** Multiplier for wings and tail, which follow the body rather than the head. */
   readonly limbScale: number;
+  /**
+   * Per-slot correction for this body shape, on top of head and limb scale.
+   *
+   * Occlusion tracks the forehead a body has, not the horn asset: a shape with
+   * a short brow wears the same horn art much closer to its eyes than a round
+   * one does. That makes the correction belong to the shape, which is what
+   * this is for. Missing entries mean 1.
+   */
+  readonly partScale?: Partial<Record<LayerKind, number>>;
   /** Mirrors parts that would otherwise point the wrong way. */
   readonly facing: 'left' | 'right';
 }
@@ -111,7 +120,7 @@ export const BODY_RIGS: Readonly<Record<BodyShape, BodyRig>> = {
     anchors: {
       body: { x: 32, y: 36 },
       head: { x: 27, y: 22 },
-      eyes: { x: 27, y: 21 },
+      eyes: { x: 27, y: 22 },
       jaw: { x: 30, y: 29 },
       crest: { x: 31, y: 16 },
       horns: { x: 31, y: 16 },
@@ -120,6 +129,7 @@ export const BODY_RIGS: Readonly<Record<BodyShape, BodyRig>> = {
     },
     headScale: 0.7,
     limbScale: 0.95,
+    partScale: { horns: 0.9 },
     facing: 'left',
   },
   muscular: {
@@ -127,7 +137,7 @@ export const BODY_RIGS: Readonly<Record<BodyShape, BodyRig>> = {
     anchors: {
       body: { x: 32, y: 38 },
       head: { x: 27, y: 23 },
-      eyes: { x: 27, y: 22 },
+      eyes: { x: 27, y: 24 },
       jaw: { x: 32, y: 31 },
       crest: { x: 30, y: 15 },
       horns: { x: 30, y: 16 },
@@ -136,14 +146,15 @@ export const BODY_RIGS: Readonly<Record<BodyShape, BodyRig>> = {
     },
     headScale: 1.0,
     limbScale: 1.1,
+    partScale: { horns: 0.9 },
     facing: 'left',
   },
   serpentine: {
     origin: { x: 32, y: 40 },
     anchors: {
       body: { x: 32, y: 40 },
-      head: { x: 25, y: 19 },
-      eyes: { x: 25, y: 20 },
+      head: { x: 24, y: 20 },
+      eyes: { x: 24, y: 20 },
       jaw: { x: 25, y: 26 },
       crest: { x: 26, y: 13 },
       horns: { x: 26, y: 13 },
@@ -158,8 +169,8 @@ export const BODY_RIGS: Readonly<Record<BodyShape, BodyRig>> = {
     origin: { x: 32, y: 36 },
     anchors: {
       body: { x: 32, y: 36 },
-      head: { x: 29, y: 22 },
-      eyes: { x: 29, y: 22 },
+      head: { x: 28, y: 22 },
+      eyes: { x: 28, y: 22 },
       jaw: { x: 30, y: 30 },
       crest: { x: 31, y: 15 },
       horns: { x: 31, y: 15 },
@@ -174,8 +185,8 @@ export const BODY_RIGS: Readonly<Record<BodyShape, BodyRig>> = {
     origin: { x: 32, y: 38 },
     anchors: {
       body: { x: 32, y: 38 },
-      head: { x: 26, y: 32 },
-      eyes: { x: 26, y: 32 },
+      head: { x: 25, y: 32 },
+      eyes: { x: 25, y: 34 },
       jaw: { x: 24, y: 38 },
       crest: { x: 32, y: 25 },
       horns: { x: 28, y: 26 },
@@ -186,6 +197,22 @@ export const BODY_RIGS: Readonly<Record<BodyShape, BodyRig>> = {
     limbScale: 1,
     facing: 'left',
   },
+};
+
+/**
+ * Per-asset size correction, applied on top of the slot's scale.
+ *
+ * Some parts are drawn larger than the rest of their slot. The ram horns are
+ * 42px wide against 30px for every other horn, which is 1.4x, and at full size
+ * they cover a face rather than crowning it. Shrinking the asset would lose
+ * the detail; scaling it at draw time keeps it.
+ *
+ * Only put a part here when it is out of step with its own slot. A part that
+ * is big everywhere is a body-shape problem - use `BodyRig.partScale`.
+ */
+export const PART_SCALES: Readonly<Record<string, number>> = {
+  // 42px of art against a 30px slot median.
+  'horns/spiral': 0.75,
 };
 
 // ---------------------------------------------------------------------------
@@ -456,6 +483,8 @@ export interface AppearanceConfig {
   readonly keratin: Ramp;
   /** Default eye colour, used unless the eyes glow. */
   readonly eye: Ramp;
+  /** Per-asset size corrections. See `PART_SCALES`. */
+  readonly partScales: Readonly<Record<string, number>>;
   /** Wings drawn behind the body rather than in front. */
   readonly wingsBehind: Readonly<Record<WingType, boolean>>;
 }
@@ -467,6 +496,7 @@ export const DEFAULT_APPEARANCE_CONFIG: AppearanceConfig = {
   elementAccents: ELEMENT_ACCENTS,
   keratin: KERATIN_RAMP,
   eye: EYE_RAMP,
+  partScales: PART_SCALES,
   wingsBehind: {
     none: true,
     feathered: true,
@@ -513,7 +543,17 @@ export function composeAppearance(
     anchor: Point,
     scale: number,
   ): void => {
-    layers.push({ kind, part, z: LAYER_ORDER.indexOf(kind), anchor, scale, flipX });
+    // Slot scale, then this shape's correction, then the asset's own.
+    const corrected =
+      scale * (rig.partScale?.[kind] ?? 1) * (config.partScales[part] ?? 1);
+    layers.push({
+      kind,
+      part,
+      z: LAYER_ORDER.indexOf(kind),
+      anchor,
+      scale: Math.round(corrected * 1000) / 1000,
+      flipX,
+    });
   };
 
   const wingsBehind = config.wingsBehind[phenotype.wings] ?? true;
