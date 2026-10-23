@@ -12,6 +12,7 @@
 
 import type {
   FusionRecord,
+  GeneLocus,
   Monster,
   MonsterGenes,
   MonsterId,
@@ -75,6 +76,8 @@ export function normalizeMonster(monster: Monster): Monster {
     parentBId: monster.parentBId,
     generation: monster.generation,
     tier: monster.tier,
+    mutatedLoci: [...monster.mutatedLoci],
+    atavismLoci: [...monster.atavismLoci],
     genes: monster.genes,
     phenotype: monster.phenotype,
     traits: [...monster.traits],
@@ -91,6 +94,20 @@ export function normalizeMonster(monster: Monster): Monster {
 
 /** Transforms a payload from version `n` to version `n + 1`. */
 export type Migration = (data: Record<string, unknown>) => Record<string, unknown>;
+
+/**
+ * Fills the mutation and atavism loci introduced by schema version 4.
+ *
+ * A version 3 monster knows how many loci mutated but not which, and that is
+ * not recoverable, so the lists start empty. An old monster therefore shows
+ * no mutation tags; its `mutationCount` is untouched.
+ */
+function addV4Loci(monster: Record<string, unknown>): Record<string, unknown> {
+  const next = { ...monster };
+  if (!Array.isArray(next.mutatedLoci)) next.mutatedLoci = [];
+  if (!Array.isArray(next.atavismLoci)) next.atavismLoci = [];
+  return next;
+}
 
 /** Fills the `tier` field introduced by schema version 3. */
 function addV3Tier(monster: Record<string, unknown>): Record<string, unknown> {
@@ -125,6 +142,8 @@ function addV2Loci(monster: Record<string, unknown>): Record<string, unknown> {
  *
  * - 1 -> 2 added the `crest` and `jaw` loci, filled with neutral defaults.
  * - 2 -> 3 added `tier`, which an unevolved monster has at 0.
+ * - 3 -> 4 added `mutatedLoci` and `atavismLoci`, empty for an older monster
+ *   because which loci mutated was never written down.
  *
  * Old saves therefore keep loading, and old monsters stay fusable with new
  * ones.
@@ -132,6 +151,7 @@ function addV2Loci(monster: Record<string, unknown>): Record<string, unknown> {
 export const MIGRATIONS: Readonly<Record<number, Migration>> = {
   1: perMonster(addV2Loci),
   2: perMonster(addV3Tier),
+  3: perMonster(addV4Loci),
 };
 
 /**
@@ -185,6 +205,13 @@ export function migrateToCurrent(
 export type ValidationResult<T> =
   | { readonly ok: true; readonly value: T }
   | { readonly ok: false; readonly errors: readonly string[] };
+
+/** Keeps only strings that name a locus, so a corrupt save cannot inject tags. */
+function asLoci(value: unknown): GeneLocus[] {
+  if (!Array.isArray(value)) return [];
+  const known = new Set<string>([...CATEGORICAL_LOCI, ...NUMERIC_LOCI]);
+  return value.filter((v): v is GeneLocus => typeof v === 'string' && known.has(v));
+}
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === 'object' && value !== null && !Array.isArray(value);
@@ -308,6 +335,8 @@ export function validateMonster(value: unknown): ValidationResult<Monster> {
       traits: Array.isArray(value.traits) ? (value.traits.filter((t) => typeof t === 'string') as string[]) : [],
       stats,
       mutationCount: typeof value.mutationCount === 'number' ? value.mutationCount : 0,
+      mutatedLoci: asLoci(value.mutatedLoci),
+      atavismLoci: asLoci(value.atavismLoci),
       createdAt: typeof value.createdAt === 'number' ? value.createdAt : 0,
       fusionHistory: history,
     },

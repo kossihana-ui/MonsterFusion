@@ -12,7 +12,7 @@
 export type MonsterId = string;
 
 /** Current on-disk / on-wire schema version for persisted monsters. */
-export const SCHEMA_VERSION = 3;
+export const SCHEMA_VERSION = 4;
 
 // ---------------------------------------------------------------------------
 // Visual / categorical gene vocabulary
@@ -269,6 +269,13 @@ export interface Monster {
   readonly stats: MonsterStats;
   /** Number of loci that mutated when this monster was created. */
   readonly mutationCount: number;
+  /**
+   * Which loci mutated, so a mutation can be pointed at rather than counted.
+   * Bounded by the number of loci, so it does not grow with generation.
+   */
+  readonly mutatedLoci: readonly GeneLocus[];
+  /** Loci where this monster received a parent's hidden carrier. */
+  readonly atavismLoci: readonly GeneLocus[];
   readonly createdAt: number;
   /** Most recent fusions on this lineage, capped in length. */
   readonly fusionHistory: readonly FusionRecord[];

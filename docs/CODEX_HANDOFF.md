@@ -310,6 +310,20 @@ const { layers, colorMappings, key } = composeAppearance(monster.phenotype);
 
 [ASSET_REQUESTS.md](ASSET_REQUESTS.md) に、効果の大きい順でまとめてあります。`horns/upright` はcore側だけ対応済みで素材待ちです（出現しても角なしで描画されます）。
 
+## 8.8 特徴タグと融合演出
+
+モンスターの特徴を日本語タグで表示するAPIと、融合演出用のデータを用意しました。
+
+```ts
+import { describeMonster, describeFusion } from '@core/core/index.ts';
+describeMonster(monster);   // kind: dominant 赤 / recessive 青 / hidden 紫枠 / mutation 紫
+describeFusion(child, evolved).steps;   // 演出の順番に並んだ配列
+```
+
+日本語ラベルは全てcore側にあります。詳細と演出の依頼文は [TAGS_AND_FUSION_FX.md](TAGS_AND_FUSION_FX.md) に。
+
+**schemaVersion が 4 になりました**（`mutatedLoci` / `atavismLoci` の追加）。旧セーブは自動補完されます。
+
 ## 9. コマンド
 
 ```bash

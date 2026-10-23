@@ -169,6 +169,27 @@ export {
   restPose,
 } from './animation.ts';
 
+// Tags (Japanese labels for a monster's genes, for the UI to colour).
+export type {
+  DescribeOptions,
+  FusionSummary,
+  MonsterTag,
+  RevealStep,
+  TagKind,
+} from './tags.ts';
+export {
+  describeAppearanceTags,
+  describeFusion,
+  describeMonster,
+  describePhenotype,
+  describeTraits,
+  dominanceOf,
+  labelFor,
+  LOCUS_LABELS,
+  traitLabel,
+  TRAIT_LABELS,
+} from './tags.ts';
+
 // Starters.
 export type { StarterSpec, TendencySpec } from './starters.ts';
 export {

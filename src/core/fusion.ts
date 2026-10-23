@@ -17,6 +17,7 @@
  */
 
 import type {
+  GeneLocus,
   Monster,
   MonsterGenes,
   MonsterId,
@@ -98,6 +99,8 @@ function assemble(
     traits: readonly MonsterTrait[];
     stats: MonsterStats;
     mutationCount: number;
+    mutatedLoci: readonly GeneLocus[];
+    atavismLoci: readonly GeneLocus[];
     createdAt: number;
     tier: number;
     fusionHistory: readonly FusionRecord[];
@@ -142,6 +145,8 @@ export function createRootMonster(
     traits,
     stats: computeStats(phenotype, 0, ctx.config.stats),
     mutationCount: 0,
+    mutatedLoci: [],
+    atavismLoci: [],
     createdAt: ctx.now(),
     tier: 0,
     fusionHistory: [],
@@ -388,6 +393,8 @@ export function fuseDetailed(
       evolution.tier,
     ),
     mutationCount: inheritance.mutationCount,
+    mutatedLoci: inheritance.mutatedLoci,
+    atavismLoci: inheritance.atavismLoci,
     createdAt,
     tier: evolution.tier,
     fusionHistory: mergeHistory(parentA, parentB, record, ctx.config.fusion.historyLimit),
