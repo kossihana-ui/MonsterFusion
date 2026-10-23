@@ -16,15 +16,17 @@ A 256 × 256 backing canvas
 allows quarter-source-pixel movement; source artwork is still 64 × 64 and
 interpolation is disabled.
 
-Ignis and Aqua currently use the original full-colour image as one layer, with
-breathing/attack/hurt movement. Their head, jaw, fins and tail separation,
-blinking and mouth replacement frames are not implemented yet.
+Ignis uses five layers: body, belly, head (including horns), tail, tail tip.
+The belly breathes; the head nods; the tail tip inherits the tail's rotation.
+Aqua uses five layers: body, jaw, dorsal fin, front fin, tail. Jaw and fins
+have different motion periods. All three retain the source pixels at rest.
+Dedicated blinking and mouth replacement frames remain unimplemented.
 
-Fused descendants still use the existing generic part renderer. These
-starter-specific masks are not yet reusable anatomy parts for every body rig.
-The next art step is covered joint artwork and full-colour/material-channel
-parts compatible with all six body shapes; do not use a starter picture as a
-substitute for a child's phenotype.
+Fused descendants use 39 material-channel assets in `parts-detailed`, with
+near/far wing pairs and the public core appearance configuration. These
+starter-specific masks are a separate rendering path, never a substitute for
+a child's phenotype. Source atlases and import instructions are documented
+in `src/mocks/assets/parts-detailed/README.md`.
 
 Public core imports only: `poseAt`, `restPose`, `Pose`, and existing composition
 APIs via `@core/core/index.ts`. No additional game API or core mutation needed.

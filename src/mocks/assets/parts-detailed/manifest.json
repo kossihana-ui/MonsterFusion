@@ -1,0 +1,314 @@
+{
+  "body/round": {
+    "width": 64,
+    "height": 64,
+    "origin": {
+      "x": 32,
+      "y": 38
+    }
+  },
+  "body/slim": {
+    "width": 64,
+    "height": 64,
+    "origin": {
+      "x": 32,
+      "y": 36
+    }
+  },
+  "body/muscular": {
+    "width": 64,
+    "height": 64,
+    "origin": {
+      "x": 32,
+      "y": 38
+    }
+  },
+  "body/serpentine": {
+    "width": 64,
+    "height": 64,
+    "origin": {
+      "x": 32,
+      "y": 40
+    }
+  },
+  "body/winged": {
+    "width": 64,
+    "height": 64,
+    "origin": {
+      "x": 32,
+      "y": 36
+    }
+  },
+  "body/finned": {
+    "width": 64,
+    "height": 64,
+    "origin": {
+      "x": 32,
+      "y": 38
+    }
+  },
+  "eyes/normal": {
+    "width": 20,
+    "height": 10,
+    "origin": {
+      "x": 10,
+      "y": 5
+    }
+  },
+  "eyes/sharp": {
+    "width": 20,
+    "height": 10,
+    "origin": {
+      "x": 10,
+      "y": 5
+    }
+  },
+  "eyes/round": {
+    "width": 20,
+    "height": 10,
+    "origin": {
+      "x": 10,
+      "y": 5
+    }
+  },
+  "eyes/multi": {
+    "width": 20,
+    "height": 10,
+    "origin": {
+      "x": 10,
+      "y": 5
+    }
+  },
+  "eyes/glowing": {
+    "width": 20,
+    "height": 10,
+    "origin": {
+      "x": 10,
+      "y": 5
+    }
+  },
+  "eyes/slit": {
+    "width": 20,
+    "height": 10,
+    "origin": {
+      "x": 10,
+      "y": 5
+    }
+  },
+  "horns/single": {
+    "width": 32,
+    "height": 32,
+    "origin": {
+      "x": 16,
+      "y": 25
+    }
+  },
+  "horns/twin": {
+    "width": 32,
+    "height": 32,
+    "origin": {
+      "x": 16,
+      "y": 25
+    }
+  },
+  "horns/crown": {
+    "width": 32,
+    "height": 32,
+    "origin": {
+      "x": 16,
+      "y": 25
+    }
+  },
+  "horns/spiral": {
+    "width": 32,
+    "height": 32,
+    "origin": {
+      "x": 16,
+      "y": 10
+    }
+  },
+  "crest/flower": {
+    "width": 22,
+    "height": 22,
+    "origin": {
+      "x": 11,
+      "y": 20
+    }
+  },
+  "crest/fin": {
+    "width": 22,
+    "height": 22,
+    "origin": {
+      "x": 11,
+      "y": 20
+    }
+  },
+  "crest/crystal": {
+    "width": 22,
+    "height": 22,
+    "origin": {
+      "x": 11,
+      "y": 20
+    }
+  },
+  "crest/mane": {
+    "width": 22,
+    "height": 22,
+    "origin": {
+      "x": 11,
+      "y": 20
+    }
+  },
+  "crest/antenna": {
+    "width": 22,
+    "height": 22,
+    "origin": {
+      "x": 11,
+      "y": 20
+    }
+  },
+  "crest/crown": {
+    "width": 22,
+    "height": 22,
+    "origin": {
+      "x": 11,
+      "y": 20
+    }
+  },
+  "tail/short": {
+    "width": 16,
+    "height": 16,
+    "origin": {
+      "x": 1,
+      "y": 13
+    }
+  },
+  "tail/long": {
+    "width": 16,
+    "height": 16,
+    "origin": {
+      "x": 1,
+      "y": 13
+    }
+  },
+  "tail/spiked": {
+    "width": 16,
+    "height": 16,
+    "origin": {
+      "x": 1,
+      "y": 13
+    }
+  },
+  "tail/twin": {
+    "width": 16,
+    "height": 16,
+    "origin": {
+      "x": 1,
+      "y": 13
+    }
+  },
+  "tail/vine": {
+    "width": 16,
+    "height": 16,
+    "origin": {
+      "x": 1,
+      "y": 13
+    }
+  },
+  "jaw/fangs": {
+    "width": 28,
+    "height": 24,
+    "origin": {
+      "x": 14,
+      "y": 2
+    }
+  },
+  "jaw/tusks": {
+    "width": 28,
+    "height": 24,
+    "origin": {
+      "x": 14,
+      "y": 2
+    }
+  },
+  "jaw/beak": {
+    "width": 28,
+    "height": 24,
+    "origin": {
+      "x": 14,
+      "y": 2
+    }
+  },
+  "jaw/maw": {
+    "width": 28,
+    "height": 24,
+    "origin": {
+      "x": 14,
+      "y": 2
+    }
+  },
+  "wings/feathered-far": {
+    "width": 32,
+    "height": 32,
+    "origin": {
+      "x": 4,
+      "y": 27
+    }
+  },
+  "wings/membrane-far": {
+    "width": 32,
+    "height": 32,
+    "origin": {
+      "x": 4,
+      "y": 27
+    }
+  },
+  "wings/crystal-far": {
+    "width": 32,
+    "height": 32,
+    "origin": {
+      "x": 4,
+      "y": 27
+    }
+  },
+  "wings/ethereal-far": {
+    "width": 32,
+    "height": 32,
+    "origin": {
+      "x": 4,
+      "y": 27
+    }
+  },
+  "wings/feathered-near": {
+    "width": 32,
+    "height": 32,
+    "origin": {
+      "x": 4,
+      "y": 27
+    }
+  },
+  "wings/membrane-near": {
+    "width": 32,
+    "height": 32,
+    "origin": {
+      "x": 4,
+      "y": 27
+    }
+  },
+  "wings/crystal-near": {
+    "width": 32,
+    "height": 32,
+    "origin": {
+      "x": 4,
+      "y": 27
+    }
+  },
+  "wings/ethereal-near": {
+    "width": 32,
+    "height": 32,
+    "origin": {
+      "x": 4,
+      "y": 27
+    }
+  }
+}

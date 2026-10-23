@@ -12,8 +12,8 @@
 
 制作済みスターター素材は64×64。32×32制限はユーザーのPNGアップロードに適用します。
 
-スターターと融合した子はphenotypeをUI表示モデルへ読み取り専用で引き継ぎ、composeAppearance / poseAtによる35パーツ合成で表示します。アップロードした画像は未解析のため、登録個体は入力画像を表示します。
+初期3体は元のPNGをUI側で部位分けして表示します。融合した子はphenotypeを変更せず、composeAppearance / poseAtと39パーツで表示します。createAppearanceConfigでwingPairs:trueを設定しています。アップロード画像は未解析のため入力画像を表示します。
 
-未接続：永続保存、遺伝子付与操作、詳細な遺伝子表示。パーツ仕様と検証手順はassets/parts/README.mdを参照してください。
+未接続：永続保存、遺伝子付与操作、詳細な遺伝子表示。パーツ仕様と検証手順はassets/parts-detailed/README.mdを参照してください。
 
 検証：3体の固定ID・素材対応・第0世代・core検証、融合結果、親の不変性、stepTurnの新state、バトル完了、登録個体のcore検証、本番ビルド。

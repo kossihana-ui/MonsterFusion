@@ -30,7 +30,7 @@ try {
   for (let row = 0; row < 3; row++) {
     const url = pathToFileURL(resolve(`src/mocks/assets/starters/${filenames[row]}-v2-64.png`)).href;
     const parts = await prepareIllustration(url);
-    assert.equal(parts.length, row === 0 ? 3 : 1);
+    assert.equal(parts.length, row === 0 ? 3 : 5);
     const composition = core.composeAppearance(monsters[row].phenotype);
     const rest = createCanvas(64, 64), rc = rest.getContext("2d");
     drawIllustration(rc, core.restPose(composition), parts, false);
@@ -51,6 +51,5 @@ try {
   }
   mkdirSync("artifacts/sprites", { recursive: true });
   writeFileSync("artifacts/sprites/illustration-motion.png", sheet.toBuffer("image/png"));
-  console.log("Original pixels preserved for all 3 starters; Moss has 3 layers; animation frames differ.");
+  console.log("Original pixels preserved for all 3 starters; Moss has 3 layers; Ignis and Aqua have 5 each; animation frames differ.");
 } finally { await server.close(); }
-

@@ -18,13 +18,24 @@ try {
   const manifest = renderer.partManifest;
   assert.deepEqual(
     Object.keys(manifest).sort(),
-    core.requiredPartKeys().sort(),
+    core.requiredPartKeys(renderer.appearanceConfig).sort(),
   );
   const colors = new Set(
     core.referenceColors().map((v) => v.slice(1).toLowerCase()),
   );
+  // All body/wing/size combinations must use a back/body/front sandwich.
+  for (const bodyShape of Object.keys(renderer.appearanceConfig.rigs))
+    for (const wings of ["feathered", "membrane", "crystal", "ethereal"])
+      for (const size of Object.keys(renderer.appearanceConfig.sizeScales)) {
+        const c = renderer.compositionFor({ ...game.initialMonsters[0].phenotype, bodyShape, wings, size });
+        const back = c.layers.findIndex(l => l.part === `wings/${wings}-far`);
+        const front = c.layers.findIndex(l => l.part === `wings/${wings}-near`);
+        const body = c.layers.findIndex(l => l.kind === "body");
+        assert.ok(back < body && body < front, "wing depth order");
+        assert.ok(c.layers[back].scale < c.layers[front].scale, "far wing perspective");
+      }
   for (const [key, spec] of Object.entries(manifest)) {
-    const png = readFileSync(resolve("src/mocks/assets/parts", key + ".png"));
+    const png = readFileSync(resolve("src/mocks/assets/parts-detailed", key + ".png"));
     assert.equal(png.subarray(0, 8).toString("hex"), "89504e470d0a1a0a");
     const w = png.readUInt32BE(16),
       h = png.readUInt32BE(20);
@@ -46,6 +57,7 @@ try {
     }
     const data = inflateSync(Buffer.concat(blocks));
     let visible = 0;
+    const usedColors = new Set();
     for (let y = 0; y < h; y++) {
       assert.equal(data[y * (w * 4 + 1)], 0);
       for (let x = 0; x < w; x++) {
@@ -55,12 +67,19 @@ try {
         if (alpha) {
           visible++;
           const color = data.subarray(i, i + 3).toString("hex");
+          usedColors.add(color);
           assert.ok(colors.has(color), key + " palette");
           if (key.startsWith("body/")) assert.notEqual(color, "ff00ff");
         }
       }
     }
     assert.ok(visible > 0, key + " is empty");
+    if (/^(wings|horns|jaw)\//.test(key))
+      assert.ok(usedColors.size <= 5, key + " detail density");
+    if (key.startsWith("wings/")) {
+      assert.deepEqual(spec.origin, { x: 4, y: 27 });
+      assert.equal(data[27 * (w * 4 + 1) + 1 + 4 * 4 + 3], 255, key + " attachment pixel");
+    }
   }
   const bytes = new Uint8ClampedArray([27, 32, 48, 255, 255, 0, 255, 0]);
   renderer.recolorPixels(bytes, [{ from: "#1b2030", to: "#123456" }]);
@@ -76,7 +95,7 @@ try {
     ).child;
     assert.ok(parent.phenotype);
     assert.equal(parent.image, "");
-    for (const layer of core.composeAppearance(parent.phenotype).layers)
+    for (const layer of renderer.compositionFor(parent.phenotype).layers)
       assert.ok(manifest[layer.part]);
   }
   assert.equal(JSON.stringify(game.getCoreMonster("starter-moss")), before);
@@ -122,7 +141,7 @@ try {
   renderer.drawPose(
     ctx,
     pose,
-    new Map([["horns/spiral", { width: 44, height: 32 }]]),
+    new Map([["horns/spiral", { width: 32, height: 32 }]]),
     true,
   );
   assert.deepEqual(
@@ -131,14 +150,14 @@ try {
   );
   assert.deepEqual(calls[0], ["translate", 40, 15]);
   assert.deepEqual(calls[2], ["scale", -1, 1]);
-  assert.deepEqual(calls[3], ["draw", -16.5, -9, 33, 24]);
+  assert.deepEqual(calls[3], ["draw", -12, -7.5, 24, 24]);
   renderer.drawPose(
     ctx,
     { layers: [{ ...pose.layers[0], part: "missing/part" }], flash: 0 },
     new Map(),
   );
   console.log(
-    "PASS: 35 parts, exact palette/binary alpha/origins, recoloring, 200 fused generations, immutable core, anchor transforms, mirroring, missing-layer skip.",
+    "PASS: 39 parts, exact palette/binary alpha/origins, recoloring, 200 fused generations, immutable core, anchor transforms, mirroring, missing-layer skip.",
   );
 
   // Optional offline visual QA using an installed native Canvas implementation.
@@ -150,10 +169,10 @@ try {
     for (const key of Object.keys(manifest))
       raw.set(
         key,
-        await loadImage(resolve("src/mocks/assets/parts", key + ".png")),
+        await loadImage(resolve("src/mocks/assets/parts-detailed", key + ".png")),
       );
     function render(phenotype, options = { animation: "idle", timeMs: 0 }) {
-      const composition = core.composeAppearance(phenotype),
+      const composition = renderer.compositionFor(phenotype),
         assets = new Map();
       for (const layer of composition.layers) {
         const img = raw.get(layer.part),
@@ -161,7 +180,7 @@ try {
           ctx = c.getContext("2d");
         ctx.drawImage(img, 0, 0);
         const data = ctx.getImageData(0, 0, c.width, c.height);
-        renderer.recolorPixels(data.data, composition.colorMappings);
+        renderer.recolorPixels(data.data, renderer.materialMappings(layer.part, composition.colorMappings));
         ctx.putImageData(data, 0, 0);
         assets.set(layer.part, c);
       }
@@ -197,6 +216,16 @@ try {
       );
     });
     mkdirSync("artifacts/sprites", { recursive: true });
+    const wingSheet = createCanvas(1152, 768), wc = wingSheet.getContext("2d");
+    wc.fillStyle = "#141b1f"; wc.fillRect(0, 0, 1152, 768); wc.imageSmoothingEnabled = false;
+    ["feathered", "membrane", "crystal", "ethereal"].forEach((wings, row) => {
+      Object.keys(renderer.appearanceConfig.rigs).forEach((bodyShape, col) => {
+        const phenotype = { ...game.initialMonsters[1].phenotype, bodyShape, wings,
+          size: "medium", horns: "none", crest: "none", jaw: "normal" };
+        wc.drawImage(render(phenotype), col * 192, row * 192, 192, 192);
+      });
+    });
+    writeFileSync("artifacts/sprites/wing-pairs-preview.png", wingSheet.toBuffer("image/png"));
     writeFileSync(
       "artifacts/sprites/composition-preview.png",
       preview.toBuffer("image/png"),

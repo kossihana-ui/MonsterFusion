@@ -26,10 +26,7 @@ vite.config.tsのエイリアスとtsconfig.jsonのpathsで、@coreを隣の../M
 
 コピー同期とcheck:ui-syncは不要です。coreの不具合修正・テストはMonsterFusion-Core側で行います。接続詳細はsrc/mocks/CORE_CONNECTION.mdを参照してください。
 
-スターターと融合した子は35パーツを表現型に沿って合成し、待機・攻撃・被弾アニメーションに対応します。素材の再生成は `npm.cmd run sprites:build`、検証は `npm.cmd run sprites:check`。仕様はsrc/mocks/assets/parts/README.mdを参照してください。
 
-未接続：永続保存、画像解析。登録画像と遺伝情報は一致する保証がないため、アップロード個体は入力画像をそのまま表示します。
+スターター3体は元の64×64画像を部位分けしてアニメーション表示します。融合した子は39枚の詳細パーツを表現型に従って合成します。翼は前後ペアです。
 
-## 移行検証
-
-型チェック・本番ビルド・開発サーバー起動、素材全画素と200世代の融合を検証。実ブラウザで図鑑のCanvas、融合した子の合成表示、バトルの操作ロックとHP・ターン更新を確認しました。
+素材と生成手順：src/mocks/assets/parts-detailed/README.md。通常の開発・ビルドに画像生成用ライブラリは不要です。素材を再生成する場合のみsharpが必要です。npm.cmd run sprites:checkで色・透明度・接続・融合を検証できます。

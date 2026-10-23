@@ -1,12 +1,12 @@
-import { composeAppearance, poseAt } from "@core/core/index.ts";
+import { composeAppearance, poseAt, createAppearanceConfig, DEFAULT_APPEARANCE_CONFIG } from "@core/core/index.ts";
 import type {
   MonsterPhenotype,
   Pose,
   SpriteComposition,
   PoseOptions,
 } from "@core/core/index.ts";
-import manifestData from "../../mocks/assets/parts/manifest.json";
-import { partUrls } from "../../mocks/assets/parts/manifest";
+import manifestData from "../../mocks/assets/parts-detailed/manifest.json";
+import { partUrls } from "../../mocks/assets/parts-detailed/manifest";
 
 export interface PartAsset {
   width: number;
@@ -14,6 +14,16 @@ export interface PartAsset {
   origin: { x: number; y: number };
 }
 export const partManifest: Record<string, PartAsset> = manifestData;
+export const appearanceConfig = createAppearanceConfig({
+  wingPairs: true,
+  // The new ram horns are 30px wide; the old 42px asset needed a .75 correction.
+  partScales: {
+    ...DEFAULT_APPEARANCE_CONFIG.partScales,
+    "horns/spiral": 1,
+    ...Object.fromEntries(["feathered", "membrane", "crystal", "ethereal"].flatMap(type =>
+      ["far", "near"].map(side => [`wings/${type}-${side}`, .65]))),
+  },
+});
 const images = new Map<string, Promise<HTMLImageElement | null>>();
 const tinted = new Map<string, HTMLCanvasElement>();
 const compositions = new Map<string, SpriteComposition>();
@@ -24,7 +34,7 @@ function cache<T>(map: Map<string, T>, key: string, value: T) {
   return value;
 }
 export function compositionFor(phenotype: MonsterPhenotype) {
-  const next = composeAppearance(phenotype);
+  const next = composeAppearance(phenotype, appearanceConfig);
   return compositions.get(next.key) ?? cache(compositions, next.key, next);
 }
 export function loadPart(key: string): Promise<HTMLImageElement | null> {
@@ -86,13 +96,22 @@ export async function prepareParts(composition: SpriteComposition) {
       ctx.imageSmoothingEnabled = false;
       ctx.drawImage(img, 0, 0);
       const pixels = ctx.getImageData(0, 0, canvas.width, canvas.height);
-      recolorPixels(pixels.data, composition.colorMappings);
+      recolorPixels(pixels.data, materialMappings(layer.part, composition.colorMappings));
       ctx.putImageData(pixels, 0, 0);
       cache(tinted, key, canvas);
       assets.set(layer.part, canvas);
     }),
   );
   return assets;
+}
+// Petals are a fixed botanical material, not green hide. All genetically
+// controlled hide/eye/element colours still come from the public core palette.
+export function materialMappings(part: string, mappings: SpriteComposition["colorMappings"]) {
+  if (part !== "crest/flower") return mappings;
+  const petals: Record<string, string> = {
+    "#5a3a6a": "#b83568", "#a06ac0": "#ef739d", "#d0a8e8": "#ffc1c9",
+  };
+  return mappings.map(mapping => ({ ...mapping, to: petals[mapping.from] ?? mapping.to }));
 }
 export function drawPose(
   ctx: CanvasRenderingContext2D,
