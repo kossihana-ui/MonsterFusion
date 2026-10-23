@@ -94,7 +94,7 @@ const loaded = deserializeSaveFile(json); // { ok: true, value } | { ok: false, 
 | `bodyColor` | red / blue / green / yellow / purple / white / black |
 | `bodyShape` | slim / round / muscular / serpentine / winged / **finned** |
 | `size` | tiny / small / medium / large / giant |
-| `horns` | none / single / twin / crown / spiral |
+| `horns` | none / single / twin / crown / spiral / **upright** |
 | `wings` | none / feathered / membrane / crystal / ethereal |
 | `tail` | none / short / long / spiked / twin / **vine** |
 | `eyes` | normal / sharp / round / multi / glowing / **slit** |
@@ -305,6 +305,10 @@ const { layers, colorMappings, key } = composeAppearance(monster.phenotype);
 現在 `src/mocks/game.ts:61` で子に親Aの画像を流用している箇所が、これで置き換えられます。
 
 さらに `poseAt()` で、呼吸・瞬き・攻撃・被弾のアニメーションが**素材追加なし**で動きます。パーツが別レイヤーなので、尻尾や翼が体に遅れて付いてくる動き（DS世代のスプライトが生きて見える理由）が出せます。同じく [SPRITE_COMPOSITION.md](SPRITE_COMPOSITION.md) の9章にまとめてあります。
+
+## 8.7 追加素材の依頼
+
+[ASSET_REQUESTS.md](ASSET_REQUESTS.md) に、効果の大きい順でまとめてあります。`horns/upright` はcore側だけ対応済みで素材待ちです（出現しても角なしで描画されます）。
 
 ## 9. コマンド
 

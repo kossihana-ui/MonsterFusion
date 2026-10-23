@@ -77,7 +77,7 @@ export const DEFAULT_ALLELE_POOLS: AllelePools = {
   bodyColor: ['red', 'blue', 'green', 'yellow', 'purple', 'white', 'black'],
   bodyShape: ['slim', 'round', 'muscular', 'serpentine', 'winged', 'finned'],
   size: ['tiny', 'small', 'medium', 'large', 'giant'],
-  horns: ['none', 'single', 'twin', 'crown', 'spiral'],
+  horns: ['none', 'single', 'twin', 'crown', 'spiral', 'upright'],
   wings: ['none', 'feathered', 'membrane', 'crystal', 'ethereal'],
   tail: ['none', 'short', 'long', 'spiked', 'twin', 'vine'],
   eyes: ['normal', 'sharp', 'round', 'multi', 'glowing', 'slit'],
@@ -180,6 +180,7 @@ export const DEFAULT_STATS_CONFIG: StatsConfig = {
       twin: { attack: 7 },
       crown: { attack: 5, magic: 6 },
       spiral: { magic: 9 },
+      upright: { attack: 8, defense: 2 },
     },
     wings: {
       none: {},

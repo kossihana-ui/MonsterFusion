@@ -46,7 +46,18 @@ export const SIZE_LADDER: readonly BodySize[] = [
   'giant',
 ];
 
-export type HornType = 'none' | 'single' | 'twin' | 'crown' | 'spiral';
+export type HornType =
+  | 'none'
+  | 'single'
+  | 'twin'
+  | 'crown'
+  | 'spiral'
+  /**
+   * Horns that sweep straight up, away from the face. The ram horns curl back
+   * down past the brow, so they are the one horn that can land on the eyes;
+   * this is the big horn that cannot.
+   */
+  | 'upright';
 
 export type WingType = 'none' | 'feathered' | 'membrane' | 'crystal' | 'ethereal';
 

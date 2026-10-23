@@ -10,6 +10,7 @@ import {
   createAppearanceConfig,
   EYE_RAMP,
   paletteFor,
+  PART_SCALES,
   referenceColors,
   requiredPartKeys,
   SIZE_SCALES,
@@ -486,4 +487,17 @@ test('a wing is a far/near pair, and can fall back to a single sheet', () => {
     requiredPartKeys().includes('wings/membrane-far'),
     'the artwork checklist must ask for the pair',
   );
+});
+
+test('upright horns are reachable and on the artwork checklist', () => {
+  const composition = composeAppearance({ ...basePhenotype, horns: 'upright' });
+  const horns = composition.layers.find((l) => l.kind === 'horns');
+  assert.ok(horns);
+  assert.equal(horns.part, 'horns/upright');
+  assert.ok(requiredPartKeys().includes('horns/upright'));
+
+  // It carries no size correction: sweeping up, it cannot land on a face the
+  // way the ram horns do, so there is nothing to correct for.
+  assert.equal(PART_SCALES['horns/upright'], undefined);
+  assert.ok(PART_SCALES['horns/spiral'] !== undefined, 'the ram horns still need one');
 });

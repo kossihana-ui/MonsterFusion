@@ -762,7 +762,7 @@ export function requiredPartKeys(
 ): string[] {
   const keys: string[] = [];
   for (const shape of Object.keys(config.rigs) as BodyShape[]) keys.push(`body/${shape}`);
-  for (const value of ['single', 'twin', 'crown', 'spiral'] satisfies HornType[]) {
+  for (const value of ['single', 'twin', 'crown', 'spiral', 'upright'] satisfies HornType[]) {
     keys.push(`horns/${value}`);
   }
   for (const value of ['feathered', 'membrane', 'crystal', 'ethereal'] satisfies WingType[]) {
