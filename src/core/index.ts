@@ -118,6 +118,7 @@ export type {
   AppearanceConfig,
   BodyRig,
   ColorMapping,
+  ContactShadow,
   HidePalette,
   LayerKind,
   Palette,

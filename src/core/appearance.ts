@@ -129,7 +129,7 @@ export const BODY_RIGS: Readonly<Record<BodyShape, BodyRig>> = {
     },
     headScale: 0.7,
     limbScale: 0.95,
-    partScale: { horns: 0.9 },
+    partScale: { horns: 0.9, eyes: 0.7, jaw: 0.6 },
     facing: 'left',
   },
   muscular: {
@@ -146,7 +146,7 @@ export const BODY_RIGS: Readonly<Record<BodyShape, BodyRig>> = {
     },
     headScale: 1.0,
     limbScale: 1.1,
-    partScale: { horns: 0.9 },
+    partScale: { horns: 0.9, eyes: 0.73, jaw: 0.7 },
     facing: 'left',
   },
   serpentine: {
@@ -163,6 +163,7 @@ export const BODY_RIGS: Readonly<Record<BodyShape, BodyRig>> = {
     },
     headScale: 0.75,
     limbScale: 0.9,
+    partScale: { eyes: 1.15, jaw: 0.6 },
     facing: 'left',
   },
   winged: {
@@ -179,6 +180,7 @@ export const BODY_RIGS: Readonly<Record<BodyShape, BodyRig>> = {
     },
     headScale: 0.85,
     limbScale: 1.15,
+    partScale: { eyes: 0.8, jaw: 0.89 },
     facing: 'left',
   },
   finned: {
@@ -195,6 +197,7 @@ export const BODY_RIGS: Readonly<Record<BodyShape, BodyRig>> = {
     },
     headScale: 0.9,
     limbScale: 1,
+    partScale: { eyes: 1.3, jaw: 1.29 },
     facing: 'left',
   },
 };
@@ -444,6 +447,22 @@ const LAYER_ORDER: readonly LayerKind[] = [
   'wings-front',
 ];
 
+/**
+ * A joint: where a part meets the body, and how much shadow it should carry.
+ *
+ * The renderer draws a soft dark blob of `radius` at `at`, under the part and
+ * over the body, at `strength` opacity. Nothing to draw and nothing to author:
+ * it is the seam core already placed.
+ */
+export interface ContactShadow {
+  readonly at: Point;
+  readonly radius: number;
+  /** 0..1 opacity of the shadow. */
+  readonly strength: number;
+  /** The slot this joint belongs to, for a renderer that wants to skip some. */
+  readonly kind: LayerKind;
+}
+
 export interface SpriteLayer {
   readonly kind: LayerKind;
   /** Asset key, e.g. "body/muscular" or "horns/spiral". No file extension. */
@@ -468,6 +487,11 @@ export interface SpriteComposition {
   /** Whole-sprite scale from the `size` gene, already folded into each layer. */
   readonly sizeScale: number;
   /**
+   * Joints to shade, back to front. Without these a composite reads as parts
+   * laid on a body rather than parts growing out of it.
+   */
+  readonly contacts: readonly ContactShadow[];
+  /**
    * Stable key for this exact appearance. Two monsters that look the same
    * share it, which makes it a safe cache key for a rendered sprite.
    */
@@ -485,8 +509,25 @@ export interface AppearanceConfig {
   readonly eye: Ramp;
   /** Per-asset size corrections. See `PART_SCALES`. */
   readonly partScales: Readonly<Record<string, number>>;
+  /** Shadow strength at a joint, 0 disables it. */
+  readonly contactStrength: number;
+  /** Joint radius as a share of the part's scale, in canvas pixels. */
+  readonly contactRadius: Partial<Record<LayerKind, number>>;
   /** Wings drawn behind the body rather than in front. */
   readonly wingsBehind: Readonly<Record<WingType, boolean>>;
+  /**
+   * Draw wings as a far/near pair instead of a single sheet.
+   *
+   * Needs `wings/<type>-far` and `wings/<type>-near` to exist. With one sheet
+   * the wing reads as pasted on, because a side-on wing cannot sit on a
+   * three-quarter body; with a pair the body passes between them and the wing
+   * belongs to the creature.
+   */
+  readonly wingPairs: boolean;
+  /** How much smaller the far wing is, since it is further away. */
+  readonly farWingScale: number;
+  /** How far the far wing sits back and up from the wing anchor, in pixels. */
+  readonly farWingOffset: Point;
 }
 
 export const DEFAULT_APPEARANCE_CONFIG: AppearanceConfig = {
@@ -497,6 +538,16 @@ export const DEFAULT_APPEARANCE_CONFIG: AppearanceConfig = {
   keratin: KERATIN_RAMP,
   eye: EYE_RAMP,
   partScales: PART_SCALES,
+  contactStrength: 0.35,
+  contactRadius: {
+    // Eyes and jaw sit on the face rather than growing from it, so they get
+    // nothing; a shadow there would read as a bruise.
+    horns: 4,
+    crest: 4,
+    'wings-back': 5,
+    'wings-front': 5,
+    tail: 4,
+  },
   wingsBehind: {
     none: true,
     feathered: true,
@@ -505,6 +556,9 @@ export const DEFAULT_APPEARANCE_CONFIG: AppearanceConfig = {
     // Ethereal wings read as a glow around the creature, so they sit in front.
     ethereal: false,
   },
+  wingPairs: false,
+  farWingScale: 0.82,
+  farWingOffset: { x: -3, y: -2 },
 };
 
 export function createAppearanceConfig(
@@ -537,6 +591,7 @@ export function composeAppearance(
   const limbScale = sizeScale * rig.limbScale;
 
   const layers: SpriteLayer[] = [];
+  const contacts: ContactShadow[] = [];
   const push = (
     kind: LayerKind,
     part: string,
@@ -554,17 +609,43 @@ export function composeAppearance(
       scale: Math.round(corrected * 1000) / 1000,
       flipX,
     });
+
+    const radius = config.contactRadius[kind];
+    if (radius !== undefined && config.contactStrength > 0) {
+      contacts.push({
+        at: anchor,
+        radius: Math.round(radius * corrected * 100) / 100,
+        strength: config.contactStrength,
+        kind,
+      });
+    }
   };
 
   const wingsBehind = config.wingsBehind[phenotype.wings] ?? true;
 
   if (!isAbsent(phenotype.wings)) {
-    push(
-      wingsBehind ? 'wings-back' : 'wings-front',
-      `wings/${phenotype.wings}`,
-      scaleAnchor(rig.anchors.wings, sizeScale),
-      limbScale,
-    );
+    const wingAnchor = scaleAnchor(rig.anchors.wings, sizeScale);
+    if (config.wingPairs) {
+      // The far wing is smaller, higher and further back, and the body is
+      // drawn over it; the near wing lands in front.
+      push(
+        'wings-back',
+        `wings/${phenotype.wings}-far`,
+        {
+          x: round2(wingAnchor.x + config.farWingOffset.x * sizeScale),
+          y: round2(wingAnchor.y + config.farWingOffset.y * sizeScale),
+        },
+        limbScale * config.farWingScale,
+      );
+      push('wings-front', `wings/${phenotype.wings}-near`, wingAnchor, limbScale);
+    } else {
+      push(
+        wingsBehind ? 'wings-back' : 'wings-front',
+        `wings/${phenotype.wings}`,
+        wingAnchor,
+        limbScale,
+      );
+    }
   }
 
   if (!isAbsent(phenotype.tail)) {
@@ -608,6 +689,7 @@ export function composeAppearance(
   return {
     canvas: { width: CANVAS_SIZE, height: CANVAS_SIZE },
     layers,
+    contacts,
     palette,
     colorMappings: colorMappings(palette),
     sizeScale,
@@ -667,7 +749,8 @@ export function requiredPartKeys(
     keys.push(`horns/${value}`);
   }
   for (const value of ['feathered', 'membrane', 'crystal', 'ethereal'] satisfies WingType[]) {
-    keys.push(`wings/${value}`);
+    if (config.wingPairs) keys.push(`wings/${value}-far`, `wings/${value}-near`);
+    else keys.push(`wings/${value}`);
   }
   for (const value of ['short', 'long', 'spiked', 'twin', 'vine'] satisfies TailType[]) {
     keys.push(`tail/${value}`);

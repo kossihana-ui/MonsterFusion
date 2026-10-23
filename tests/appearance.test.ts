@@ -416,3 +416,69 @@ test('scaling is applied once, not twice', () => {
     `the size scale was applied ${ratio.toFixed(2)}x instead of once`,
   );
 });
+
+test('joints are reported for the parts that grow out of the body', () => {
+  const composition = composeAppearance({
+    ...basePhenotype,
+    horns: 'twin',
+    wings: 'membrane',
+    tail: 'vine',
+    jaw: 'maw',
+  });
+  const kinds = composition.contacts.map((c) => c.kind);
+
+  assert.ok(kinds.includes('horns'), 'a horn grows out of the head');
+  assert.ok(kinds.includes('tail'), 'a tail grows out of the body');
+  assert.ok(
+    !kinds.includes('jaw') && !kinds.includes('eyes'),
+    'eyes and jaw sit on the face; shading them would read as a bruise',
+  );
+  for (const contact of composition.contacts) {
+    assert.ok(contact.radius > 0 && contact.strength > 0 && contact.strength <= 1);
+    const layer = composition.layers.find((l) => l.kind === contact.kind);
+    assert.ok(layer);
+    assert.deepEqual(contact.at, layer.anchor, 'a joint is where its part is anchored');
+  }
+});
+
+test('joints scale with the monster', () => {
+  const small = composeAppearance({ ...basePhenotype, size: 'tiny', horns: 'twin' });
+  const big = composeAppearance({ ...basePhenotype, size: 'giant', horns: 'twin' });
+  const radius = (c: typeof small) => c.contacts.find((j) => j.kind === 'horns')?.radius ?? 0;
+  assert.ok(radius(big) > radius(small));
+});
+
+test('facial features are sized to the face that carries them', () => {
+  // slim wore a jaw at 150% of its own face width before these corrections.
+  for (const shape of ['slim', 'serpentine', 'muscular'] as const) {
+    const scale = BODY_RIGS[shape].partScale?.jaw ?? 1;
+    assert.ok(scale < 1, `${shape}: a mouth wider than the head needs correcting`);
+  }
+  assert.equal(BODY_RIGS.round.partScale?.jaw ?? 1, 1, 'round was already in proportion');
+});
+
+test('a wing can be a far/near pair, and only when the art exists', () => {
+  const single = composeAppearance({ ...basePhenotype, wings: 'membrane' });
+  assert.deepEqual(
+    single.layers.filter((l) => l.kind.startsWith('wings')).map((l) => l.part),
+    ['wings/membrane'],
+    'the default stays on the single sheet the UI has today',
+  );
+
+  const paired = composeAppearance(
+    { ...basePhenotype, wings: 'membrane' },
+    createAppearanceConfig({ wingPairs: true }),
+  );
+  const wings = paired.layers.filter((l) => l.kind.startsWith('wings'));
+  assert.deepEqual(wings.map((l) => l.part), ['wings/membrane-far', 'wings/membrane-near']);
+
+  const far = wings[0];
+  const near = wings[1];
+  assert.ok(far && near);
+  assert.ok(far.scale < near.scale, 'the far wing is further away, so smaller');
+  assert.ok(far.z < near.z, 'and the body passes between them');
+  assert.ok(
+    requiredPartKeys(createAppearanceConfig({ wingPairs: true })).includes('wings/membrane-far'),
+    'the artwork checklist must ask for the pair',
+  );
+});

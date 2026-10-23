@@ -94,6 +94,32 @@ core はこの原点を「体に接する点」として扱い、`anchor` に一
 
 座標が合わない場合は `BODY_RIGS` の数値を調整すれば全体に反映されます。「蛇型の角が3px下」のように具体的に言ってもらえれば直します。
 
+### 接合部の影
+
+`composition.contacts` が、パーツが体に接する位置・半径・濃さを返します。そこに暗い楕円を1枚、**パーツの下・体の上**に敷いてください。素材は不要です。
+
+```ts
+for (const joint of composition.contacts) {
+  ctx.globalAlpha = joint.strength;
+  ctx.fillStyle = '#000';
+  ctx.beginPath();
+  ctx.ellipse(joint.at.x, joint.at.y, joint.radius, joint.radius * 0.7, 0, 0, Math.PI * 2);
+  ctx.fill();
+}
+```
+
+体の範囲だけを暗くするため、体のアルファでマスクしてください。目と顎には影が出ません（顔の上に乗るパーツなので、影を置くと痣に見えます）。
+
+### 翼の前後ペア
+
+`wingPairs: true` にすると、翼が `wings/<type>-far`（体の奥）と `wings/<type>-near`（手前）の2枚になります。真横から見た1枚絵の翼は3/4視点の体に乗らず、貼り付けたように見えるためです。**既定は false** で、素材が揃うまで現在の1枚絵のまま動きます。
+
+```ts
+createAppearanceConfig({ wingPairs: true })
+```
+
+素材の作り方は [ART_PROMPTS.md](ART_PROMPTS.md) にあります。
+
 ### パーツの大きさ補正
 
 2段階の倍率があります。
