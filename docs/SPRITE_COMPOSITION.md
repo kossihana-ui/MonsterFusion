@@ -127,12 +127,11 @@ for (const joint of composition.contacts) {
 ```ts
 import { PART_SCALES, BODY_RIGS } from '@core/core/index.ts';
 
-PART_SCALES['horns/spiral']        // 0.8（巻き角だけが眉から下に垂れるため）
 PART_SCALES['wings/membrane-near'] // 0.65（giant で翼端がキャンバスから出るため）
-BODY_RIGS.serpentine.partScale     // { horns: 0.7, eyes: 1.15, jaw: 0.42 }
+BODY_RIGS.serpentine.partScale     // { eyes: 1.15, jaw: 0.4 }
 ```
 
-- **`PART_SCALES`（パーツ別）**: その素材だけが同じスロットの中で大きすぎる/小さすぎる場合に使います。巻き角だけが眉から下に垂れる形状で、他の角（single / twin / crown）が目を1%も隠さないのに対し40〜73%隠すため、0.8倍にしています
+- **`PART_SCALES`（パーツ別）**: その素材だけが同じスロットの中で大きすぎる/小さすぎる場合に使います。現在は翼8枚のみです（取り付け点から最も遠くまで伸びるため、giantでキャンバスから出ます）。角の補正は、巻き角の垂れ下がりが17px→6pxに描き直されたことで不要になりました
 - **`BodyRig.partScale`（体型×部位別）**: ある体型でだけ合わない場合に使います。角が目を隠す度合いは**角の素材ではなく体型の額の広さ**で決まる（round 10% / muscular 56%）ため、この補正は体型側に置いています
 
 どちらも `createAppearanceConfig()` と `BODY_RIGS` で調整できます。「この体型の角をもう少し小さく」といった要望はこの数値で対応します。

@@ -113,7 +113,7 @@ export const BODY_RIGS: Readonly<Record<BodyShape, BodyRig>> = {
     },
     headScale: 1.0,
     limbScale: 1,
-    partScale: { jaw: 0.69 },
+    partScale: { jaw: 0.97 },
     facing: 'left',
   },
   slim: {
@@ -122,7 +122,7 @@ export const BODY_RIGS: Readonly<Record<BodyShape, BodyRig>> = {
       body: { x: 32, y: 36 },
       head: { x: 27, y: 22 },
       eyes: { x: 27, y: 22 },
-      jaw: { x: 30, y: 27 },
+      jaw: { x: 32, y: 27 },
       crest: { x: 31, y: 16 },
       horns: { x: 31, y: 16 },
       wings: { x: 35, y: 31 },
@@ -130,7 +130,7 @@ export const BODY_RIGS: Readonly<Record<BodyShape, BodyRig>> = {
     },
     headScale: 0.7,
     limbScale: 0.95,
-    partScale: { horns: 0.9, eyes: 0.7, jaw: 0.42 },
+    partScale: { eyes: 0.7, jaw: 0.35 },
     facing: 'left',
   },
   muscular: {
@@ -147,7 +147,7 @@ export const BODY_RIGS: Readonly<Record<BodyShape, BodyRig>> = {
     },
     headScale: 1.0,
     limbScale: 1.1,
-    partScale: { horns: 0.9, eyes: 0.73, jaw: 0.48 },
+    partScale: { eyes: 0.73, jaw: 0.59 },
     facing: 'left',
   },
   serpentine: {
@@ -156,7 +156,7 @@ export const BODY_RIGS: Readonly<Record<BodyShape, BodyRig>> = {
       body: { x: 32, y: 40 },
       head: { x: 24, y: 18 },
       eyes: { x: 24, y: 20 },
-      jaw: { x: 25, y: 24 },
+      jaw: { x: 25, y: 22 },
       crest: { x: 26, y: 13 },
       horns: { x: 26, y: 13 },
       wings: { x: 34, y: 30 },
@@ -164,7 +164,7 @@ export const BODY_RIGS: Readonly<Record<BodyShape, BodyRig>> = {
     },
     headScale: 0.75,
     limbScale: 0.9,
-    partScale: { horns: 0.7, eyes: 1.15, jaw: 0.42 },
+    partScale: { eyes: 1.15, jaw: 0.4 },
     facing: 'left',
   },
   winged: {
@@ -181,7 +181,7 @@ export const BODY_RIGS: Readonly<Record<BodyShape, BodyRig>> = {
     },
     headScale: 0.85,
     limbScale: 1.15,
-    partScale: { eyes: 0.8, jaw: 0.62 },
+    partScale: { eyes: 0.8, jaw: 0.69 },
     facing: 'left',
   },
   finned: {
@@ -198,7 +198,7 @@ export const BODY_RIGS: Readonly<Record<BodyShape, BodyRig>> = {
     },
     headScale: 0.9,
     limbScale: 1,
-    partScale: { horns: 0.7, eyes: 1.3, jaw: 0.89 },
+    partScale: { eyes: 1.3 },
     facing: 'left',
   },
 };
@@ -226,12 +226,9 @@ export const PART_SCALES: Readonly<Record<string, number>> = {
   'wings/crystal-near': 0.65,
   'wings/ethereal-far': 0.65,
   'wings/ethereal-near': 0.65,
-  // The ram horns are the only horn that curls back down past the brow, so
-  // they are the only one that can land on a face: single, twin and crown
-  // cover none of the eyes at full size, spiral covers 40-73%. A light trim
-  // here, and a heavier one per shape below, keeps the eyes readable without
-  // reducing a ram horn to a bump.
-  'horns/spiral': 0.8,
+  // horns/spiral needed 0.8 while its curl dropped 17px below the anchor and
+  // covered 40-73% of a face. Redrawn with a 6px drop it covers 0-12% at full
+  // size, so the correction is gone rather than merely smaller.
 };
 
 // ---------------------------------------------------------------------------

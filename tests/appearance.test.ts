@@ -450,15 +450,11 @@ test('joints scale with the monster', () => {
 });
 
 test('facial features are sized to the face that carries them', () => {
-  // slim wore a jaw at 150% of its own face width before these corrections,
-  // and every jaw is now drawn at the width the maw used to have, so even a
-  // round face needs bringing down.
-  for (const shape of Object.keys(BODY_RIGS) as (keyof typeof BODY_RIGS)[]) {
-    const scale = BODY_RIGS[shape].partScale?.jaw ?? 1;
-    assert.ok(scale < 1, `${shape}: a mouth wider than the head needs correcting`);
-  }
+  // slim wore a jaw at 150% of its own face width before these corrections.
+  // A broad face can take the art as drawn; a narrow one cannot.
   const narrow = BODY_RIGS.slim.partScale?.jaw ?? 1;
   const wide = BODY_RIGS.finned.partScale?.jaw ?? 1;
+  assert.ok(narrow < 1, 'a narrow face cannot carry the jaw at full size');
   assert.ok(narrow < wide, 'a narrow face carries a smaller mouth than a broad one');
 });
 
@@ -496,8 +492,14 @@ test('upright horns are reachable and on the artwork checklist', () => {
   assert.equal(horns.part, 'horns/upright');
   assert.ok(requiredPartKeys().includes('horns/upright'));
 
-  // It carries no size correction: sweeping up, it cannot land on a face the
-  // way the ram horns do, so there is nothing to correct for.
-  assert.equal(PART_SCALES['horns/upright'], undefined);
-  assert.ok(PART_SCALES['horns/spiral'] !== undefined, 'the ram horns still need one');
+  // No horn carries a size correction any more. The ram horns needed one
+  // while their curl dropped 17px below the anchor and covered up to 73% of a
+  // face; redrawn with a 6px drop they cover at most 12%.
+  for (const horn of ['single', 'twin', 'crown', 'spiral', 'upright']) {
+    assert.equal(
+      PART_SCALES[`horns/${horn}`],
+      undefined,
+      `horns/${horn}: a correction here means the art and the rig disagree`,
+    );
+  }
 });
