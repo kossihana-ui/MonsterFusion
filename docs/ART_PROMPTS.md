@@ -50,7 +50,7 @@ sprites - do not add fine texture that the body does not have.
 
 ## 3. 翼（最優先・8枚）
 
-**現在の4枚を、前後ペアの8枚に差し替えます。** core側は対応済みで、`wingPairs: true` にすると `wings/<type>-far` と `wings/<type>-near` を要求します。
+**対応済みです**（2026-10-23）。8枚が納品され、core側も既定で前後ペアを使います。以下は再生成が必要になった場合の指示です。
 
 ```
 Draw a WING PAIR for a three-quarter view creature, as TWO separate sprites.
@@ -105,7 +105,7 @@ Material is keratin throughout, with the shade tone on the lower-right of each
 horn and ridges running across the curve.
 ```
 
-**巻き角について**: 現在のものは幅42pxで他の角（30px）より1.4倍大きく、core側で0.75倍に縮小しています。30px幅で描き直してもらえれば補正が不要になります。
+**巻き角について**: 30px幅で描き直されましたが、巻きが眉から下に垂れる形状のため、他の角が目を1%も隠さないのに対し40〜73%隠します。core側で0.8倍、頭の小さい `serpentine` と `finned` ではさらに0.7倍にしています。垂れ下がりを浅くすれば補正を減らせます。
 
 ## 5. 口・顎（4枚・描き直し）
 

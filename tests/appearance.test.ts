@@ -449,26 +449,31 @@ test('joints scale with the monster', () => {
 });
 
 test('facial features are sized to the face that carries them', () => {
-  // slim wore a jaw at 150% of its own face width before these corrections.
-  for (const shape of ['slim', 'serpentine', 'muscular'] as const) {
+  // slim wore a jaw at 150% of its own face width before these corrections,
+  // and every jaw is now drawn at the width the maw used to have, so even a
+  // round face needs bringing down.
+  for (const shape of Object.keys(BODY_RIGS) as (keyof typeof BODY_RIGS)[]) {
     const scale = BODY_RIGS[shape].partScale?.jaw ?? 1;
     assert.ok(scale < 1, `${shape}: a mouth wider than the head needs correcting`);
   }
-  assert.equal(BODY_RIGS.round.partScale?.jaw ?? 1, 1, 'round was already in proportion');
+  const narrow = BODY_RIGS.slim.partScale?.jaw ?? 1;
+  const wide = BODY_RIGS.finned.partScale?.jaw ?? 1;
+  assert.ok(narrow < wide, 'a narrow face carries a smaller mouth than a broad one');
 });
 
-test('a wing can be a far/near pair, and only when the art exists', () => {
-  const single = composeAppearance({ ...basePhenotype, wings: 'membrane' });
+test('a wing is a far/near pair, and can fall back to a single sheet', () => {
+  const single = composeAppearance(
+    { ...basePhenotype, wings: 'membrane' },
+    createAppearanceConfig({ wingPairs: false }),
+  );
   assert.deepEqual(
     single.layers.filter((l) => l.kind.startsWith('wings')).map((l) => l.part),
     ['wings/membrane'],
-    'the default stays on the single sheet the UI has today',
+    'the single sheet stays available for art that has not been split',
   );
 
-  const paired = composeAppearance(
-    { ...basePhenotype, wings: 'membrane' },
-    createAppearanceConfig({ wingPairs: true }),
-  );
+  // The pair art exists, so this is the default now.
+  const paired = composeAppearance({ ...basePhenotype, wings: 'membrane' });
   const wings = paired.layers.filter((l) => l.kind.startsWith('wings'));
   assert.deepEqual(wings.map((l) => l.part), ['wings/membrane-far', 'wings/membrane-near']);
 
@@ -478,7 +483,7 @@ test('a wing can be a far/near pair, and only when the art exists', () => {
   assert.ok(far.scale < near.scale, 'the far wing is further away, so smaller');
   assert.ok(far.z < near.z, 'and the body passes between them');
   assert.ok(
-    requiredPartKeys(createAppearanceConfig({ wingPairs: true })).includes('wings/membrane-far'),
+    requiredPartKeys().includes('wings/membrane-far'),
     'the artwork checklist must ask for the pair',
   );
 });

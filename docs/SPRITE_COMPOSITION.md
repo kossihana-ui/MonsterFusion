@@ -112,11 +112,11 @@ for (const joint of composition.contacts) {
 
 ### 翼の前後ペア
 
-`wingPairs: true` にすると、翼が `wings/<type>-far`（体の奥）と `wings/<type>-near`（手前）の2枚になります。真横から見た1枚絵の翼は3/4視点の体に乗らず、貼り付けたように見えるためです。**既定は false** で、素材が揃うまで現在の1枚絵のまま動きます。
+翼は `wings/<type>-far`（体の奥）と `wings/<type>-near`（手前）の2枚で描かれます。真横から見た1枚絵の翼は3/4視点の体に乗らず、貼り付けたように見えるためです。**素材が揃ったので既定で有効**です。
 
-```ts
-createAppearanceConfig({ wingPairs: true })
-```
+1枚絵の素材に戻す場合は `createAppearanceConfig({ wingPairs: false })`。
+
+翼は取り付け点から最も遠くまで伸びるパーツで、giant では翼端が x=76 まで届いて64pxのキャンバスから出ます。`PART_SCALES` で8枚とも0.65倍にしてあります。
 
 素材の作り方は [ART_PROMPTS.md](ART_PROMPTS.md) にあります。
 
@@ -127,11 +127,12 @@ createAppearanceConfig({ wingPairs: true })
 ```ts
 import { PART_SCALES, BODY_RIGS } from '@core/core/index.ts';
 
-PART_SCALES['horns/spiral']        // 0.75（素材が他の角より1.4倍大きいため）
-BODY_RIGS.muscular.partScale       // { horns: 0.9 }（額が狭く角が目にかかるため）
+PART_SCALES['horns/spiral']        // 0.8（巻き角だけが眉から下に垂れるため）
+PART_SCALES['wings/membrane-near'] // 0.65（giant で翼端がキャンバスから出るため）
+BODY_RIGS.serpentine.partScale     // { horns: 0.7, eyes: 1.15, jaw: 0.42 }
 ```
 
-- **`PART_SCALES`（パーツ別）**: その素材だけが同じスロットの中で大きすぎる/小さすぎる場合に使います。巻き角は42px幅で、他の角の30pxに対して1.4倍あるため0.75倍にしています
+- **`PART_SCALES`（パーツ別）**: その素材だけが同じスロットの中で大きすぎる/小さすぎる場合に使います。巻き角だけが眉から下に垂れる形状で、他の角（single / twin / crown）が目を1%も隠さないのに対し40〜73%隠すため、0.8倍にしています
 - **`BodyRig.partScale`（体型×部位別）**: ある体型でだけ合わない場合に使います。角が目を隠す度合いは**角の素材ではなく体型の額の広さ**で決まる（round 10% / muscular 56%）ため、この補正は体型側に置いています
 
 どちらも `createAppearanceConfig()` と `BODY_RIGS` で調整できます。「この体型の角をもう少し小さく」といった要望はこの数値で対応します。

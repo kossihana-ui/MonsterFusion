@@ -103,9 +103,9 @@ export const BODY_RIGS: Readonly<Record<BodyShape, BodyRig>> = {
     origin: { x: 32, y: 38 },
     anchors: {
       body: { x: 32, y: 38 },
-      head: { x: 31, y: 32 },
+      head: { x: 31, y: 30 },
       eyes: { x: 31, y: 33 },
-      jaw: { x: 31, y: 41 },
+      jaw: { x: 31, y: 38 },
       crest: { x: 32, y: 23 },
       horns: { x: 32, y: 23 },
       wings: { x: 36, y: 34 },
@@ -113,6 +113,7 @@ export const BODY_RIGS: Readonly<Record<BodyShape, BodyRig>> = {
     },
     headScale: 1.0,
     limbScale: 1,
+    partScale: { jaw: 0.69 },
     facing: 'left',
   },
   slim: {
@@ -121,7 +122,7 @@ export const BODY_RIGS: Readonly<Record<BodyShape, BodyRig>> = {
       body: { x: 32, y: 36 },
       head: { x: 27, y: 22 },
       eyes: { x: 27, y: 22 },
-      jaw: { x: 30, y: 29 },
+      jaw: { x: 30, y: 27 },
       crest: { x: 31, y: 16 },
       horns: { x: 31, y: 16 },
       wings: { x: 35, y: 31 },
@@ -129,16 +130,16 @@ export const BODY_RIGS: Readonly<Record<BodyShape, BodyRig>> = {
     },
     headScale: 0.7,
     limbScale: 0.95,
-    partScale: { horns: 0.9, eyes: 0.7, jaw: 0.6 },
+    partScale: { horns: 0.9, eyes: 0.7, jaw: 0.42 },
     facing: 'left',
   },
   muscular: {
     origin: { x: 32, y: 38 },
     anchors: {
       body: { x: 32, y: 38 },
-      head: { x: 27, y: 23 },
+      head: { x: 27, y: 22 },
       eyes: { x: 27, y: 24 },
-      jaw: { x: 32, y: 31 },
+      jaw: { x: 32, y: 29 },
       crest: { x: 30, y: 15 },
       horns: { x: 30, y: 16 },
       wings: { x: 38, y: 32 },
@@ -146,16 +147,16 @@ export const BODY_RIGS: Readonly<Record<BodyShape, BodyRig>> = {
     },
     headScale: 1.0,
     limbScale: 1.1,
-    partScale: { horns: 0.9, eyes: 0.73, jaw: 0.7 },
+    partScale: { horns: 0.9, eyes: 0.73, jaw: 0.48 },
     facing: 'left',
   },
   serpentine: {
     origin: { x: 32, y: 40 },
     anchors: {
       body: { x: 32, y: 40 },
-      head: { x: 24, y: 20 },
+      head: { x: 24, y: 18 },
       eyes: { x: 24, y: 20 },
-      jaw: { x: 25, y: 26 },
+      jaw: { x: 25, y: 24 },
       crest: { x: 26, y: 13 },
       horns: { x: 26, y: 13 },
       wings: { x: 34, y: 30 },
@@ -163,16 +164,16 @@ export const BODY_RIGS: Readonly<Record<BodyShape, BodyRig>> = {
     },
     headScale: 0.75,
     limbScale: 0.9,
-    partScale: { eyes: 1.15, jaw: 0.6 },
+    partScale: { horns: 0.7, eyes: 1.15, jaw: 0.42 },
     facing: 'left',
   },
   winged: {
     origin: { x: 32, y: 36 },
     anchors: {
       body: { x: 32, y: 36 },
-      head: { x: 28, y: 22 },
+      head: { x: 28, y: 21 },
       eyes: { x: 28, y: 22 },
-      jaw: { x: 30, y: 30 },
+      jaw: { x: 30, y: 27 },
       crest: { x: 31, y: 15 },
       horns: { x: 31, y: 15 },
       wings: { x: 34, y: 28 },
@@ -180,16 +181,16 @@ export const BODY_RIGS: Readonly<Record<BodyShape, BodyRig>> = {
     },
     headScale: 0.85,
     limbScale: 1.15,
-    partScale: { eyes: 0.8, jaw: 0.89 },
+    partScale: { eyes: 0.8, jaw: 0.62 },
     facing: 'left',
   },
   finned: {
     origin: { x: 32, y: 38 },
     anchors: {
       body: { x: 32, y: 38 },
-      head: { x: 25, y: 32 },
+      head: { x: 25, y: 31 },
       eyes: { x: 25, y: 34 },
-      jaw: { x: 24, y: 38 },
+      jaw: { x: 24, y: 37 },
       crest: { x: 32, y: 25 },
       horns: { x: 28, y: 26 },
       wings: { x: 36, y: 34 },
@@ -197,7 +198,7 @@ export const BODY_RIGS: Readonly<Record<BodyShape, BodyRig>> = {
     },
     headScale: 0.9,
     limbScale: 1,
-    partScale: { eyes: 1.3, jaw: 1.29 },
+    partScale: { horns: 0.7, eyes: 1.3, jaw: 0.89 },
     facing: 'left',
   },
 };
@@ -214,8 +215,23 @@ export const BODY_RIGS: Readonly<Record<BodyShape, BodyRig>> = {
  * is big everywhere is a body-shape problem - use `BodyRig.partScale`.
  */
 export const PART_SCALES: Readonly<Record<string, number>> = {
-  // 42px of art against a 30px slot median.
-  'horns/spiral': 0.75,
+  // Wings reach further from their anchor than anything else a monster wears.
+  // At full size a giant's wing tip lands past x=76 on a 64px canvas; 0.65 is
+  // the largest scale that keeps the whole wing on the sprite.
+  'wings/feathered-far': 0.65,
+  'wings/feathered-near': 0.65,
+  'wings/membrane-far': 0.65,
+  'wings/membrane-near': 0.65,
+  'wings/crystal-far': 0.65,
+  'wings/crystal-near': 0.65,
+  'wings/ethereal-far': 0.65,
+  'wings/ethereal-near': 0.65,
+  // The ram horns are the only horn that curls back down past the brow, so
+  // they are the only one that can land on a face: single, twin and crown
+  // cover none of the eyes at full size, spiral covers 40-73%. A light trim
+  // here, and a heavier one per shape below, keeps the eyes readable without
+  // reducing a ram horn to a bump.
+  'horns/spiral': 0.8,
 };
 
 // ---------------------------------------------------------------------------
@@ -556,7 +572,8 @@ export const DEFAULT_APPEARANCE_CONFIG: AppearanceConfig = {
     // Ethereal wings read as a glow around the creature, so they sit in front.
     ethereal: false,
   },
-  wingPairs: false,
+  // The far/near art exists now, so a wing is a pair by default.
+  wingPairs: true,
   farWingScale: 0.82,
   farWingOffset: { x: -3, y: -2 },
 };
