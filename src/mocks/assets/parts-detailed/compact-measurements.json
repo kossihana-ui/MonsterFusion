@@ -1,0 +1,92 @@
+{
+  "horns/upright": {
+    "width": 32,
+    "height": 32,
+    "origin": {
+      "x": 16,
+      "y": 25
+    },
+    "bounds": {
+      "left": 1,
+      "top": 1,
+      "right": 30,
+      "bottom": 26
+    },
+    "artWidth": 30
+  },
+  "horns/spiral": {
+    "width": 32,
+    "height": 32,
+    "origin": {
+      "x": 16,
+      "y": 10
+    },
+    "bounds": {
+      "left": 1,
+      "top": 1,
+      "right": 30,
+      "bottom": 16
+    },
+    "artWidth": 30
+  },
+  "jaw/fangs": {
+    "width": 28,
+    "height": 24,
+    "origin": {
+      "x": 14,
+      "y": 2
+    },
+    "bounds": {
+      "left": 5,
+      "top": 3,
+      "right": 22,
+      "bottom": 12
+    },
+    "artWidth": 18
+  },
+  "jaw/tusks": {
+    "width": 28,
+    "height": 24,
+    "origin": {
+      "x": 14,
+      "y": 2
+    },
+    "bounds": {
+      "left": 6,
+      "top": 3,
+      "right": 22,
+      "bottom": 15
+    },
+    "artWidth": 17
+  },
+  "jaw/beak": {
+    "width": 28,
+    "height": 24,
+    "origin": {
+      "x": 14,
+      "y": 2
+    },
+    "bounds": {
+      "left": 5,
+      "top": 2,
+      "right": 22,
+      "bottom": 15
+    },
+    "artWidth": 18
+  },
+  "jaw/maw": {
+    "width": 28,
+    "height": 24,
+    "origin": {
+      "x": 14,
+      "y": 2
+    },
+    "bounds": {
+      "left": 5,
+      "top": 2,
+      "right": 22,
+      "bottom": 17
+    },
+    "artWidth": 18
+  }
+}

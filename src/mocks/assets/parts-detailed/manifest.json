@@ -310,5 +310,13 @@
       "x": 4,
       "y": 27
     }
+  },
+  "horns/upright": {
+    "width": 32,
+    "height": 32,
+    "origin": {
+      "x": 16,
+      "y": 25
+    }
   }
 }

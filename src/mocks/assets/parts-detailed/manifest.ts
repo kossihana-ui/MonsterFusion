@@ -38,4 +38,5 @@ export const partUrls: Record<string, string> = {
   "wings/membrane-near": new URL("./wings/membrane-near.png", import.meta.url).href,
   "wings/crystal-near": new URL("./wings/crystal-near.png", import.meta.url).href,
   "wings/ethereal-near": new URL("./wings/ethereal-near.png", import.meta.url).href,
+  "horns/upright": new URL("./horns/upright.png", import.meta.url).href,
 };

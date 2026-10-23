@@ -56,7 +56,7 @@ try {
       n += length + 12;
     }
     const data = inflateSync(Buffer.concat(blocks));
-    let visible = 0;
+    let visible = 0, left = w, right = -1, bottom = -1;
     const usedColors = new Set();
     for (let y = 0; y < h; y++) {
       assert.equal(data[y * (w * 4 + 1)], 0);
@@ -66,6 +66,7 @@ try {
         assert.ok(alpha === 0 || alpha === 255, key + " antialiasing");
         if (alpha) {
           visible++;
+          left = Math.min(left, x); right = Math.max(right, x); bottom = Math.max(bottom, y);
           const color = data.subarray(i, i + 3).toString("hex");
           usedColors.add(color);
           assert.ok(colors.has(color), key + " palette");
@@ -74,6 +75,18 @@ try {
       }
     }
     assert.ok(visible > 0, key + " is empty");
+    if (key.startsWith("jaw/")) {
+      assert.ok(right - left + 1 <= 18, key + " compact width");
+      assert.deepEqual(spec.origin, { x: 14, y: 2 });
+    }
+    if (key === "horns/upright") {
+      assert.ok(bottom <= 27, "upright below brow");
+      assert.deepEqual(spec.origin, { x: 16, y: 25 });
+    }
+    if (key === "horns/spiral") {
+      assert.ok(bottom <= 16, "spiral below brow");
+      assert.deepEqual(spec.origin, { x: 16, y: 10 });
+    }
     if (/^(wings|horns|jaw)\//.test(key))
       assert.ok(usedColors.size <= 5, key + " detail density");
     if (key.startsWith("wings/")) {
@@ -157,7 +170,7 @@ try {
     new Map(),
   );
   console.log(
-    "PASS: 39 parts, exact palette/binary alpha/origins, recoloring, 200 fused generations, immutable core, anchor transforms, mirroring, missing-layer skip.",
+    "PASS: 40 parts, compact jaw/horn bounds, exact palette/binary alpha/origins, recoloring, 200 fused generations, immutable core, anchor transforms, mirroring, missing-layer skip.",
   );
 
   // Optional offline visual QA using an installed native Canvas implementation.
@@ -216,6 +229,18 @@ try {
       );
     });
     mkdirSync("artifacts/sprites", { recursive: true });
+    const compact = createCanvas(1152, 1152), cc = compact.getContext("2d");
+    cc.fillStyle = "#141b1f"; cc.fillRect(0, 0, 1152, 1152); cc.imageSmoothingEnabled = false;
+    ["horns/upright", "horns/spiral", "jaw/fangs", "jaw/tusks", "jaw/beak", "jaw/maw"].forEach((key, row) => {
+      Object.keys(renderer.appearanceConfig.rigs).forEach((bodyShape, col) => {
+        const [kind, value] = key.split("/");
+        const phenotype = { ...game.initialMonsters[1].phenotype, bodyShape,
+          wings: "none", crest: "none", horns: "none", jaw: "normal", size: "medium",
+          [kind]: value };
+        cc.drawImage(render(phenotype), col * 192, row * 192, 192, 192);
+      });
+    });
+    writeFileSync("artifacts/sprites/compact-preview.png", compact.toBuffer("image/png"));
     const wingSheet = createCanvas(1152, 768), wc = wingSheet.getContext("2d");
     wc.fillStyle = "#141b1f"; wc.fillRect(0, 0, 1152, 768); wc.imageSmoothingEnabled = false;
     ["feathered", "membrane", "crystal", "ethereal"].forEach((wings, row) => {
