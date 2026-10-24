@@ -16,5 +16,11 @@
     "durationSeconds": 0.48,
     "peak": 0.30354763811699725,
     "rms": 0.12000000000000001
+  },
+  {
+    "name": "clear-layered",
+    "durationSeconds": 0.84,
+    "peak": 0.33010793258582394,
+    "rms": 0.12
   }
 ]

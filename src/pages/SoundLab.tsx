@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import "../styles/sound-lab.css";
 
 const sounds = [
+  { id: "clear-layered", title: "04 / 重ねたフォーン", text: "②に少し高い音を控えめに重ね、余韻を長くした新しい案。0.84秒。", word: "フォーン", tags: "新しい案 · 重なりと余韻" },
   { id: "round", title: "01 / 丸いフォーン", text: "低い音程で柔らかく始まり、静かになめらかに消える音。", word: "フォーン", tags: "柔らかい · 落ち着き" },
   { id: "clear", title: "02 / 透明なフォーン", text: "低めの澄んだ響き。ノイズを加えず、余韻を短く整えた音。", word: "フォーン", tags: "透明感 · 浮遊感" },
   { id: "machine", title: "03 / 機械的なフォーン", text: "低めの芯に電子的な響き。跳ねずになめらかに伸びる音。", word: "フォーン", tags: "電子的 · くっきり" },
@@ -29,7 +30,7 @@ export function SoundLab() {
   }
   return <>
     <div className="hero"><div><div className="eyebrow">SOUND WORKSHOP</div>
-      <h1>「フォーン」を探す</h1><p>同じ短い選択音を、3つの質感で。気になる音を押して聴き比べてください。</p></div></div>
+      <h1>「フォーン」を探す</h1><p>新しい④は、②に高めの音と長い余韻を加えた案です。元の②と聴き比べてください。</p></div></div>
     <section className="panel sound-settings">
       <label htmlFor="sound-volume">試聴音量 <strong>{Math.round(volume*100)}%</strong></label>
       <input id="sound-volume" type="range" min="0" max="1" step=".05" value={volume}
@@ -46,6 +47,6 @@ export function SoundLab() {
       <a download href={import.meta.env.BASE_URL+"audio/selection/"+sound.id+".wav"}>WAVを保存 ↓</a>
     </section>)}</div>
     {error && <p role="alert">{error}</p>}
-    <p className="sound-note">各0.48秒のオリジナル音です。連続で押して、操作を繰り返したときの感触も試せます。</p>
+    <p className="sound-note">①〜③は0.48秒、④は0.84秒のオリジナル音です。連続で押して、操作を繰り返したときの感触も試せます。</p>
   </>;
 }

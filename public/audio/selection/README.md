@@ -1,5 +1,10 @@
 # Selection sound studies
 
+Revision 4 adds clear-layered.wav while preserving all three revision-3 files.
+It layers a quiet 393 Hz perfect fifth over the 262 Hz clear tone (amplitude 0.24),
+with a 160ms hold and 620ms smooth release. File duration: 0.84 seconds.
+No noise or detuning is introduced; the upper tone fades earlier than the base.
+
 Original synthesized sounds for MonsterFusion; no sampled game audio or external recordings.
 Created with scripts/build-selection-sounds.mjs (Node built-ins only).
 Run: node scripts/build-selection-sounds.mjs

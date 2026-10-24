@@ -1,15 +1,17 @@
 // Original oscillator synthesis: no samples, random values or external dependencies.
 import { mkdirSync, writeFileSync } from "node:fs";
-const rate = 48000, length = Math.round(rate * .48);
+const rate = 48000;
 const root = "public/audio/selection";
 mkdirSync(root, { recursive: true });
 const variants = [
   { id: "round", pitch: 220, harmonic: .16 },
   { id: "clear", pitch: 262, harmonic: .08 },
   { id: "machine", pitch: 196, harmonic: .24 },
+  { id: "clear-layered", pitch: 262, harmonic: .08, duration: .84, upper: .24 },
 ];
 const metrics = [];
 for (const v of variants) {
+  const length = Math.round(rate * (v.duration ?? .48));
   const dry = new Float64Array(length), output = new Float64Array(length);
   let phase = 0;
   for (let i = 0; i < length; i++) {
@@ -18,11 +20,13 @@ for (const v of variants) {
     const f = v.pitch;
     phase += 2 * Math.PI * f / rate;
     const attack = Math.sin(Math.min(1, t / .025) * Math.PI / 2) ** 2;
-    const release = Math.min(1, Math.max(0, (t - .09) / .33));
+    const release = Math.min(1, Math.max(0, (t - (v.upper ? .16 : .09)) / (v.upper ? .62 : .33)));
     const envelope = attack * Math.cos(release * Math.PI / 2) ** 4;
     // Stable harmonic tones only: no noise, detuning, echo or metallic FM tail.
     // Higher partials disappear first, leaving a clean, dark release.
-    const tone = Math.sin(phase) + v.harmonic * Math.exp(-t / .075) * Math.sin(phase * 2);
+    // A quiet perfect fifth adds height without bringing back noisy breath or beating.
+    const upper = (v.upper ?? 0) * Math.exp(-Math.max(0, t - .16) / .28) * Math.sin(phase * 1.5);
+    const tone = Math.sin(phase) + upper + v.harmonic * Math.exp(-t / .075) * Math.sin(phase * 2);
     dry[i] = envelope * tone;
   }
   for (let i = 0; i < length; i++) {
