@@ -1,0 +1,12 @@
+.sound-settings { display:flex; flex-wrap:wrap; align-items:center; gap:18px; margin-bottom:24px; }
+.sound-settings label { min-width:140px; }
+.sound-settings input { flex:1; min-width:120px; accent-color:#b7e59a; }
+.sound-settings p { flex-basis:100%; margin:0; font-size:12px; }
+.sound-grid { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:18px; }
+.sound-card { display:flex; flex-direction:column; gap:14px; }
+.sound-card h2 { font-size:20px; margin:0; }
+.sound-word { display:grid; place-items:center; min-height:140px; font-size:32px; color:#ceeab8; background:radial-gradient(ellipse,#304d4144,transparent 70%); letter-spacing:.1em; }
+.sound-card p { flex:1; }
+.sound-card a { text-align:center; padding:10px; color:#b7c9c1; text-decoration:underline; }
+.sound-note { margin-top:24px; }
+@media(max-width:900px) { .sound-grid { grid-template-columns:1fr; } .sound-word { min-height:80px; } }

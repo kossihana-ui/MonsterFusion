@@ -4,9 +4,10 @@ import { Detail } from "./pages/Detail";
 import { Fusion } from "./pages/Fusion";
 import { Battle } from "./pages/Battle";
 import { Register } from "./pages/Register";
+import { SoundLab } from "./pages/SoundLab";
 import { initialMonsters, gameAdapter } from "./mocks/game";
 import type { GameAdapter, Monster } from "./shared/ui";
-type Page = "collection" | "fusion" | "battle" | "register" | "detail";
+type Page = "collection" | "fusion" | "battle" | "register" | "detail" | "sound";
 const tabs: { id: Page; label: string; icon: string; english: string }[] = [
   {
     id: "collection",
@@ -17,6 +18,7 @@ const tabs: { id: Page; label: string; icon: string; english: string }[] = [
   { id: "fusion", label: "融合のアトリエ", icon: "✧", english: "FUSION" },
   { id: "battle", label: "バトルアリーナ", icon: "⚔", english: "BATTLE" },
   { id: "register", label: "モンスター登録", icon: "＋", english: "REGISTER" },
+  { id: "sound", label: "音の試聴室", icon: "♪", english: "SOUND WORKSHOP" },
 ];
 export default function App({
   adapter = gameAdapter,
@@ -110,6 +112,7 @@ export default function App({
             <Battle monsters={monsters} adapter={adapter} />
           )}
           {page === "register" && <Register onRegister={add} />}
+          {page === "sound" && <SoundLab />}
           <footer>
             <span>MONSTERFUSION</span>
             <span>ひとつの融合から、無限の物語へ。</span>
