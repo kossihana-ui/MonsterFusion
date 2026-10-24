@@ -1,4 +1,4 @@
-import { useCallback, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import type { FusionResult, GameAdapter, Monster } from "../shared/ui";
 import { Portrait } from "../components/MonsterView";
 import { FusionReveal } from "../components/FusionReveal";
@@ -17,6 +17,9 @@ export function Fusion({
   const [busy, setBusy] = useState(false);
   const [animating, setAnimating] = useState(false);
   const pending = useRef(false);
+  const soundContext = useRef<AudioContext | null>(null);
+  const [muted, setMuted] = useState(false);
+  useEffect(() => () => { void soundContext.current?.close(); soundContext.current = null; }, []);
   const finish = useCallback(() => setAnimating(false), []);
   const [error, setError] = useState("");
   const parentA = monsters.find((m) => m.id === a);
@@ -24,6 +27,13 @@ export function Fusion({
   async function fuse() {
     if (!parentA || !parentB || a === b || pending.current || animating) return;
     pending.current = true;
+    // Unlock audio inside the user's click, before asynchronous core work.
+    if (!matchMedia("(prefers-reduced-motion: reduce)").matches) {
+      try {
+        soundContext.current ??= new AudioContext();
+        void soundContext.current.resume().catch(() => {});
+      } catch { /* Visual timeline remains available without Web Audio. */ }
+    }
     setBusy(true);
     setError("");
     setResult(null);
@@ -84,6 +94,9 @@ export function Fusion({
         ))}
       </div>
       <div className="fusion-action">
+        <button className="text-button" onClick={() => setMuted(value => !value)} aria-pressed={!muted}>
+          {muted ? "融合音：オフ" : "融合音：オン"}
+        </button>
         <span>✧</span>
         <button
           className="primary"
@@ -101,7 +114,8 @@ export function Fusion({
         </p>
       </div>
       {error && <p role="alert">{error}</p>}
-      {result ? <FusionReveal key={result.child.id} result={result} onFinished={finish} /> : <section className="panel result" aria-live="polite">
+      {result ? <FusionReveal key={result.child.id} result={result} onFinished={finish}
+        soundContext={soundContext.current} muted={muted} onMute={() => setMuted(value => !value)} /> : <section className="panel result" aria-live="polite">
         <div className="eyebrow">FUSION RESULT</div>
         <h2>新しい出会いを待っています</h2>
         <p>親となる2体を選んで融合しましょう。</p>
