@@ -1,32 +1,29 @@
 // Original oscillator synthesis: no samples, random values or external dependencies.
 import { mkdirSync, writeFileSync } from "node:fs";
-const rate = 48000, length = Math.round(rate * .64);
+const rate = 48000, length = Math.round(rate * .48);
 const root = "public/audio/selection";
 mkdirSync(root, { recursive: true });
 const variants = [
-  { id: "round", pitch: 440, harmonic: .20, breath: .16 },
-  { id: "clear", pitch: 554, harmonic: .14, breath: .22 },
-  { id: "machine", pitch: 392, harmonic: .32, breath: .12 },
+  { id: "round", pitch: 220, harmonic: .16 },
+  { id: "clear", pitch: 262, harmonic: .08 },
+  { id: "machine", pitch: 196, harmonic: .24 },
 ];
 const metrics = [];
 for (const v of variants) {
   const dry = new Float64Array(length), output = new Float64Array(length);
-  let phase = 0, seed = 731, low = 0, high = 0;
+  let phase = 0;
   for (let i = 0; i < length; i++) {
     const t = i / rate;
     // Almost level pitch: no large upward scoop that makes the sound bounce.
-    const f = v.pitch * (1 + .008 * Math.exp(-t / .10));
+    const f = v.pitch;
     phase += 2 * Math.PI * f / rate;
-    const attack = Math.sin(Math.min(1, t / .035) * Math.PI / 2) ** 2;
-    const envelope = attack * Math.exp(-Math.max(0, t - .105) / .115);
-    seed = (Math.imul(seed, 1664525) + 1013904223) >>> 0;
-    const noise = seed / 2147483648 - 1;
-    low += .18 * (noise - low);
-    high += .035 * (noise - high);
-    const air = (low - high) * Math.exp(-t / .095);
-    const tone = Math.sin(phase) + v.harmonic * Math.sin(phase * 2)
-      + .07 * Math.sin(phase * 3) + .08 * Math.sin(phase * 1.003);
-    dry[i] = envelope * (tone + v.breath * air * 3);
+    const attack = Math.sin(Math.min(1, t / .025) * Math.PI / 2) ** 2;
+    const release = Math.min(1, Math.max(0, (t - .09) / .33));
+    const envelope = attack * Math.cos(release * Math.PI / 2) ** 4;
+    // Stable harmonic tones only: no noise, detuning, echo or metallic FM tail.
+    // Higher partials disappear first, leaving a clean, dark release.
+    const tone = Math.sin(phase) + v.harmonic * Math.exp(-t / .075) * Math.sin(phase * 2);
+    dry[i] = envelope * tone;
   }
   for (let i = 0; i < length; i++) {
     output[i] = dry[i];

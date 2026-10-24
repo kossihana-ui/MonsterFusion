@@ -2,8 +2,8 @@ import { useEffect, useRef, useState } from "react";
 import "../styles/sound-lab.css";
 
 const sounds = [
-  { id: "round", title: "01 / 丸いフォーン", text: "息のように柔らかく始まり、一定の音程で伸びる音。", word: "フォーン", tags: "柔らかい · 落ち着き" },
-  { id: "clear", title: "02 / 透明なフォーン", text: "少し高い響きと、薄い余韻。軽く浮かぶような感触。", word: "フォーン", tags: "透明感 · 浮遊感" },
+  { id: "round", title: "01 / 丸いフォーン", text: "低い音程で柔らかく始まり、静かになめらかに消える音。", word: "フォーン", tags: "柔らかい · 落ち着き" },
+  { id: "clear", title: "02 / 透明なフォーン", text: "低めの澄んだ響き。ノイズを加えず、余韻を短く整えた音。", word: "フォーン", tags: "透明感 · 浮遊感" },
   { id: "machine", title: "03 / 機械的なフォーン", text: "低めの芯に電子的な響き。跳ねずになめらかに伸びる音。", word: "フォーン", tags: "電子的 · くっきり" },
 ];
 export function SoundLab() {
@@ -18,7 +18,7 @@ export function SoundLab() {
   }, []);
   async function play(id: string) {
     player.current?.pause();
-    const audio = new Audio(import.meta.env.BASE_URL + "audio/selection/" + id + ".wav?v=2");
+    const audio = new Audio(import.meta.env.BASE_URL + "audio/selection/" + id + ".wav?v=3");
     player.current = audio; audio.volume = volume;
     setError(""); setPlaying(id);
     audio.onended = () => { if (player.current === audio) setPlaying(""); };
@@ -46,6 +46,6 @@ export function SoundLab() {
       <a download href={import.meta.env.BASE_URL+"audio/selection/"+sound.id+".wav"}>WAVを保存 ↓</a>
     </section>)}</div>
     {error && <p role="alert">{error}</p>}
-    <p className="sound-note">各0.64秒のオリジナル音です。連続で押して、操作を繰り返したときの感触も試せます。</p>
+    <p className="sound-note">各0.48秒のオリジナル音です。連続で押して、操作を繰り返したときの感触も試せます。</p>
   </>;
 }
