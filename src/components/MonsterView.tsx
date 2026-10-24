@@ -1,6 +1,7 @@
 import type { Monster } from "../shared/ui";
 import { statLabels } from "../shared/ui";
 import { MonsterSprite } from "./MonsterSprite";
+import { FeatureTags } from "./FeatureTags";
 import type { SpriteMotion } from "./MonsterSprite";
 export function Portrait({
   monster,
@@ -70,6 +71,7 @@ export function MonsterCard({
           {monster.traits[0]?.name ?? "新たな可能性"}
         </p>
         <Stats monster={monster} />
+        <FeatureTags monster={monster} compact />
       </div>
       <span className="card-footer">
         個体の詳細を見る <span>↗</span>

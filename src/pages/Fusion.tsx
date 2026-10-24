@@ -1,6 +1,7 @@
-import { useState } from "react";
+import { useCallback, useRef, useState } from "react";
 import type { FusionResult, GameAdapter, Monster } from "../shared/ui";
 import { Portrait } from "../components/MonsterView";
+import { FusionReveal } from "../components/FusionReveal";
 export function Fusion({
   monsters,
   adapter,
@@ -14,22 +15,28 @@ export function Fusion({
   const [b, setB] = useState(monsters[1]?.id ?? "");
   const [result, setResult] = useState<FusionResult | null>(null);
   const [busy, setBusy] = useState(false);
+  const [animating, setAnimating] = useState(false);
+  const pending = useRef(false);
+  const finish = useCallback(() => setAnimating(false), []);
   const [error, setError] = useState("");
   const parentA = monsters.find((m) => m.id === a);
   const parentB = monsters.find((m) => m.id === b);
   async function fuse() {
-    if (!parentA || !parentB || a === b || busy) return;
+    if (!parentA || !parentB || a === b || pending.current || animating) return;
+    pending.current = true;
     setBusy(true);
     setError("");
     setResult(null);
     try {
       const r = await adapter.fuseMonsters(parentA, parentB);
       onCreated(r.child);
+      setAnimating(true);
       setResult(r);
     } catch {
       setError("融合に失敗しました。もう一度お試しください。");
     } finally {
       setBusy(false);
+      pending.current = false;
     }
   }
   return (
@@ -52,7 +59,7 @@ export function Fusion({
             <select
               aria-label={p.label}
               value={p.id}
-              disabled={busy}
+              disabled={busy || animating}
               onChange={(e) => {
                 p.set(e.target.value);
                 setResult(null);
@@ -80,7 +87,7 @@ export function Fusion({
         <span>✧</span>
         <button
           className="primary"
-          disabled={!parentA || !parentB || a === b || busy}
+          disabled={!parentA || !parentB || a === b || busy || animating}
           onClick={fuse}
         >
           {busy ? "融合中…" : "✦ 融合する"}
@@ -94,23 +101,11 @@ export function Fusion({
         </p>
       </div>
       {error && <p role="alert">{error}</p>}
-      <section className="panel result" aria-live="polite">
+      {result ? <FusionReveal key={result.child.id} result={result} onFinished={finish} /> : <section className="panel result" aria-live="polite">
         <div className="eyebrow">FUSION RESULT</div>
-        {result ? (
-          <>
-            <Portrait monster={result.child} />
-            <h2>{result.child.name}</h2>
-            <p>第 {result.child.generation} 世代</p>
-            <p>親：{result.parents.map((p) => p.name).join(" × ")}</p>
-            <span className="badge">図鑑に登録しました</span>
-          </>
-        ) : (
-          <>
-            <h2>新しい出会いを待っています</h2>
-            <p>親となる2体を選んで融合しましょう。</p>
-          </>
-        )}
-      </section>
+        <h2>新しい出会いを待っています</h2>
+        <p>親となる2体を選んで融合しましょう。</p>
+      </section>}
     </>
   );
 }

@@ -17,6 +17,7 @@ export interface MonsterTrait {
   description: string;
 }
 export interface Monster {
+  tags?: import("@core/core/index.ts").MonsterTag[];
   phenotype?: import("@core/core/index.ts").MonsterPhenotype;
   id: string;
   name: string;
@@ -28,6 +29,7 @@ export interface Monster {
   parentIds: string[];
 }
 export interface FusionResult {
+  summary?: import("@core/core/index.ts").FusionSummary;
   child: Monster;
   parents: [Monster, Monster];
 }

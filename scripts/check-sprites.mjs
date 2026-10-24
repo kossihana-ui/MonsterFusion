@@ -100,12 +100,17 @@ try {
   const before = JSON.stringify(game.getCoreMonster("starter-moss"));
   let parent = game.initialMonsters[0];
   for (let n = 0; n < 200; n++) {
-    parent = (
-      await game.gameAdapter.fuseMonsters(
+    const fusion = await game.gameAdapter.fuseMonsters(
         parent,
         game.initialMonsters[(n + 1) % 3],
-      )
-    ).child;
+      );
+    parent = fusion.child;
+    const original = game.getCoreMonster(parent.id);
+    assert.deepEqual(parent.tags, core.describeMonster(original), "core tags preserved");
+    assert.deepEqual(fusion.summary, core.describeFusion(original, fusion.summary.evolved), "core reveal preserved");
+    const order = { inherited: 0, atavism: 1, mutation: 2, evolution: 3 };
+    const ranks = fusion.summary.steps.map(step => order[step.kind]);
+    assert.deepEqual(ranks, [...ranks].sort((a, b) => a - b), "reveal order");
     assert.ok(parent.phenotype);
     assert.equal(parent.image, "");
     for (const layer of renderer.compositionFor(parent.phenotype).layers)

@@ -1,5 +1,6 @@
 import type { Monster } from "../shared/ui";
 import { Portrait, Stats } from "../components/MonsterView";
+import { FeatureTags } from "../components/FeatureTags";
 export function Detail({
   monster,
   monsters,
@@ -34,14 +35,13 @@ export function Detail({
             monster.traits.map((t) => (
               <p key={t.id}>
                 <strong>{t.name}</strong>
-                <br />
-                {t.description}
               </p>
             ))
           ) : (
             <p>まだ特徴は登録されていません。</p>
           )}
           <h2>遺伝情報</h2>
+          <FeatureTags monster={monster} />
           <dl>
             {Object.entries(monster.genes).map(([k, v]) => (
               <div key={k}>

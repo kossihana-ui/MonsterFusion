@@ -4,7 +4,11 @@ import {
   findStarterSpec,
   createMonsterFromAnalysis,
   canFuse,
-  fuse,
+  fuseDetailed,
+  describeMonster,
+  describeTraits,
+  describeFusion,
+  labelFor,
   createDuel,
   stepTurn,
   createBasicPolicy,
@@ -33,23 +37,6 @@ const names: Record<string, string> = {
   "starter-ignis": "イグニス",
   "starter-aqua": "アクア",
 };
-const elements: Record<string, string> = {
-  earth: "森",
-  fire: "炎",
-  water: "水",
-  neutral: "無",
-  wind: "風",
-  light: "光",
-  dark: "闇",
-};
-const bodies: Record<string, string> = {
-  round: "丸型",
-  muscular: "筋肉質",
-  finned: "魚型",
-  slim: "細身",
-  serpentine: "蛇型",
-  winged: "翼型",
-};
 export function getCoreMonster(id: string): CoreMonster {
   const monster = records.get(id);
   if (!monster) throw new Error("モンスターが見つかりません。");
@@ -64,15 +51,16 @@ function present(monster: CoreMonster, image = "", composed = true): Monster {
     phenotype: composed ? monster.phenotype : undefined,
     generation: monster.generation,
     stats: monster.stats,
+    tags: describeMonster(monster),
     genes: {
-      element: elements[monster.phenotype.element],
-      body: bodies[monster.phenotype.bodyShape],
+      element: labelFor("element", monster.phenotype.element),
+      body: labelFor("bodyShape", monster.phenotype.bodyShape),
       potential: `進化ランク ${monster.tier} / 隠れ遺伝子あり`,
     },
-    traits: monster.traits.map((tag) => ({
-      id: tag,
-      name: tag,
-      description: tag,
+    traits: describeTraits(monster).map((tag) => ({
+      id: tag.trait,
+      name: tag.label,
+      description: tag.label,
     })),
     parentIds: [monster.parentAId, monster.parentBId].filter(
       (id): id is string => id !== null,
@@ -132,8 +120,9 @@ export const gameAdapter: GameAdapter = {
       parentB = getCoreMonster(b.id);
     const check = canFuse(parentA, parentB);
     if (!check.ok) throw new Error(check.message);
-    const child = fuse(parentA, parentB, context);
-    return { child: present(child), parents: [a, b] };
+    const result = fuseDetailed(parentA, parentB, context);
+    return { child: present(result.child), parents: [a, b],
+      summary: describeFusion(result.child, result.evolution.willEvolve) };
   },
   async calculateBattleTurn(state, action) {
     if (state.status !== "active") return state;
