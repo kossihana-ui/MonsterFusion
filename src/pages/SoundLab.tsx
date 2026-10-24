@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import "../styles/sound-lab.css";
 
 const sounds = [
+  { id: "fusion-motor", title: "05 / 遠心融合", text: "低いモーター音が滑らかに加速。回転が止まると②の音で誕生を知らせます。2.4秒。", word: "ウィィン → フォン", tags: "融合音の候補 · 加速と誕生" },
   { id: "clear-layered", title: "04 / 重ねたフォーン", text: "②に少し高い音を控えめに重ね、余韻を長くした新しい案。0.84秒。", word: "フォーン", tags: "新しい案 · 重なりと余韻" },
   { id: "round", title: "01 / 丸いフォーン", text: "低い音程で柔らかく始まり、静かになめらかに消える音。", word: "フォーン", tags: "柔らかい · 落ち着き" },
   { id: "clear", title: "02 / 透明なフォーン", text: "低めの澄んだ響き。ノイズを加えず、余韻を短く整えた音。", word: "フォーン", tags: "透明感 · 浮遊感" },
@@ -30,7 +31,7 @@ export function SoundLab() {
   }
   return <>
     <div className="hero"><div><div className="eyebrow">SOUND WORKSHOP</div>
-      <h1>「フォーン」を探す</h1><p>新しい④は、②に高めの音と長い余韻を加えた案です。元の②と聴き比べてください。</p></div></div>
+      <h1>音の試聴室</h1><p>⑤は遠心分離機のような回転をイメージした融合音です。②は決定音、④は警告音の候補として残しています。</p></div></div>
     <section className="panel sound-settings">
       <label htmlFor="sound-volume">試聴音量 <strong>{Math.round(volume*100)}%</strong></label>
       <input id="sound-volume" type="range" min="0" max="1" step=".05" value={volume}
@@ -47,6 +48,6 @@ export function SoundLab() {
       <a download href={import.meta.env.BASE_URL+"audio/selection/"+sound.id+".wav"}>WAVを保存 ↓</a>
     </section>)}</div>
     {error && <p role="alert">{error}</p>}
-    <p className="sound-note">①〜③は0.48秒、④は0.84秒のオリジナル音です。連続で押して、操作を繰り返したときの感触も試せます。</p>
+    <p className="sound-note">①〜③は0.48秒、④は0.84秒、⑤は2.4秒のオリジナル音です。ゲーム本編への融合音の適用は、試聴後に行います。</p>
   </>;
 }

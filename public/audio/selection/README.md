@@ -1,5 +1,12 @@
 # Selection sound studies
 
+Fusion motor study: fusion-motor.wav, 2.4 seconds.
+Rebuild with node scripts/build-fusion-sound.mjs after generating selection sounds.
+Deterministic harmonic motor rises from 78 to 320 Hz; rotor amplitude pulses
+accelerate from 7 to 72 Hz with a subdued low housing resonance.
+Motor fades out at 1.86s; approved clear.wav begins at 1.88s.
+No drums, sampled audio or hiss. Preview only, not wired to the fusion timeline yet.
+
 Revision 4 adds clear-layered.wav while preserving all three revision-3 files.
 It layers a quiet 393 Hz perfect fifth over the 262 Hz clear tone (amplitude 0.24),
 with a 160ms hold and 620ms smooth release. File duration: 0.84 seconds.
