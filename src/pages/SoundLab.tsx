@@ -2,9 +2,9 @@ import { useEffect, useRef, useState } from "react";
 import "../styles/sound-lab.css";
 
 const sounds = [
-  { id: "round", title: "01 / 丸いフォン", text: "柔らかい立ち上がりと低めの芯。繰り返す選択音の第一候補。", word: "フォン", tags: "柔らかい · 落ち着き" },
-  { id: "clear", title: "02 / 透明なフォン", text: "少し高い響きと、薄い余韻。軽く浮かぶような感触。", word: "フォーン", tags: "透明感 · 浮遊感" },
-  { id: "machine", title: "03 / 機械的なフォン", text: "短い立ち上がりに電子的なうねり。工作機器のような手応え。", word: "フウォン", tags: "電子的 · くっきり" },
+  { id: "round", title: "01 / 丸いフォーン", text: "息のように柔らかく始まり、一定の音程で伸びる音。", word: "フォーン", tags: "柔らかい · 落ち着き" },
+  { id: "clear", title: "02 / 透明なフォーン", text: "少し高い響きと、薄い余韻。軽く浮かぶような感触。", word: "フォーン", tags: "透明感 · 浮遊感" },
+  { id: "machine", title: "03 / 機械的なフォーン", text: "低めの芯に電子的な響き。跳ねずになめらかに伸びる音。", word: "フォーン", tags: "電子的 · くっきり" },
 ];
 export function SoundLab() {
   const player = useRef<HTMLAudioElement | null>(null);
@@ -18,7 +18,7 @@ export function SoundLab() {
   }, []);
   async function play(id: string) {
     player.current?.pause();
-    const audio = new Audio(import.meta.env.BASE_URL + "audio/selection/" + id + ".wav");
+    const audio = new Audio(import.meta.env.BASE_URL + "audio/selection/" + id + ".wav?v=2");
     player.current = audio; audio.volume = volume;
     setError(""); setPlaying(id);
     audio.onended = () => { if (player.current === audio) setPlaying(""); };
@@ -29,7 +29,7 @@ export function SoundLab() {
   }
   return <>
     <div className="hero"><div><div className="eyebrow">SOUND WORKSHOP</div>
-      <h1>「フォン」を探す</h1><p>同じ短い選択音を、3つの質感で。気になる音を押して聴き比べてください。</p></div></div>
+      <h1>「フォーン」を探す</h1><p>同じ短い選択音を、3つの質感で。気になる音を押して聴き比べてください。</p></div></div>
     <section className="panel sound-settings">
       <label htmlFor="sound-volume">試聴音量 <strong>{Math.round(volume*100)}%</strong></label>
       <input id="sound-volume" type="range" min="0" max="1" step=".05" value={volume}
@@ -46,6 +46,6 @@ export function SoundLab() {
       <a download href={import.meta.env.BASE_URL+"audio/selection/"+sound.id+".wav"}>WAVを保存 ↓</a>
     </section>)}</div>
     {error && <p role="alert">{error}</p>}
-    <p className="sound-note">各0.48秒のオリジナル音です。連続で押して、操作を繰り返したときの感触も試せます。</p>
+    <p className="sound-note">各0.64秒のオリジナル音です。連続で押して、操作を繰り返したときの感触も試せます。</p>
   </>;
 }

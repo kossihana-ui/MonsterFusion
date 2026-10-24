@@ -1,20 +1,20 @@
 [
   {
     "name": "round",
-    "durationSeconds": 0.48,
-    "peak": 0.5114838863980361,
+    "durationSeconds": 0.64,
+    "peak": 0.4092256398381138,
     "rms": 0.12
   },
   {
     "name": "clear",
-    "durationSeconds": 0.48,
-    "peak": 0.5210961923679491,
+    "durationSeconds": 0.64,
+    "peak": 0.4168182447581303,
     "rms": 0.12
   },
   {
     "name": "machine",
-    "durationSeconds": 0.48,
-    "peak": 0.4925029588464451,
-    "rms": 0.11999999999999998
+    "durationSeconds": 0.64,
+    "peak": 0.418850543012855,
+    "rms": 0.12
   }
 ]

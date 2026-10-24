@@ -1,30 +1,35 @@
 // Original oscillator synthesis: no samples, random values or external dependencies.
 import { mkdirSync, writeFileSync } from "node:fs";
-const rate = 48000, length = Math.round(rate * .48);
+const rate = 48000, length = Math.round(rate * .64);
 const root = "public/audio/selection";
 mkdirSync(root, { recursive: true });
 const variants = [
-  { id: "round", start: 340, end: 590, sweep: .034, fm: .32, ratio: 2, decay: .075 },
-  { id: "clear", start: 490, end: 810, sweep: .025, fm: .55, ratio: 3, decay: .085 },
-  { id: "machine", start: 290, end: 560, sweep: .018, fm: 1.25, ratio: 2, decay: .065 },
+  { id: "round", pitch: 440, harmonic: .20, breath: .16 },
+  { id: "clear", pitch: 554, harmonic: .14, breath: .22 },
+  { id: "machine", pitch: 392, harmonic: .32, breath: .12 },
 ];
 const metrics = [];
 for (const v of variants) {
   const dry = new Float64Array(length), output = new Float64Array(length);
-  let phase = 0;
+  let phase = 0, seed = 731, low = 0, high = 0;
   for (let i = 0; i < length; i++) {
     const t = i / rate;
-    const f = v.end + (v.start - v.end) * Math.exp(-t / v.sweep);
+    // Almost level pitch: no large upward scoop that makes the sound bounce.
+    const f = v.pitch * (1 + .008 * Math.exp(-t / .10));
     phase += 2 * Math.PI * f / rate;
-    const attack = 1 - Math.exp(-t / .007);
-    const envelope = attack * Math.exp(-t / v.decay);
-    const modulation = v.fm * Math.exp(-t / .055) * Math.sin(phase * v.ratio);
-    dry[i] = envelope * (Math.sin(phase + modulation) + .16 * Math.sin(phase * .5));
+    const attack = Math.sin(Math.min(1, t / .035) * Math.PI / 2) ** 2;
+    const envelope = attack * Math.exp(-Math.max(0, t - .105) / .115);
+    seed = (Math.imul(seed, 1664525) + 1013904223) >>> 0;
+    const noise = seed / 2147483648 - 1;
+    low += .18 * (noise - low);
+    high += .035 * (noise - high);
+    const air = (low - high) * Math.exp(-t / .095);
+    const tone = Math.sin(phase) + v.harmonic * Math.sin(phase * 2)
+      + .07 * Math.sin(phase * 3) + .08 * Math.sin(phase * 1.003);
+    dry[i] = envelope * (tone + v.breath * air * 3);
   }
   for (let i = 0; i < length; i++) {
-    const delay = Math.round(.047 * rate);
-    output[i] = dry[i] + (i >= delay ? .14 * dry[i-delay] : 0)
-      + (i >= delay*2 ? .055 * dry[i-delay*2] : 0);
+    output[i] = dry[i];
     // Fade the tail to exact silence and avoid a cut-off click.
     output[i] *= Math.min(1, (length - 1 - i) / (rate * .035));
   }
