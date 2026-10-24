@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import "../styles/sound-lab.css";
 
 const sounds = [
-  { id: "fusion-motor", title: "05 / 遠心融合", text: "低いモーター音が滑らかに加速。回転が止まると②の音で誕生を知らせます。2.4秒。", word: "ウィィン → フォン", tags: "融合音の候補 · 加速と誕生" },
+  { id: "fusion-motor-door", title: "05 / 遠心融合", text: "回転が止まり、重いロックがガチャコン。圧力が抜けるプシューーで装置が開きます。3.6秒。", word: "ガチャコン → プシュー", tags: "融合音の候補 · 解錠と排気" },
   { id: "clear-layered", title: "04 / 重ねたフォーン", text: "②に少し高い音を控えめに重ね、余韻を長くした新しい案。0.84秒。", word: "フォーン", tags: "新しい案 · 重なりと余韻" },
   { id: "round", title: "01 / 丸いフォーン", text: "低い音程で柔らかく始まり、静かになめらかに消える音。", word: "フォーン", tags: "柔らかい · 落ち着き" },
   { id: "clear", title: "02 / 透明なフォーン", text: "低めの澄んだ響き。ノイズを加えず、余韻を短く整えた音。", word: "フォーン", tags: "透明感 · 浮遊感" },
@@ -48,6 +48,6 @@ export function SoundLab() {
       <a download href={import.meta.env.BASE_URL+"audio/selection/"+sound.id+".wav"}>WAVを保存 ↓</a>
     </section>)}</div>
     {error && <p role="alert">{error}</p>}
-    <p className="sound-note">①〜③は0.48秒、④は0.84秒、⑤は2.4秒のオリジナル音です。ゲーム本編への融合音の適用は、試聴後に行います。</p>
+    <p className="sound-note">①〜③は0.48秒、④は0.84秒、⑤は3.6秒のオリジナル音です。ゲーム本編への融合音の適用は、試聴後に行います。</p>
   </>;
 }

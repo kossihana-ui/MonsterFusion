@@ -1,5 +1,12 @@
 # Selection sound studies
 
+Latest fusion revision: fusion-motor-door.wav (3.6 seconds), built with
+scripts/build-fusion-sound.mjs. Preserves the motor's 1.86s acceleration.
+Latch at 1.89s, heavy door impact at 2.08s, pneumatic vent at 2.17s.
+Original harmonic resonators and reproducible filtered noise; no sampled recordings.
+The old fusion-motor.wav is retained as a comparison, but the audition UI uses the new file.
+No decision chime in the new fusion sound.
+
 Fusion motor study: fusion-motor.wav, 2.4 seconds.
 Rebuild with node scripts/build-fusion-sound.mjs after generating selection sounds.
 Deterministic harmonic motor rises from 78 to 320 Hz; rotor amplitude pulses
