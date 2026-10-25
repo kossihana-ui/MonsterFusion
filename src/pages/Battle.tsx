@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from "react";
-import { animationDuration, DEFAULT_BATTLE_CONFIG, elementMultiplier, labelFor } from "@core/core/index.ts";
+import { animationDuration, DEFAULT_BATTLE_CONFIG, elementMultiplier, expectedDamage, labelFor } from "@core/core/index.ts";
+import { skillLabel } from "../shared/battlePresentation";
 import "../styles/battle.css";
 import type { SpriteMotion } from "../components/MonsterSprite";
 import type { BattleAction, GameAdapter, Monster } from "../shared/ui";
@@ -37,11 +38,6 @@ function BattleSession({
   const enemy = state.coreState?.combatants.find((c) => c.side === 1);
   const availableMp = Math.min(99, (player?.mp ?? 0) + DEFAULT_BATTLE_CONFIG.mpRegenPerTurn);
   const locked = busy || state.status !== "active";
-  const skillNames: Record<string, string> = {
-    "sig-neutral": "インパクト", "sig-fire": "フレイムバースト",
-    "sig-water": "タイドランス", "sig-earth": "ストーンクラッシュ",
-    "sig-wind": "ゲイルエッジ", "sig-light": "レイディアンス", "sig-dark": "アンブラファング",
-  };
   useEffect(() => () => active.current?.abort(), []);
   async function play(
     side: number,
@@ -179,26 +175,28 @@ function BattleSession({
       <section className="panel battle-command-panel" aria-label="バトルコマンド">
         <h2>行動を選ぶ</h2>
         <p>毎ターン開始時にMP +{DEFAULT_BATTLE_CONFIG.mpRegenPerTurn}。
-          {player && enemy && (player.stats.speed > enemy.stats.speed ? "あなたが先に行動します。" : player.stats.speed < enemy.stats.speed ? "相手が先に行動します。" : "同じ素早さのため行動順は抽選です。")}
+          素早さが高いほど先に動きやすくなりますが、行動順は毎ターン抽選です。
         </p>
         <div className="battle-command-grid">
           <button disabled={locked} onClick={() => act("attack")}>
             <strong>⚔ 攻撃</strong><span>MP消費なし · 物理攻撃</span>
             <span>{state.player.genes.element}属性 · 相性 ×{player && enemy ? elementMultiplier(player.element, enemy.element) : 1}</span>
+            {player && enemy && <span>ダメージ目安 約{Math.round(expectedDamage(player, enemy))}</span>}
           </button>
           <button disabled={locked} onClick={() => act("defend")}>
-            <strong>◇ 守る</strong><span>行動後、このターンの被ダメージを{Math.round((1 - DEFAULT_BATTLE_CONFIG.defendDamageMultiplier) * 100)}%軽減</span>
-            <span>現在の仕様では先制攻撃は防げません</span>
+            <strong>◇ 守る</strong><span>先制攻撃も含め、このターンの被ダメージを{Math.round((1 - DEFAULT_BATTLE_CONFIG.defendDamageMultiplier) * 100)}%軽減</span>
+            <span>MPを追加で +{DEFAULT_BATTLE_CONFIG.defendMpBonus}回復（上限99）</span>
           </button>
           {player?.skills.map((skill) => (
             <button key={skill.id} disabled={locked || availableMp < skill.cost} onClick={() => act({ kind: "skill", skillId: skill.id })}>
-              <strong>✧ {skillNames[skill.id] ?? (skill.id === "strike" ? skill.scaling === "magic" ? "マナボルト" : "ヘビーストライク" : skill.name)}</strong>
+              <strong>✧ {skillLabel(skill)}</strong>
               <span>MP {skill.cost} · 威力 {skill.power} · {skill.scaling === "magic" ? "魔力" : "攻撃"}参照</span>
               <span>{labelFor("element", skill.element)}属性 · 相性 ×{enemy ? elementMultiplier(skill.element, enemy.element) : 1}{availableMp < skill.cost ? " · MP不足" : ""}</span>
+              {enemy && <span>ダメージ目安 約{Math.round(expectedDamage(player, enemy, skill))}</span>}
             </button>
           ))}
         </div>
-        <p className="battle-help">相性は技ごとに変わります。×1より大きいと有利、小さいとダメージが減ります。威力は実際のダメージではありません。</p>
+        <p className="battle-help">相性は技ごとに変わります。×1より大きいと有利、小さいとダメージが減ります。ダメージ目安は相性込み・防御態勢／会心／乱数変動なしの値です。攻撃と魔力は、主に使わない方も{Math.round(DEFAULT_BATTLE_CONFIG.offhandFactor * 100)}%加算されます。</p>
       </section>
       {error && <p role="alert">{error}</p>}
       <section className="panel battle-log">

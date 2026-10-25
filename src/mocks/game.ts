@@ -18,6 +18,7 @@ import type {
   BattleState as CoreBattleState,
 } from "@core/core/index.ts";
 import type { Monster, BattleState, GameAdapter } from "../shared/ui";
+import { battleLogLabel } from "../shared/battlePresentation";
 
 // UI presentation adapter. Core objects are kept intact and never edited here.
 const context = { rng: createSeededRandom(12345) };
@@ -96,7 +97,7 @@ function presentBattle(
     playerHp: coreState.combatants.find((c) => c.side === 0)!.hp,
     enemyHp: coreState.combatants.find((c) => c.side === 1)!.hp,
     turn: coreState.turn + 1,
-    logs: coreState.log.map((entry) => entry.message),
+    logs: coreState.log.map((entry) => battleLogLabel(entry, coreState, { [player.id]: player.name, [enemy.id]: enemy.name })),
     status:
       outcome.status === "ongoing"
         ? "active"
