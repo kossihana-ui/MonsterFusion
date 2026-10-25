@@ -1,5 +1,9 @@
 # Claude Codeへの依頼：体の特徴から覚える技と、図鑑での技セット
 
+## MOVES.md対応・接続完了
+
+図鑑にMoveLoadoutEditorを追加。getLearnableMovesの理由・分類・属性を表示し、MAX_MOVE_SLOTS枠の選択をvalidateMoveLoadoutで検証する。技セットはモンスターと別のセッションMapで保持。createDuelWithLoadoutsで双方の技セットを適用する。未設定はdefaultLoadout、取得時はreconcileLoadoutを使用。大技はバトルでも明示する。セーブUIはまだないためリロードをまたぐ永続保存は未実装で、画面にも明記。以下は元の依頼記録。
+
 ## ユーザーの希望
 
 計算式や乱数の理解を前提にしない。属性色・物理/魔法のアイコン・MPだけで選べるゲームにする。体の特徴が技につながり、図鑑で大技などをセットしてバトルで使いたい。例：特定の尻尾を持つと「ファイナルテール」を覚える。

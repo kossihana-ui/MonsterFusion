@@ -9,13 +9,17 @@ import {
   describeTraits,
   describeFusion,
   labelFor,
-  createDuel,
+  createDuelWithLoadouts,
+  defaultLoadout,
+  reconcileLoadout,
+  validateMoveLoadout,
   stepTurn,
   createBasicPolicy,
 } from "@core/core/index.ts";
 import type {
   Monster as CoreMonster,
   BattleState as CoreBattleState,
+  MoveLoadout,
 } from "@core/core/index.ts";
 import type { Monster, BattleState, GameAdapter } from "../shared/ui";
 import { battleLogLabel } from "../shared/battlePresentation";
@@ -23,6 +27,18 @@ import { battleLogLabel } from "../shared/battlePresentation";
 // UI presentation adapter. Core objects are kept intact and never edited here.
 const context = { rng: createSeededRandom(12345) };
 const records = new Map<string, CoreMonster>();
+// Session preferences, separate from canonical monsters, like the demo collection.
+const loadouts = new Map<string, MoveLoadout>();
+export function getMoveLoadout(id: string): MoveLoadout {
+  const monster = getCoreMonster(id);
+  const saved = loadouts.get(id);
+  return saved ? reconcileLoadout(monster, saved.skillIds) : defaultLoadout(monster);
+}
+export function setMoveLoadout(id: string, skillIds: readonly string[]) {
+  const result = validateMoveLoadout(getCoreMonster(id), skillIds);
+  if (result.ok) loadouts.set(id, result.loadout);
+  return result;
+}
 const starterArt: Record<string, string> = {
   "moss-v2-64.png": new URL("./assets/starters/moss-v2-64.png", import.meta.url)
     .href,
@@ -110,7 +126,7 @@ function presentBattle(
 }
 export function createBattle(player: Monster, enemy: Monster): BattleState {
   return presentBattle(
-    createDuel(getCoreMonster(player.id), getCoreMonster(enemy.id)),
+    createDuelWithLoadouts(getCoreMonster(player.id), getCoreMonster(enemy.id), [getMoveLoadout(player.id), getMoveLoadout(enemy.id)]),
     player,
     enemy,
   );

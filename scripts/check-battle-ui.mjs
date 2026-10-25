@@ -3,7 +3,7 @@ import { createServer } from 'vite';
 
 const server = await createServer({ server: { middlewareMode: true }, appType: 'custom' });
 try {
-  const { initialMonsters, createBattle, gameAdapter } = await server.ssrLoadModule('/src/mocks/game.ts');
+  const { initialMonsters, createBattle, gameAdapter, getMoveLoadout, setMoveLoadout, getCoreMonster } = await server.ssrLoadModule('/src/mocks/game.ts');
   const { DEFAULT_BATTLE_CONFIG: config } = await server.ssrLoadModule('@core/core/index.ts');
   for (const skillIndex of [0, 1]) {
     const before = createBattle(initialMonsters[0], initialMonsters[1]);
@@ -25,6 +25,26 @@ try {
   assert.ok(after.logs.some(line => line.includes('守りで') && line.includes('軽減')));
   assert.ok(after.logs.some(line => line.includes(`MP回復 +${config.defendMpBonus}`)));
   await assert.rejects(gameAdapter.calculateBattleTurn(before, { kind: 'skill', skillId: 'missing' }));
+  const { getLearnableMoves } = await server.ssrLoadModule('@core/core/index.ts');
+  const monster = initialMonsters[1];
+  const canonical = getCoreMonster(monster.id);
+  const snapshot = JSON.stringify(canonical);
+  const saved = getMoveLoadout(monster.id).skillIds;
+  const finisher = getLearnableMoves(canonical).find(m => m.category === 'finisher');
+  assert.ok(finisher, 'starter has a feature finisher');
+  assert.ok(setMoveLoadout(monster.id, [finisher.skill.id]).ok);
+  assert.deepEqual(createBattle(monster, initialMonsters[0]).coreState.combatants[0].skills.map(s => s.id), [finisher.skill.id], 'no unwanted slot filling');
+  assert.equal(setMoveLoadout(monster.id, []).ok, false);
+  assert.equal(setMoveLoadout(monster.id, ['missing']).ok, false);
+  assert.equal(setMoveLoadout(monster.id, [finisher.skill.id, finisher.skill.id]).ok, false);
+  assert.deepEqual(getMoveLoadout(monster.id).skillIds, [finisher.skill.id], 'invalid saves preserve selection');
+  assert.equal(JSON.stringify(canonical), snapshot);
+  let duel = createBattle(monster, initialMonsters[0]);
+  duel = await gameAdapter.calculateBattleTurn(duel, 'defend');
+  duel = await gameAdapter.calculateBattleTurn(duel, { kind: 'skill', skillId: finisher.skill.id });
+  assert.ok(duel.coreState.log.some(e => e.skillId === finisher.skill.id && e.actorId === duel.coreState.combatants[0].id));
+  assert.ok(setMoveLoadout(monster.id, saved).ok);
+  console.log('Loadout: finisher equipped and used, invalid saves rejected, empty slots preserved, monster unchanged.');
   console.log('Battle UI adapter: both skills, MP cost, defend, invalid skill and immutability passed.');
 } finally {
   await server.close();

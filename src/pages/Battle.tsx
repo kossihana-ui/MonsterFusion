@@ -1,11 +1,11 @@
 import { useEffect, useRef, useState } from "react";
-import { animationDuration, DEFAULT_BATTLE_CONFIG, elementMultiplier } from "@core/core/index.ts";
+import { animationDuration, DEFAULT_BATTLE_CONFIG, elementMultiplier, getLearnableMoves } from "@core/core/index.ts";
 import { matchupLabel, skillLabel } from "../shared/battlePresentation";
 import { MoveBadges } from "../components/MoveBadges";
 import "../styles/battle.css";
 import type { SpriteMotion } from "../components/MonsterSprite";
 import type { BattleAction, GameAdapter, Monster } from "../shared/ui";
-import { createBattle } from "../mocks/game";
+import { createBattle, getCoreMonster } from "../mocks/game";
 import { Portrait } from "../components/MonsterView";
 export function Battle(props: { monsters: Monster[]; adapter: GameAdapter }) {
   if (props.monsters.length < 2) {
@@ -39,6 +39,7 @@ function BattleSession({
   const enemy = state.coreState?.combatants.find((c) => c.side === 1);
   const availableMp = Math.min(99, (player?.mp ?? 0) + DEFAULT_BATTLE_CONFIG.mpRegenPerTurn);
   const locked = busy || state.status !== "active";
+  const finishers = new Set(getLearnableMoves(getCoreMonster(state.player.id)).filter(m => m.category === "finisher").map(m => m.skill.id));
   useEffect(() => () => active.current?.abort(), []);
   async function play(
     side: number,
@@ -189,7 +190,7 @@ function BattleSession({
           </button>
           {player?.skills.map((skill) => (
             <button data-element={skill.element} key={skill.id} disabled={locked || availableMp < skill.cost} onClick={() => act({ kind: "skill", skillId: skill.id })}>
-              <strong>{skillLabel(skill)}</strong>
+              <strong>{skillLabel(skill)} {finishers.has(skill.id) && <span className="finisher-badge">大技</span>}</strong>
               <MoveBadges element={skill.element} scaling={skill.scaling} />
               <span>MP {skill.cost} · {enemy ? matchupLabel(elementMultiplier(skill.element, enemy.element)) : ""}{availableMp < skill.cost ? " · MP不足" : ""}</span>
             </button>
