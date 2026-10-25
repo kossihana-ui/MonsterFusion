@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from "react";
-import { animationDuration, DEFAULT_BATTLE_CONFIG, elementMultiplier, expectedDamage, labelFor } from "@core/core/index.ts";
-import { skillLabel } from "../shared/battlePresentation";
+import { animationDuration, DEFAULT_BATTLE_CONFIG, elementMultiplier } from "@core/core/index.ts";
+import { matchupLabel, skillLabel } from "../shared/battlePresentation";
+import { MoveBadges } from "../components/MoveBadges";
 import "../styles/battle.css";
 import type { SpriteMotion } from "../components/MonsterSprite";
 import type { BattleAction, GameAdapter, Monster } from "../shared/ui";
@@ -154,8 +155,7 @@ function BattleSession({
             />
             <h2>{side.monster.name}</h2>
             <p className="battle-resources">
-              {side.monster.genes.element}属性 · 素早さ {side.monster.stats.speed}
-              <br />MP {state.coreState?.combatants.find((c) => c.side === i)?.mp ?? "—"}
+              {side.monster.genes.element}属性
             </p>
             <div className="hp-label">
               <span>HP</span>
@@ -168,35 +168,34 @@ function BattleSession({
               max={side.monster.stats.hp}
               value={side.hp}
             />
+            <div className="hp-label mp-label"><span>MP</span><span>{state.coreState?.combatants.find(c => c.side === i)?.mp ?? 0} / 99</span></div>
+            <progress className="mp-bar" aria-label={`${side.label} MP`} max={99} value={state.coreState?.combatants.find(c => c.side === i)?.mp ?? 0} />
           </section>
         ))}
         <span className="versus">VS</span>
       </div>
       <section className="panel battle-command-panel" aria-label="バトルコマンド">
         <h2>行動を選ぶ</h2>
-        <p>毎ターン開始時にMP +{DEFAULT_BATTLE_CONFIG.mpRegenPerTurn}。
-          素早さが高いほど先に動きやすくなりますが、行動順は毎ターン抽選です。
-        </p>
+        <p>技で攻める。MPが減ったら、守って回復。</p>
         <div className="battle-command-grid">
-          <button disabled={locked} onClick={() => act("attack")}>
-            <strong>⚔ 攻撃</strong><span>MP消費なし · 物理攻撃</span>
-            <span>{state.player.genes.element}属性 · 相性 ×{player && enemy ? elementMultiplier(player.element, enemy.element) : 1}</span>
-            {player && enemy && <span>ダメージ目安 約{Math.round(expectedDamage(player, enemy))}</span>}
+          <button data-element={player?.element} disabled={locked} onClick={() => act("attack")}>
+            <strong>攻撃</strong>
+            {player && <MoveBadges element={player.element} scaling="attack" />}
+            <span>MP 0 {player && enemy ? ` · ${matchupLabel(elementMultiplier(player.element, enemy.element))}` : ""}</span>
           </button>
           <button disabled={locked} onClick={() => act("defend")}>
-            <strong>◇ 守る</strong><span>先制攻撃も含め、このターンの被ダメージを{Math.round((1 - DEFAULT_BATTLE_CONFIG.defendDamageMultiplier) * 100)}%軽減</span>
-            <span>MPを追加で +{DEFAULT_BATTLE_CONFIG.defendMpBonus}回復（上限99）</span>
+            <strong>◇ 守る</strong><span>受けるダメージを減らす</span>
+            <span>MP回復 +{DEFAULT_BATTLE_CONFIG.defendMpBonus}</span>
           </button>
           {player?.skills.map((skill) => (
-            <button key={skill.id} disabled={locked || availableMp < skill.cost} onClick={() => act({ kind: "skill", skillId: skill.id })}>
-              <strong>✧ {skillLabel(skill)}</strong>
-              <span>MP {skill.cost} · 威力 {skill.power} · {skill.scaling === "magic" ? "魔力" : "攻撃"}参照</span>
-              <span>{labelFor("element", skill.element)}属性 · 相性 ×{enemy ? elementMultiplier(skill.element, enemy.element) : 1}{availableMp < skill.cost ? " · MP不足" : ""}</span>
-              {enemy && <span>ダメージ目安 約{Math.round(expectedDamage(player, enemy, skill))}</span>}
+            <button data-element={skill.element} key={skill.id} disabled={locked || availableMp < skill.cost} onClick={() => act({ kind: "skill", skillId: skill.id })}>
+              <strong>{skillLabel(skill)}</strong>
+              <MoveBadges element={skill.element} scaling={skill.scaling} />
+              <span>MP {skill.cost} · {enemy ? matchupLabel(elementMultiplier(skill.element, enemy.element)) : ""}{availableMp < skill.cost ? " · MP不足" : ""}</span>
             </button>
           ))}
         </div>
-        <p className="battle-help">相性は技ごとに変わります。×1より大きいと有利、小さいとダメージが減ります。ダメージ目安は相性込み・防御態勢／会心／乱数変動なしの値です。攻撃と魔力は、主に使わない方も{Math.round(DEFAULT_BATTLE_CONFIG.offhandFactor * 100)}%加算されます。</p>
+        <p className="battle-help">MPは毎ターン +{DEFAULT_BATTLE_CONFIG.mpRegenPerTurn}。守ると、さらに回復します。</p>
       </section>
       {error && <p role="alert">{error}</p>}
       <section className="panel battle-log">

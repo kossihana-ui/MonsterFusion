@@ -1,6 +1,11 @@
 import type { Monster } from "../shared/ui";
 import { Portrait, Stats } from "../components/MonsterView";
 import { FeatureTags } from "../components/FeatureTags";
+import { deriveSkills } from "@core/core/index.ts";
+import { getCoreMonster } from "../mocks/game";
+import { skillLabel } from "../shared/battlePresentation";
+import { MoveBadges } from "../components/MoveBadges";
+import "../styles/battle.css";
 export function Detail({
   monster,
   monsters,
@@ -30,6 +35,14 @@ export function Detail({
           <Stats monster={monster} />
         </section>
         <section className="panel details">
+          <h2>使える技</h2>
+          <div className="profile-moves">
+            {deriveSkills(getCoreMonster(monster.id)).map(skill => <div className="profile-move" data-element={skill.element} key={skill.id}>
+              <strong>{skillLabel(skill)}</strong>
+              <MoveBadges element={skill.element} scaling={skill.scaling} />
+              <span>MP {skill.cost}</span>
+            </div>)}
+          </div>
           <h2>特徴</h2>
           {monster.traits.length ? (
             monster.traits.map((t) => (

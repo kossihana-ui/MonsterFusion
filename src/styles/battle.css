@@ -5,4 +5,22 @@
 .battle-command-grid strong { font-size: 1rem; }
 .battle-command-grid span { font-size: .8rem; line-height: 1.5; }
 .battle-help { font-size: .8rem; line-height: 1.8; }
+[data-element="neutral"] { --type-color: #bdc7d4; --type-bg: #29323e; }
+[data-element="fire"] { --type-color: #ffb08f; --type-bg: #4b2925; }
+[data-element="water"] { --type-color: #91d7ff; --type-bg: #193c55; }
+[data-element="earth"] { --type-color: #e0c28c; --type-bg: #443a24; }
+[data-element="wind"] { --type-color: #9be2bd; --type-bg: #204539; }
+[data-element="light"] { --type-color: #ffe88a; --type-bg: #494324; }
+[data-element="dark"] { --type-color: #dab1ff; --type-bg: #38264d; }
+.battle-command-grid button[data-element] { background: var(--type-bg); border: 1px solid var(--type-color); border-left-width: 5px; color: #f4f5f8; }
+.battle-command-grid button:disabled { opacity: .5; }
+.move-badges { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+.move-type { background: var(--type-bg); color: var(--type-color); border: 1px solid var(--type-color); border-radius: 5px; padding: 2px 9px; }
+.move-category { color: #edf2f7; }
+.mp-label { margin-top: 12px; color: #91d7ff; }
+.mp-bar { accent-color: #72bdf5; }
+.mp-bar::-webkit-progress-value { background: #72bdf5; }
+.mp-bar::-moz-progress-bar { background: #72bdf5; }
+.profile-moves { display: grid; gap: 10px; margin-bottom: 24px; }
+.profile-move { display: grid; gap: 10px; padding: 14px; border-left: 4px solid var(--type-color); background: var(--type-bg); border-radius: 6px; color: #f4f5f8; }
 @media (max-width: 560px) { .battle-command-grid { grid-template-columns: 1fr; } }

@@ -1,5 +1,9 @@
 import type { BattleLogEntry, BattleState, Skill } from "@core/core/index.ts";
 
+export function matchupLabel(multiplier: number): string {
+  return multiplier > 1 ? "よく効く" : multiplier < 1 ? "効きにくい" : "ふつう";
+}
+
 export function skillLabel(skill: Skill): string {
   const names: Record<string, string> = {
     "sig-neutral": "インパクト", "sig-fire": "フレイムバースト",
@@ -23,7 +27,7 @@ export function battleLogLabel(entry: BattleLogEntry, state: BattleState, names:
   const skill = actor?.skills.find(s => s.id === entry.skillId);
   return `${actorName}の${entry.kind === "skill" ? skill ? skillLabel(skill) : "技" : "攻撃"}！ ${targetName}に${entry.damage ?? 0}ダメージ。`
     + (entry.critical ? " 会心！" : "")
-    + (entry.elementMultiplier !== undefined ? ` 相性 ×${entry.elementMultiplier}` : "")
-    + ((entry.mitigated ?? 0) > 0 ? ` 守りで${entry.mitigated}軽減。` : "")
+    + (entry.elementMultiplier !== undefined && entry.elementMultiplier !== 1 ? ` ${matchupLabel(entry.elementMultiplier)}！` : "")
+    + ((entry.mitigated ?? 0) > 0 ? " 守りでダメージを軽減。" : "")
     + ((entry.mpSpent ?? 0) > 0 ? ` MP消費 ${entry.mpSpent}` : "");
 }
