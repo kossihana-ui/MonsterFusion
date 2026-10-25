@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from "react";
-import { animationDuration } from "@core/core/index.ts";
+import { animationDuration, DEFAULT_BATTLE_CONFIG, elementMultiplier, labelFor } from "@core/core/index.ts";
+import "../styles/battle.css";
 import type { SpriteMotion } from "../components/MonsterSprite";
 import type { BattleAction, GameAdapter, Monster } from "../shared/ui";
 import { createBattle } from "../mocks/game";
@@ -32,6 +33,15 @@ function BattleSession({
   const [motions, setMotions] = useState<Record<number, SpriteMotion>>({});
   const active = useRef<AbortController | null>(null);
   const serial = useRef(0);
+  const player = state.coreState?.combatants.find((c) => c.side === 0);
+  const enemy = state.coreState?.combatants.find((c) => c.side === 1);
+  const availableMp = Math.min(99, (player?.mp ?? 0) + DEFAULT_BATTLE_CONFIG.mpRegenPerTurn);
+  const locked = busy || state.status !== "active";
+  const skillNames: Record<string, string> = {
+    "sig-neutral": "インパクト", "sig-fire": "フレイムバースト",
+    "sig-water": "タイドランス", "sig-earth": "ストーンクラッシュ",
+    "sig-wind": "ゲイルエッジ", "sig-light": "レイディアンス", "sig-dark": "アンブラファング",
+  };
   useEffect(() => () => active.current?.abort(), []);
   async function play(
     side: number,
@@ -124,6 +134,15 @@ function BattleSession({
           ))}
         </select>
       </label>
+      <label className="battle-select">
+        対戦相手
+        <select disabled={busy} value={state.enemy.id} onChange={(e) => {
+          setError("");
+          setState(createBattle(state.player, monsters.find((m) => m.id === e.target.value)!));
+        }}>
+          {monsters.filter((m) => m.id !== state.player.id).map((m) => <option key={m.id} value={m.id}>{m.name}</option>)}
+        </select>
+      </label>
       <div className="battle-field">
         {[
           { monster: state.player, hp: state.playerHp, label: "PLAYER" },
@@ -138,6 +157,10 @@ function BattleSession({
               motion={motions[i]}
             />
             <h2>{side.monster.name}</h2>
+            <p className="battle-resources">
+              {side.monster.genes.element}属性 · 素早さ {side.monster.stats.speed}
+              <br />MP {state.coreState?.combatants.find((c) => c.side === i)?.mp ?? "—"}
+            </p>
             <div className="hp-label">
               <span>HP</span>
               <span>
@@ -153,17 +176,30 @@ function BattleSession({
         ))}
         <span className="versus">VS</span>
       </div>
-      <div className="battle-actions">
-        {(["attack", "defend", "skill"] as const).map((a, i) => (
-          <button
-            key={a}
-            disabled={busy || state.status !== "active"}
-            onClick={() => act(a)}
-          >
-            {["⚔ 攻撃", "◇ 防御", "✧ スキル"][i]}
+      <section className="panel battle-command-panel" aria-label="バトルコマンド">
+        <h2>行動を選ぶ</h2>
+        <p>毎ターン開始時にMP +{DEFAULT_BATTLE_CONFIG.mpRegenPerTurn}。
+          {player && enemy && (player.stats.speed > enemy.stats.speed ? "あなたが先に行動します。" : player.stats.speed < enemy.stats.speed ? "相手が先に行動します。" : "同じ素早さのため行動順は抽選です。")}
+        </p>
+        <div className="battle-command-grid">
+          <button disabled={locked} onClick={() => act("attack")}>
+            <strong>⚔ 攻撃</strong><span>MP消費なし · 物理攻撃</span>
+            <span>{state.player.genes.element}属性 · 相性 ×{player && enemy ? elementMultiplier(player.element, enemy.element) : 1}</span>
           </button>
-        ))}
-      </div>
+          <button disabled={locked} onClick={() => act("defend")}>
+            <strong>◇ 守る</strong><span>行動後、このターンの被ダメージを{Math.round((1 - DEFAULT_BATTLE_CONFIG.defendDamageMultiplier) * 100)}%軽減</span>
+            <span>現在の仕様では先制攻撃は防げません</span>
+          </button>
+          {player?.skills.map((skill) => (
+            <button key={skill.id} disabled={locked || availableMp < skill.cost} onClick={() => act({ kind: "skill", skillId: skill.id })}>
+              <strong>✧ {skillNames[skill.id] ?? (skill.id === "strike" ? skill.scaling === "magic" ? "マナボルト" : "ヘビーストライク" : skill.name)}</strong>
+              <span>MP {skill.cost} · 威力 {skill.power} · {skill.scaling === "magic" ? "魔力" : "攻撃"}参照</span>
+              <span>{labelFor("element", skill.element)}属性 · 相性 ×{enemy ? elementMultiplier(skill.element, enemy.element) : 1}{availableMp < skill.cost ? " · MP不足" : ""}</span>
+            </button>
+          ))}
+        </div>
+        <p className="battle-help">相性は技ごとに変わります。×1より大きいと有利、小さいとダメージが減ります。威力は実際のダメージではありません。</p>
+      </section>
       {error && <p role="alert">{error}</p>}
       <section className="panel battle-log">
         <h2>

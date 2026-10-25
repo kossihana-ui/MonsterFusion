@@ -33,7 +33,7 @@ export interface FusionResult {
   child: Monster;
   parents: [Monster, Monster];
 }
-export type BattleAction = "attack" | "defend" | "skill";
+export type BattleAction = "attack" | "defend" | { kind: "skill"; skillId: string };
 export interface BattleState {
   coreState?: import("@core/core/index.ts").BattleState;
   player: Monster;

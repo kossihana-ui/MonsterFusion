@@ -139,8 +139,12 @@ export const gameAdapter: GameAdapter = {
                   (c) => c.side !== current.side && c.hp > 0,
                 );
                 if (action === "defend" || !target) return { kind: "defend" };
-                const skill = current.skills.find((s) => s.cost <= current.mp);
-                if (action === "skill" && skill)
+                const skill = typeof action === "object"
+                  ? current.skills.find((s) => s.id === action.skillId)
+                  : undefined;
+                if (typeof action === "object" && (!skill || skill.cost > current.mp))
+                  throw new Error("この技は使用できません。");
+                if (skill)
                   return {
                     kind: "skill",
                     skillId: skill.id,
