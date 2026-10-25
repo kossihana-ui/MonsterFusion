@@ -26,13 +26,12 @@ export function Detail({
           </p>
         </div>
       </div>
-      <div className="detail-grid">
-        <section className="panel">
+      <div className="detail-grid move-detail-grid">
+        <MoveLoadoutEditor key={monster.id} monsterId={monster.id}>
           <Portrait monster={monster} large />
           <Stats monster={monster} />
-        </section>
+        </MoveLoadoutEditor>
         <section className="panel details">
-          <MoveLoadoutEditor key={monster.id} monsterId={monster.id} />
           <h2>特徴</h2>
           {monster.traits.length ? (
             monster.traits.map((t) => (

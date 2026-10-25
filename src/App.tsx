@@ -6,6 +6,7 @@ import { Battle } from "./pages/Battle";
 import { Register } from "./pages/Register";
 import { SoundLab } from "./pages/SoundLab";
 import { initialMonsters, gameAdapter } from "./mocks/game";
+import { playUiSound } from "./components/uiSound";
 import type { GameAdapter, Monster } from "./shared/ui";
 type Page = "collection" | "fusion" | "battle" | "register" | "detail" | "sound";
 const tabs: { id: Page; label: string; icon: string; english: string }[] = [
@@ -30,7 +31,14 @@ export default function App({
   const [selected, setSelected] = useState<Monster | null>(null);
   const add = (m: Monster) => setMonsters((prev) => [...prev, m]);
   return (
-    <div className="app">
+    <div className="app" onClickCapture={(event) => {
+      const target = event.target as HTMLElement;
+      if (target.closest('[data-custom-sound]') || page === "sound") return;
+      const button = target.closest('button');
+      if (button && !button.disabled) playUiSound();
+    }} onChangeCapture={(event) => {
+      if (event.target instanceof HTMLSelectElement) playUiSound();
+    }}>
       <aside className="sidebar">
         <a
           className="brand"

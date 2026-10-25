@@ -1,51 +1,95 @@
 import { useState } from "react";
+import type { ReactNode } from "react";
 import { defaultLoadout, getLearnableMoves, MAX_MOVE_SLOTS } from "@core/core/index.ts";
 import { getCoreMonster, getMoveLoadout, setMoveLoadout } from "../mocks/game";
 import { skillLabel } from "../shared/battlePresentation";
 import { MoveBadges } from "./MoveBadges";
+import { playUiSound } from "./uiSound";
 
-export function MoveLoadoutEditor({ monsterId }: { monsterId: string }) {
+export function MoveLoadoutEditor({ monsterId, children }: { monsterId: string; children: ReactNode }) {
   const monster = getCoreMonster(monsterId);
   const moves = getLearnableMoves(monster);
-  const [selected, setSelected] = useState<readonly string[]>(() => getMoveLoadout(monsterId).skillIds);
+  const pad = (ids: readonly string[]) => Array.from({ length: MAX_MOVE_SLOTS }, (_, i) => ids[i] ?? "");
+  const [slots, setSlots] = useState(() => pad(getMoveLoadout(monsterId).skillIds));
+  const [picked, setPicked] = useState("");
+  const [expanded, setExpanded] = useState<string[]>([]);
   const [message, setMessage] = useState("");
   const [error, setError] = useState("");
-  function change(ids: readonly string[]) {
-    setSelected(ids);
+  function change(next: string[], sound: "equip" | "remove") {
+    setSlots(next); setError("");
     setMessage("変更中です。「この技でセット」で反映します。");
-    setError("");
+    playUiSound(sound);
+  }
+  function equip(id: string, index: number) {
+    if (!moves.some(m => m.skill.id === id)) return;
+    const from = slots.indexOf(id);
+    if (from === index) { setPicked(""); return; }
+    const next = [...slots];
+    if (from >= 0) next[from] = next[index];
+    next[index] = id;
+    change(next, "equip"); setPicked("");
   }
   function save() {
-    const result = setMoveLoadout(monsterId, selected);
+    const result = setMoveLoadout(monsterId, slots.filter(Boolean));
     if (!result.ok) { setError(result.message); setMessage(""); return; }
-    setError("");
+    playUiSound(); setError("");
     setMessage("技をセットしました。次のバトルから使えます。");
   }
-  return <section aria-label="技セット">
-    <h2>技セット <small>{selected.length} / {MAX_MOVE_SLOTS}</small></h2>
-    <p>使いたい技を選ぼう。大技も同じ枠にセットできます。</p>
-    <ol className="move-slots" aria-label="セットする技">
-      {Array.from({ length: MAX_MOVE_SLOTS }, (_, index) => {
-        const move = moves.find(m => m.skill.id === selected[index]);
-        return <li key={index}>{move ? <><span>{skillLabel(move.skill)}</span><button type="button" aria-label={`${skillLabel(move.skill)}を外す`} onClick={() => change(selected.filter(id => id !== move.skill.id))}>外す</button></> : <span>空き枠</span>}</li>;
-      })}
-    </ol>
-    <div className="profile-moves">
-      {moves.map(({ skill, category, reason }) => {
-        const checked = selected.includes(skill.id);
-        return <label className="profile-move move-option" data-element={skill.element} key={skill.id}>
-          <span><input type="checkbox" checked={checked} disabled={!checked && selected.length >= MAX_MOVE_SLOTS} onChange={() => change(checked ? selected.filter(id => id !== skill.id) : [...selected, skill.id])} /> <strong>{skillLabel(skill)}</strong> {category === "finisher" && <span className="finisher-badge">大技</span>}</span>
-          <MoveBadges element={skill.element} scaling={skill.scaling} />
-          <span>MP {skill.cost} · {reason}</span>
-        </label>;
-      })}
-    </div>
-    <div className="loadout-actions">
-      <button type="button" onClick={save}>この技でセット</button>
-      <button type="button" className="text-button" onClick={() => change(defaultLoadout(monster).skillIds)}>おすすめを選ぶ</button>
-    </div>
-    {error && <p role="alert">{error}</p>}
-    <p role="status">{message}</p>
-    <p className="battle-help">攻撃・守るはいつでも使えます。技セットはこのプレイ中のみ保持され、ページを再読み込みすると戻ります。</p>
-  </section>;
+  return <>
+    <section className="panel" data-custom-sound>
+      {children}
+      <h2>技セット <small>{slots.filter(Boolean).length} / {MAX_MOVE_SLOTS}</small></h2>
+      <p className="battle-help">技を枠へドラッグ。技を選んで枠を押してもセットできます。</p>
+      <div className="move-slot-grid" aria-label="セットする技">
+        {slots.map((id, index) => {
+          const move = moves.find(m => m.skill.id === id);
+          return <div className="move-slot" data-element={move?.skill.element} key={index}
+            onDragOver={e => { e.preventDefault(); e.dataTransfer.dropEffect = "move"; }}
+            onDrop={e => { e.preventDefault(); equip(e.dataTransfer.getData("text/plain"), index); }}>
+            <button className="slot-target" type="button" aria-label={`技枠${index + 1}：${move ? skillLabel(move.skill) : "空き枠"}`} onClick={() => {
+              if (picked) equip(picked, index);
+              else { playUiSound(); setMessage("技一覧から技を選んで、この枠を押してください。"); }
+            }}>
+              <small>SLOT {index + 1}</small>
+              <strong>{move ? skillLabel(move.skill) : "＋ 空き枠"}</strong>
+              {move && <><MoveBadges element={move.skill.element} scaling={move.skill.scaling} /><span>MP {move.skill.cost}{move.category === "finisher" ? " · 大技" : ""}</span></>}
+            </button>
+            {move && <button type="button" className="slot-remove" aria-label={`${skillLabel(move.skill)}を外す`} onClick={() => change(slots.map((v, i) => i === index ? "" : v), "remove")}>×</button>}
+          </div>;
+        })}
+      </div>
+      <div className="loadout-actions">
+        <button type="button" onClick={save}>この技でセット</button>
+        <button type="button" className="text-button" onClick={() => { change(pad(defaultLoadout(monster).skillIds), "equip"); setPicked(""); }}>おすすめを選ぶ</button>
+      </div>
+      {error && <p role="alert">{error}</p>}
+      <p role="status">{message}</p>
+      <p className="battle-help">攻撃・守るはいつでも使えます。技セットはこのプレイ中のみ保持され、ページを再読み込みすると戻ります。</p>
+    </section>
+    <section className="panel" data-custom-sound aria-label="覚えられる技">
+      <h2>覚えられる技</h2>
+      <p className="battle-help">ⓘで説明を開けます。セット済みの技を別の枠に置くと、位置を交換します。</p>
+      <div className="profile-moves">
+        {moves.map(({ skill, category, reason }) => {
+          const open = expanded.includes(skill.id);
+          return <div className="profile-move" data-element={skill.element} key={skill.id}>
+            <div className="move-list-row">
+              <button type="button" className="move-pick" draggable aria-pressed={picked === skill.id}
+                onDragStart={e => { e.dataTransfer.setData("text/plain", skill.id); e.dataTransfer.effectAllowed = "move"; setPicked(skill.id); playUiSound(); }}
+                onDragEnd={() => setPicked("")}
+                onClick={() => { setPicked(picked === skill.id ? "" : skill.id); playUiSound(); setMessage("入れたい技枠を押してください。"); }}>
+                <strong>{skillLabel(skill)}</strong>{category === "finisher" && <span className="finisher-badge">大技</span>}
+                <MoveBadges element={skill.element} scaling={skill.scaling} />
+                <span>MP {skill.cost}{slots.includes(skill.id) ? " · セット済み" : ""}</span>
+              </button>
+              <button type="button" className="move-info" aria-label={`${skillLabel(skill)}の説明`} aria-expanded={open} aria-controls={`move-info-${skill.id}`} onClick={() => {
+                setExpanded(open ? expanded.filter(id => id !== skill.id) : [...expanded, skill.id]); playUiSound();
+              }}>ⓘ</button>
+            </div>
+            {open && <div id={`move-info-${skill.id}`} className="move-description"><p>{reason}</p><p>{skill.scaling === "magic" ? "魔法で相手を攻撃します。" : "体の力で相手を攻撃します。"}{category === "finisher" ? "MPをためて放つ、強力な大技です。" : ""}</p></div>}
+          </div>;
+        })}
+      </div>
+    </section>
+  </>;
 }
