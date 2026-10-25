@@ -351,7 +351,13 @@ export interface BattleConfig {
   readonly initiativeVariance: number;
   /** Turn limit; a battle that reaches it ends in a draw-by-hp comparison. */
   readonly maxTurns: number;
-  /** MP every combatant starts with, and regain per turn. */
+  /**
+   * MP every combatant starts with.
+   *
+   * Low enough that a finisher cannot open the fight: the heavy move is
+   * something you build toward over a couple of turns, which is most of what
+   * makes it feel heavy.
+   */
   readonly startingMp: number;
   readonly mpRegenPerTurn: number;
   /** element -> element -> damage multiplier. Missing pairs are 1. */
@@ -372,7 +378,7 @@ export const DEFAULT_BATTLE_CONFIG: BattleConfig = {
   defendMpBonus: 4,
   initiativeVariance: 0.25,
   maxTurns: 200,
-  startingMp: 20,
+  startingMp: 10,
   mpRegenPerTurn: 3,
   // Advantage compounds: a monster that deals 1.3x while taking 0.7x is at
   // nearly twice the strength of its counter, which made one starter beat

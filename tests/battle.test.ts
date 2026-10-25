@@ -21,6 +21,7 @@ import {
 } from '../src/core/battle.ts';
 import { createRootMonster, fuse } from '../src/core/fusion.ts';
 import { createStarterMonsters } from '../src/core/starters.ts';
+import { MAX_MOVE_SLOTS } from '../src/core/moves.ts';
 import { createSeededRandom } from '../src/core/random.ts';
 import type { BattlePolicy } from '../src/shared/types.ts';
 import { testContext } from './helpers.ts';
@@ -141,7 +142,11 @@ test('skills cost MP and fall back to a plain attack when it runs out', () => {
 test('skills are derived deterministically from the monster', () => {
   const [a] = twoMonsters(6);
   assert.deepEqual(deriveSkills(a), deriveSkills(a));
-  assert.equal(deriveSkills(a).length, 2);
+  // What a monster brings is now its default loadout, so the count depends on
+  // how many features it has rather than being fixed at two.
+  assert.ok(deriveSkills(a).length >= 2);
+  assert.ok(deriveSkills(a).length <= MAX_MOVE_SLOTS);
+  assert.ok(deriveSkills(a).some((s) => s.id === 'strike'), 'always something cheap to use');
 });
 
 test('the element chart is applied and configurable', () => {
@@ -401,16 +406,18 @@ test('guarding every turn survives far longer than attacking every turn', () => 
   );
 });
 
-test('a skill scales off whichever offence the monster actually has', () => {
+test('the base moves scale off whichever offence the monster actually has', () => {
   const [base] = twoMonsters(47);
-  const caster = {
-    ...base,
-    stats: { ...base.stats, attack: 40, magic: 110 },
-  };
-  assert.ok(deriveSkills(caster).every((s) => s.scaling === 'magic'));
+  // A feature move is physical or magical by its own nature - a tail swipe is
+  // a tail swipe - so this is about the two moves every monster has.
+  const baseMoves = (monster: typeof base) =>
+    deriveSkills(monster).filter((s) => s.id === 'strike' || s.id.startsWith('sig-'));
+
+  const caster = { ...base, stats: { ...base.stats, attack: 40, magic: 110 } };
+  assert.ok(baseMoves(caster).every((s) => s.scaling === 'magic'));
 
   const brawler = { ...base, stats: { ...base.stats, attack: 110, magic: 40 } };
-  assert.ok(deriveSkills(brawler).every((s) => s.scaling === 'attack'));
+  assert.ok(baseMoves(brawler).every((s) => s.scaling === 'attack'));
 });
 
 test('the off-hand offence still counts for something', () => {

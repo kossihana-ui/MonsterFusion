@@ -23,6 +23,8 @@ import type {
   Skill,
 } from '../shared/types.ts';
 import type { BattleConfig } from './config.ts';
+import type { MoveLoadout } from './moves.ts';
+import { loadoutFor, skillsForLoadout } from './moves.ts';
 import { DEFAULT_BATTLE_CONFIG } from './config.ts';
 import type { Random } from './random.ts';
 import { chance, nextFloat, shuffled } from './random.ts';
@@ -32,47 +34,14 @@ import { clamp } from './util.ts';
 // Skills
 // ---------------------------------------------------------------------------
 
-const ELEMENT_SKILL_NAMES: Record<Element, string> = {
-  neutral: 'Impact',
-  fire: 'Flame Burst',
-  water: 'Tide Lance',
-  earth: 'Stone Crush',
-  wind: 'Gale Edge',
-  light: 'Radiance',
-  dark: 'Umbral Fang',
-};
-
 /**
- * Gives a monster its skill list from its element and its strongest tendency.
- * Pure: the same monster always has the same skills.
+ * The moves a monster brings when nobody chose any.
+ *
+ * Kept as a thin wrapper over the move catalogue so the battle and the
+ * collection screen cannot disagree about what a monster knows.
  */
 export function deriveSkills(monster: Monster): Skill[] {
-  const element = monster.phenotype.element;
-  // Decided by the stats, not by the tendency genes that fed them. A monster
-  // whose visual traits pushed its magic past its attack was still swinging
-  // off the weaker of the two, which made a fusion that should have been an
-  // upgrade come out worse.
-  const magical = monster.stats.magic >= monster.stats.attack;
-
-  const signature: Skill = {
-    id: `sig-${element}`,
-    name: ELEMENT_SKILL_NAMES[element],
-    power: 140,
-    scaling: magical ? 'magic' : 'attack',
-    element,
-    cost: 6,
-  };
-
-  const basic: Skill = {
-    id: 'strike',
-    name: magical ? 'Mana Bolt' : 'Heavy Strike',
-    power: 100,
-    scaling: magical ? 'magic' : 'attack',
-    element: 'neutral',
-    cost: 2,
-  };
-
-  return [signature, basic];
+  return skillsForLoadout(monster);
 }
 
 // ---------------------------------------------------------------------------
@@ -83,6 +52,8 @@ export interface CombatantOptions {
   readonly id?: string;
   readonly skills?: readonly Skill[];
   readonly startingMp?: number;
+  /** The moves this monster takes in. Falls back to its default set. */
+  readonly loadout?: MoveLoadout | readonly string[];
 }
 
 export function createCombatant(
@@ -101,7 +72,7 @@ export function createCombatant(
     mp: options.startingMp ?? config.startingMp,
     stats: { ...monster.stats },
     element: monster.phenotype.element,
-    skills: options.skills ?? deriveSkills(monster),
+    skills: options.skills ?? skillsForLoadout(monster, options.loadout),
     defending: false,
   };
 }
@@ -133,6 +104,52 @@ export function createBattle(
   ];
 
   return { combatants, turn: 0, log, outcome: { status: 'ongoing' } };
+}
+
+/**
+ * Builds the opening state with each monster using its chosen moves.
+ *
+ * A monster with no loadout, or one naming moves it cannot learn any more -
+ * a fused child wearing a different body to the parent whose set was saved -
+ * falls back to its default rather than going in unable to act.
+ */
+export function createBattleWithLoadouts(
+  teams: readonly (readonly Monster[])[],
+  loadouts: readonly MoveLoadout[] = [],
+  config: BattleConfig = DEFAULT_BATTLE_CONFIG,
+): BattleState {
+  const combatants: Combatant[] = [];
+  teams.forEach((team, side) => {
+    team.forEach((monster, index) => {
+      combatants.push(
+        createCombatant(monster, side, config, {
+          id: `${side}-${index}:${monster.id}`,
+          ...(loadoutFor(monster, loadouts) ? { loadout: loadoutFor(monster, loadouts) } : {}),
+        }),
+      );
+    });
+  });
+
+  const log: BattleLogEntry[] = [
+    {
+      turn: 0,
+      actorId: '',
+      kind: 'start',
+      message: `Battle start: ${teams.map((t) => t.map((m) => m.name).join(', ')).join(' vs ')}`,
+    },
+  ];
+
+  return { combatants, turn: 0, log, outcome: { status: 'ongoing' } };
+}
+
+/** The one-on-one case, with chosen moves. */
+export function createDuelWithLoadouts(
+  a: Monster,
+  b: Monster,
+  loadouts: readonly MoveLoadout[] = [],
+  config: BattleConfig = DEFAULT_BATTLE_CONFIG,
+): BattleState {
+  return createBattleWithLoadouts([[a], [b]], loadouts, config);
 }
 
 /** Convenience wrapper for the common one-on-one case. */

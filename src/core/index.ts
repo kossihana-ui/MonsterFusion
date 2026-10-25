@@ -190,6 +190,28 @@ export {
   TRAIT_LABELS,
 } from './tags.ts';
 
+// Moves (what a body teaches, and what the player chose to take in).
+export type {
+  LearnableMove,
+  LoadoutCheck,
+  MoveCategory,
+  MoveDefinition,
+  MoveLoadout,
+} from './moves.ts';
+export {
+  allMoveDefinitions,
+  canLearn,
+  defaultLoadout,
+  getLearnableMoves,
+  loadoutFor,
+  MAX_MOVE_SLOTS,
+  MOVE_CATALOGUE,
+  MOVE_TIERS,
+  reconcileLoadout,
+  skillsForLoadout,
+  validateMoveLoadout,
+} from './moves.ts';
+
 // Starters.
 export type { StarterSpec, TendencySpec } from './starters.ts';
 export {
@@ -211,7 +233,9 @@ export {
   createBasicPolicy,
   createBattle,
   createCombatant,
+  createBattleWithLoadouts,
   createDuel,
+  createDuelWithLoadouts,
   createScriptedPolicy,
   declareActions,
   deriveSkills,

@@ -335,6 +335,23 @@ BATTLE_HANDOFF.md への対応は [BATTLE.md](BATTLE.md) にまとめてあり�
 - `expectedDamage()` で乱数抜きの期待ダメージ。技選択UIの表示と敵AIの判断が同じ関数になります
 - スターターの能力傾向を均衡化しました（最大乖離 29% → 11%）
 
+## 8.10 技の習得と技セット
+
+MOVE_LOADOUT_HANDOFF.md への対応は [MOVES.md](MOVES.md) にまとめてあります。依頼どおりのAPIを実装しました。
+
+```ts
+getLearnableMoves(monster);                    // 習得可能技（日本語の習得理由つき）
+validateMoveLoadout(monster, skillIds);        // 日本語メッセージで検証
+createDuelWithLoadouts(a, b, loadouts, cfg?);  // 技セットを反映した対戦
+MAX_MOVE_SLOTS                                 // 4
+MOVE_TIERS                                     // 大技の威力230・MP16など
+```
+
+- 習得は**発現している特徴のみ**で判定します。隠れ遺伝子では解禁されません
+- 技セットは `MonsterSaveFile.loadouts` に**遺伝情報と分けて**保存されます
+- 読み込み時は**修復**します（覚えられない技を落とす・空なら既定に戻す）。拒否しません
+- **`startingMp` を 20 → 10 に下げました**。大技が初手から撃てないようにするためです。MPバーの表示に影響します
+
 ## 9. コマンド
 
 ```bash

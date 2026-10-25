@@ -18,6 +18,8 @@ import type {
   MonsterId,
   MonsterStats,
 } from '../shared/types.ts';
+import type { MoveLoadout } from './moves.ts';
+import { reconcileLoadout } from './moves.ts';
 import {
   CATEGORICAL_LOCI,
   NUMERIC_LOCI,
@@ -33,11 +35,21 @@ export interface MonsterSaveFile {
   readonly schemaVersion: number;
   readonly savedAt: number;
   readonly monsters: readonly Monster[];
+  /**
+   * Chosen moves, stored apart from the monsters.
+   *
+   * A loadout is a decision, not a property of the creature, so it lives
+   * beside the genes rather than inside them - and a save written before
+   * loadouts existed simply has none.
+   */
+  readonly loadouts: readonly MoveLoadout[];
 }
 
 export interface SerializeOptions {
   /** Defaults to `Date.now`. */
   readonly now?: () => number;
+  /** Chosen moves to save alongside the monsters. */
+  readonly loadouts?: readonly MoveLoadout[];
 }
 
 export function createSaveFile(
@@ -45,10 +57,22 @@ export function createSaveFile(
   options: SerializeOptions = {},
 ): MonsterSaveFile {
   const now = options.now ?? (() => Date.now());
+  const index = indexById(monsters);
+  // A loadout is only meaningful next to the monster it belongs to, so one
+  // naming a monster that is not being saved is dropped rather than kept as a
+  // dangling reference.
+  const loadouts = (options.loadouts ?? [])
+    .filter((loadout) => index.has(loadout.monsterId))
+    .map((loadout) => {
+      const monster = index.get(loadout.monsterId) as Monster;
+      return reconcileLoadout(monster, loadout.skillIds);
+    });
+
   return {
     schemaVersion: SCHEMA_VERSION,
     savedAt: now(),
     monsters: monsters.map(normalizeMonster),
+    loadouts,
   };
 }
 
@@ -391,12 +415,30 @@ export function deserializeSaveFile(json: string): ValidationResult<MonsterSaveF
   }
   if (errors.length > 0) return { ok: false, errors };
 
+  // Loadouts are repaired rather than rejected: a monster can be fused into a
+  // different body between saves, and refusing to load the file over a move
+  // that no longer applies would lose the collection with it.
+  const index = indexById(monsters);
+  const loadouts: MoveLoadout[] = [];
+  if (Array.isArray(migrated.loadouts)) {
+    for (const entry of migrated.loadouts) {
+      if (!isRecord(entry) || typeof entry.monsterId !== 'string') continue;
+      const monster = index.get(entry.monsterId);
+      if (!monster) continue;
+      const ids = Array.isArray(entry.skillIds)
+        ? entry.skillIds.filter((id): id is string => typeof id === 'string')
+        : [];
+      loadouts.push(reconcileLoadout(monster, ids));
+    }
+  }
+
   return {
     ok: true,
     value: {
       schemaVersion: SCHEMA_VERSION,
       savedAt: typeof migrated.savedAt === 'number' ? migrated.savedAt : 0,
       monsters,
+      loadouts,
     },
   };
 }
