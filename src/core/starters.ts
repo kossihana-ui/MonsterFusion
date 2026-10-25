@@ -42,6 +42,12 @@ export interface StarterSpec {
 /**
  * The three starters, matching the art in the UI repository
  * (`src/mocks/assets/starters`).
+ *
+ * The tendencies are balanced against each other by measurement rather than
+ * by eye: before this, the round robin ran Aqua > Ignis > Moss with the
+ * weakest winning 21% of the time. They now sit within about ten points of
+ * even while keeping their characters - Moss defensive, Ignis hitting
+ * hardest, Aqua fastest.
  */
 export const STARTER_SPECS: readonly StarterSpec[] = [
   {
@@ -63,10 +69,10 @@ export const STARTER_SPECS: readonly StarterSpec[] = [
       notes: 'starter art, appearance pinned by design',
     },
     tendencies: {
-      attackTendency: 35,
-      defenseTendency: 55,
-      magicTendency: 65,
-      speedTendency: 35,
+      attackTendency: 45,
+      defenseTendency: 65,
+      magicTendency: 60,
+      speedTendency: 30,
     },
   },
   {
@@ -90,8 +96,8 @@ export const STARTER_SPECS: readonly StarterSpec[] = [
     tendencies: {
       attackTendency: 70,
       defenseTendency: 50,
-      magicTendency: 30,
-      speedTendency: 40,
+      magicTendency: 25,
+      speedTendency: 35,
     },
   },
   {
@@ -113,10 +119,10 @@ export const STARTER_SPECS: readonly StarterSpec[] = [
       notes: 'starter art, appearance pinned by design',
     },
     tendencies: {
-      attackTendency: 60,
-      defenseTendency: 35,
-      magicTendency: 45,
-      speedTendency: 60,
+      attackTendency: 70,
+      defenseTendency: 25,
+      magicTendency: 35,
+      speedTendency: 55,
     },
   },
 ];

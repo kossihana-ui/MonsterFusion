@@ -324,6 +324,17 @@ describeFusion(child, evolved).steps;   // 演出の順番に並んだ配列
 
 **schemaVersion が 4 になりました**（`mutatedLoci` / `atavismLoci` の追加）。旧セーブは自動補完されます。
 
+## 8.9 バトル
+
+BATTLE_HANDOFF.md への対応は [BATTLE.md](BATTLE.md) にまとめてあります。要点:
+
+- **守るはターン開始時に発動します**。遅い側が守っても先制攻撃を軽減できます。UI側の「先制攻撃は防げません」という説明は事実と異なるようになりました
+- 同格の戦闘が**2ターン → 5〜8ターン**になりました。素早さ+40の勝率は93% → 75%
+- `BattleLogEntry` に `skillId` / `elementMultiplier` / `mitigated` / `mpSpent` を追加（既存フィールドは維持）
+- `declareActions()` で宣言内容だけ取得可。予備動作の表示に使えます
+- `expectedDamage()` で乱数抜きの期待ダメージ。技選択UIの表示と敵AIの判断が同じ関数になります
+- スターターの能力傾向を均衡化しました（最大乖離 29% → 11%）
+
 ## 9. コマンド
 
 ```bash

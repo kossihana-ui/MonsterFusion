@@ -48,7 +48,11 @@ const ELEMENT_SKILL_NAMES: Record<Element, string> = {
  */
 export function deriveSkills(monster: Monster): Skill[] {
   const element = monster.phenotype.element;
-  const magical = monster.phenotype.magicTendency >= monster.phenotype.attackTendency;
+  // Decided by the stats, not by the tendency genes that fed them. A monster
+  // whose visual traits pushed its magic past its attack was still swinging
+  // off the weaker of the two, which made a fusion that should have been an
+  // upgrade come out worse.
+  const magical = monster.stats.magic >= monster.stats.attack;
 
   const signature: Skill = {
     id: `sig-${element}`,
@@ -155,6 +159,11 @@ export function elementMultiplier(
 export interface DamageResult {
   readonly damage: number;
   readonly critical: boolean;
+  /** Before the guard and the random spread, for the UI to explain a hit. */
+  readonly raw: number;
+  /** Damage the target's guard absorbed. 0 when it was not defending. */
+  readonly mitigated: number;
+  readonly elementMultiplier: number;
 }
 
 /**
@@ -171,14 +180,17 @@ export function computeDamage(
   config: BattleConfig = DEFAULT_BATTLE_CONFIG,
 ): DamageResult {
   const skill = options.skill;
-  const scaling = skill?.scaling ?? 'attack';
-  const power = Math.max(1, attacker.stats[scaling]);
+  const power = offensivePower(attacker, skill, config);
   const skillFactor = (skill?.power ?? 100) / 100;
   const defense = Math.max(1, defender.stats.defense * config.defenseScale);
 
-  let damage = power * skillFactor * (power / (power + defense));
+  const elementMultiplier = elementMultiplierFor(skill, attacker, defender, config);
 
-  damage *= elementMultiplier(skill?.element ?? attacker.element, defender.element, config);
+  // power/(power + defense) flattens the curve at high numbers, so a capped
+  // monster is strong without being unanswerable. damageScale then sets how
+  // many hits a fight takes, which is the pacing dial.
+  let damage =
+    power * skillFactor * (power / (power + defense)) * elementMultiplier * config.damageScale;
 
   const speedEdge = Math.max(0, attacker.stats.speed - defender.stats.speed);
   const critChance = Math.min(
@@ -188,15 +200,48 @@ export function computeDamage(
   const critical = chance(rng, critChance);
   if (critical) damage *= config.criticalMultiplier;
 
+  const raw = damage;
   if (defender.defending) damage *= config.defendDamageMultiplier;
 
   const variance = config.damageVariance;
-  damage *= nextFloat(rng, 1 - variance, 1 + variance);
+  const spread = nextFloat(rng, 1 - variance, 1 + variance);
+  damage *= spread;
+
+  const final = Math.max(config.minimumDamage, Math.round(damage));
+  const unguarded = Math.max(config.minimumDamage, Math.round(raw * spread));
 
   return {
-    damage: Math.max(config.minimumDamage, Math.round(damage)),
+    damage: final,
     critical,
+    raw: Math.round(raw),
+    mitigated: defender.defending ? Math.max(0, unguarded - final) : 0,
+    elementMultiplier,
   };
+}
+
+/**
+ * The offence behind a hit: the stat the skill scales off, plus a share of the
+ * other one. See `offhandFactor`.
+ */
+export function offensivePower(
+  attacker: Combatant,
+  skill: Skill | undefined,
+  config: BattleConfig = DEFAULT_BATTLE_CONFIG,
+): number {
+  const scaling = skill?.scaling ?? 'attack';
+  const primary = attacker.stats[scaling];
+  const offhand = attacker.stats[scaling === 'attack' ? 'magic' : 'attack'];
+  return Math.max(1, primary + offhand * config.offhandFactor);
+}
+
+/** The matchup a hit is subject to: a skill brings its own element. */
+function elementMultiplierFor(
+  skill: Skill | undefined,
+  attacker: Combatant,
+  defender: Combatant,
+  config: BattleConfig,
+): number {
+  return elementMultiplier(skill?.element ?? attacker.element, defender.element, config);
 }
 
 // ---------------------------------------------------------------------------
@@ -236,16 +281,47 @@ export function createBasicPolicy(
         if (candidate.hp < target.hp) target = candidate;
       }
 
+      // Pick by what the hit is actually worth against THIS target, so the
+      // element chart is something the opponent uses too, not just a number
+      // shown in the UI.
       const affordable = actor.skills.filter((s) => s.cost <= actor.mp);
-      if (affordable.length > 0) {
-        let best = affordable[0] as Skill;
-        for (const skill of affordable) if (skill.power > best.power) best = skill;
-        return { kind: 'skill', skillId: best.id, targetId: target.id };
+      let best: Skill | undefined;
+      let bestValue = expectedDamage(actor, target, undefined);
+      for (const skill of affordable) {
+        const value = expectedDamage(actor, target, skill);
+        if (value > bestValue) {
+          best = skill;
+          bestValue = value;
+        }
       }
 
+      if (best) return { kind: 'skill', skillId: best.id, targetId: target.id };
       return { kind: 'attack', targetId: target.id };
     },
   };
+}
+
+/**
+ * What a hit is worth on average, with no randomness: the figure a policy
+ * compares options with, and the one a UI can show next to a skill.
+ */
+export function expectedDamage(
+  attacker: Combatant,
+  defender: Combatant,
+  skill?: Skill,
+  config: BattleConfig = DEFAULT_BATTLE_CONFIG,
+): number {
+  const power = offensivePower(attacker, skill, config);
+  const defense = Math.max(1, defender.stats.defense * config.defenseScale);
+  const matchup = elementMultiplier(
+    skill?.element ?? attacker.element,
+    defender.element,
+    config,
+  );
+  return (
+    power * ((skill?.power ?? 100) / 100) * (power / (power + defense))
+    * matchup * config.damageScale
+  );
 }
 
 /** A policy that always replays a fixed script. Handy for deterministic tests. */
@@ -325,16 +401,73 @@ function evaluateOutcome(
   return { status: 'ongoing' };
 }
 
-/** Action order for a turn: fastest first, ties broken by the injected rng. */
-export function turnOrder(combatants: readonly Combatant[], rng: Random): Combatant[] {
-  return shuffled(rng, combatants.filter((c) => c.hp > 0)).sort(
-    (a, b) => b.stats.speed - a.stats.speed,
-  );
+/**
+ * Action order for a turn: fastest first, but rolled rather than decided.
+ *
+ * Each combatant rolls its speed with `initiativeVariance` of spread, so a
+ * small edge leans the order without settling it. With a flat sort, speed won
+ * the battle outright: it bought the first move every single turn.
+ */
+export function turnOrder(
+  combatants: readonly Combatant[],
+  rng: Random,
+  config: BattleConfig = DEFAULT_BATTLE_CONFIG,
+): Combatant[] {
+  const variance = Math.max(0, config.initiativeVariance);
+  return shuffled(rng, combatants.filter((c) => c.hp > 0))
+    .map((combatant) => ({
+      combatant,
+      roll: variance > 0
+        ? combatant.stats.speed * nextFloat(rng, 1 - variance, 1 + variance)
+        : combatant.stats.speed,
+    }))
+    .sort((a, b) => b.roll - a.roll)
+    .map((entry) => entry.combatant);
 }
 
 /**
  * Resolves one full turn: every living combatant acts once, in speed order.
  * Returns a new state; the input state is not modified.
+ */
+/**
+ * One declaration from one combatant, made before anybody acts.
+ *
+ * Exposed because a UI that wants to show intentions - a telegraphed attack,
+ * an enemy visibly bracing - needs the same list the resolver works from.
+ */
+export interface DeclaredAction {
+  readonly actorId: string;
+  readonly action: BattleAction;
+}
+
+/**
+ * Asks every living combatant what it intends to do this turn.
+ *
+ * Each policy is called exactly once, against the state as it stands at the
+ * start of the turn, so a decision never depends on where its owner sits in
+ * the speed order.
+ */
+export function declareActions(
+  state: BattleState,
+  policies: BattlePolicy | readonly BattlePolicy[] | PolicyResolver,
+): DeclaredAction[] {
+  const resolver = toPolicyResolver(policies);
+  return state.combatants
+    .filter((c) => c.hp > 0)
+    .map((actor) => ({ actorId: actor.id, action: resolver(actor).chooseAction(actor, state) }));
+}
+
+/**
+ * Resolves one full turn.
+ *
+ * Two phases, and the order matters:
+ *
+ *   1. every living combatant declares, and anyone guarding raises its guard
+ *      immediately - so a slow defender is protected from the fast attacker
+ *      that would otherwise have hit it before it braced;
+ *   2. the rest act in speed order.
+ *
+ * Returns a new state; the input is not modified.
  */
 export function stepTurn(
   state: BattleState,
@@ -344,43 +477,59 @@ export function stepTurn(
 ): BattleState {
   if (state.outcome.status !== 'ongoing') return state;
 
-  const resolver = toPolicyResolver(policies);
   const combatants = cloneCombatants(state.combatants);
   const byId = new Map(combatants.map((c) => [c.id, c]));
   const log: BattleLogEntry[] = [...state.log];
   const turn = state.turn + 1;
 
-  // Defending lasts for the turn it was declared, so clear it first.
+  // A guard lasts for the turn it was declared, so last turn's is cleared
+  // before anyone declares a new one.
   for (const combatant of combatants) {
     combatant.defending = false;
     combatant.mp = Math.min(99, combatant.mp + config.mpRegenPerTurn);
   }
 
-  const order = turnOrder(combatants, rng);
+  const atTurnStart: BattleState = {
+    combatants: cloneCombatants(combatants),
+    turn,
+    log,
+    outcome: { status: 'ongoing' },
+  };
+
+  // Phase 1: declare. Guards go up now, before anything is resolved.
+  const declared = declareActions(atTurnStart, policies);
+  const intents = new Map(declared.map((d) => [d.actorId, d.action]));
+
+  for (const { actorId, action } of declared) {
+    if (action.kind !== 'defend') continue;
+    const actor = byId.get(actorId);
+    if (!actor) continue;
+    actor.defending = true;
+    actor.mp = Math.min(99, actor.mp + config.defendMpBonus);
+    log.push({
+      turn,
+      actorId: actor.id,
+      kind: 'defend',
+      message: `${actor.name} braces for impact.`,
+      ...(config.defendMpBonus > 0 ? { mpSpent: -config.defendMpBonus } : {}),
+    });
+  }
+
+  // Phase 2: resolve, fastest first.
   const working: BattleState = { combatants, turn, log, outcome: { status: 'ongoing' } };
 
-  for (const actorRef of order) {
+  for (const actorRef of turnOrder(combatants, rng, config)) {
     const actor = byId.get(actorRef.id);
     if (!actor || actor.hp <= 0) continue;
+    const action = intents.get(actor.id);
+    if (!action || action.kind === 'defend') continue;
     if (evaluateOutcome(combatants, turn, config).status !== 'ongoing') break;
-
-    const action = resolver(actor).chooseAction(actor, working);
-
-    if (action.kind === 'defend') {
-      actor.defending = true;
-      log.push({
-        turn,
-        actorId: actor.id,
-        kind: 'defend',
-        message: `${actor.name} braces for impact.`,
-      });
-      continue;
-    }
 
     const target = resolveTarget(action, actor, working, byId);
     if (!target) continue;
 
     let skill: Skill | undefined;
+    let mpSpent = 0;
     if (action.kind === 'skill') {
       skill = actor.skills.find((s) => s.id === action.skillId) ?? actor.skills[0];
       if (!skill || skill.cost > actor.mp) {
@@ -388,6 +537,7 @@ export function stepTurn(
         skill = undefined;
       } else {
         actor.mp -= skill.cost;
+        mpSpent = skill.cost;
       }
     }
 
@@ -401,7 +551,11 @@ export function stepTurn(
       targetId: target.id,
       damage: result.damage,
       critical: result.critical,
-      message: `${actor.name} ${skill ? `casts ${skill.name} on` : 'attacks'} ${target.name} for ${result.damage}${result.critical ? ' (critical!)' : ''}.`,
+      elementMultiplier: result.elementMultiplier,
+      mitigated: result.mitigated,
+      ...(skill ? { skillId: skill.id } : {}),
+      ...(mpSpent ? { mpSpent } : {}),
+      message: `${actor.name} ${skill ? `casts ${skill.name} on` : 'attacks'} ${target.name} for ${result.damage}${result.critical ? ' (critical!)' : ''}${result.mitigated > 0 ? ` (${result.mitigated} guarded)` : ''}.`,
     });
 
     if (target.hp === 0) {

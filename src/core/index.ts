@@ -200,7 +200,12 @@ export {
 } from './starters.ts';
 
 // Battle.
-export type { CombatantOptions, DamageResult, PolicyResolver } from './battle.ts';
+export type {
+  CombatantOptions,
+  DamageResult,
+  DeclaredAction,
+  PolicyResolver,
+} from './battle.ts';
 export {
   computeDamage,
   createBasicPolicy,
@@ -208,8 +213,11 @@ export {
   createCombatant,
   createDuel,
   createScriptedPolicy,
+  declareActions,
   deriveSkills,
   elementMultiplier,
+  expectedDamage,
+  offensivePower,
   livingAllies,
   livingOpponents,
   runBattle,

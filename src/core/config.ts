@@ -302,7 +302,12 @@ export function createFusionConfig(overrides: Partial<FusionConfig> = {}): Fusio
 export interface BattleConfig {
   /** Base chance of a critical hit, before the speed bonus. */
   readonly criticalChance: number;
-  /** Extra crit chance per point of speed advantage over the target. */
+  /**
+   * Extra crit chance per point of speed advantage over the target.
+   *
+   * Kept small on purpose. Speed already buys the first move; letting it also
+   * buy critical hits made it the only stat that mattered.
+   */
   readonly criticalChancePerSpeed: number;
   readonly criticalChanceCap: number;
   readonly criticalMultiplier: number;
@@ -314,6 +319,36 @@ export interface BattleConfig {
   readonly minimumDamage: number;
   /** Scales the attack-vs-defense curve. */
   readonly defenseScale: number;
+  /**
+   * How much the unused offensive stat still contributes.
+   *
+   * A skill scales off attack or magic, so at 0 every point in the other one
+   * is dead weight - and a monster's total stops predicting its strength. A
+   * fused monster could beat its parents on paper and lose to them, because
+   * its gains landed in the stat its skills do not read. At 0.25 the off-hand
+   * stat still counts for something, without erasing the difference between a
+   * brawler and a caster.
+   */
+  readonly offhandFactor: number;
+  /**
+   * Overall damage multiplier: the pacing dial.
+   *
+   * At 1 an even fight was over in two turns, which left no room to guard, to
+   * read a matchup or to spend a skill - the speed stat decided it, because
+   * acting first was most of the battle. Lower means more turns.
+   */
+  readonly damageScale: number;
+  /** MP a combatant regains for spending its turn guarding. */
+  readonly defendMpBonus: number;
+  /**
+   * How much a turn order roll wanders, as a fraction of speed.
+   *
+   * At 0 the faster monster always moves first, which made one stat decide
+   * the battle. At 0.25 a ten-point edge is a strong lean rather than a
+   * certainty, so a slower monster can still open - and guarding becomes a
+   * read rather than a formality.
+   */
+  readonly initiativeVariance: number;
   /** Turn limit; a battle that reaches it ends in a draw-by-hp comparison. */
   readonly maxTurns: number;
   /** MP every combatant starts with, and regain per turn. */
@@ -325,23 +360,31 @@ export interface BattleConfig {
 
 export const DEFAULT_BATTLE_CONFIG: BattleConfig = {
   criticalChance: 0.06,
-  criticalChancePerSpeed: 0.002,
-  criticalChanceCap: 0.35,
+  criticalChancePerSpeed: 0.0008,
+  criticalChanceCap: 0.2,
   criticalMultiplier: 1.6,
   defendDamageMultiplier: 0.45,
   damageVariance: 0.1,
   minimumDamage: 1,
   defenseScale: 1,
+  offhandFactor: 0.25,
+  damageScale: 0.2,
+  defendMpBonus: 4,
+  initiativeVariance: 0.25,
   maxTurns: 200,
   startingMp: 20,
   mpRegenPerTurn: 3,
+  // Advantage compounds: a monster that deals 1.3x while taking 0.7x is at
+  // nearly twice the strength of its counter, which made one starter beat
+  // another 98 times in 100. These are deliberately milder than they look -
+  // 1.25 and 0.8 still read clearly in play and still decide close fights.
   elementChart: {
-    fire: { water: 0.7, wind: 1.3, earth: 1.0 },
-    water: { fire: 1.3, earth: 1.3, wind: 0.7 },
-    earth: { wind: 1.3, water: 0.7, fire: 1.0 },
-    wind: { earth: 0.7, fire: 0.7, water: 1.3 },
-    light: { dark: 1.4, light: 0.6 },
-    dark: { light: 1.4, dark: 0.6 },
+    fire: { water: 0.8, wind: 1.25, earth: 1.0 },
+    water: { fire: 1.25, earth: 1.25, wind: 0.8 },
+    earth: { wind: 1.25, water: 0.8, fire: 1.0 },
+    wind: { earth: 0.8, fire: 0.8, water: 1.25 },
+    light: { dark: 1.35, light: 0.7 },
+    dark: { light: 1.35, dark: 0.7 },
   },
 };
 

@@ -368,6 +368,18 @@ export interface BattleLogEntry {
   readonly targetId?: string;
   readonly damage?: number;
   readonly critical?: boolean;
+  /** The skill used, so the UI can name it without parsing the message. */
+  readonly skillId?: string;
+  /** Element matchup applied to this hit. 1 when neither resists nor is weak. */
+  readonly elementMultiplier?: number;
+  /** Damage the target's guard absorbed. 0 when it was not defending. */
+  readonly mitigated?: number;
+  /** MP the actor spent. */
+  readonly mpSpent?: number;
+  /**
+   * English sentence describing the entry. The UI is expected to build its own
+   * text from the fields above; this is a fallback and a debugging aid.
+   */
   readonly message: string;
 }
 
