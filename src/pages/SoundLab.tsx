@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import "../styles/sound-lab.css";
 import battleSounds from '../mocks/battleSounds.json';
 import { LootPreview } from '../components/LootPreview';
+import hummedVictory from '../mocks/hummedVictory.json';
 
 const sounds = [
   { id: "fusion-motor-door", title: "05 / 遠心融合", text: "回転が止まり、重いロックがガチャコン。圧力が抜けるプシューーで装置が開きます。3.6秒。", word: "ガチャコン → プシュー", tags: "融合音の候補 · 解錠と排気" },
@@ -40,6 +41,14 @@ export function SoundLab() {
         onChange={e => { const value=Number(e.target.value); setVolume(value); if(player.current) player.current.volume=value; }} />
       <button className="text-button" onClick={() => { player.current?.pause(); setPlaying(""); }}>停止</button>
       <p>初期音量は50%。再生ボタンを押すまで音は鳴りません。</p>
+    </section>
+    <section className="panel sound-card">
+      <h2>あなたの鼻歌から · 勝利メロディ試作</h2>
+      <p>録音の間隔をもとにした単旋律の確認版です。音程は推定のため、まず原案との違いを確認してください。</p>
+      {hummedVictory.map(track => <div key={track.id}><h3>{track.name}</h3>
+        <button onClick={() => void play(track.id,'music')}>{playing === track.id ? '♪ もう一度聴く' : '▶ 聴く'} · {track.name}</button>
+        <a download href={`${import.meta.env.BASE_URL}audio/music/${track.id}.wav`}>WAVを保存 ↓</a>
+      </div>)}
     </section>
     <section className="panel sound-card">
       <div className="eyebrow">VICTORY FANFARE · ORIGINAL</div>
