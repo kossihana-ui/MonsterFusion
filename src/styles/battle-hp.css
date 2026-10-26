@@ -1,0 +1,8 @@
+.battle-hp-track { position: relative; overflow: hidden; height: 12px; margin-top: 10px; border-radius: 3px; background: #303d39; }
+.battle-hp-current, .battle-hp-trail { position: absolute; inset: 0 auto 0 0; }
+.battle-hp-trail { background: #ec6868; transition: width 700ms steps(28, end); }
+.battle-hp-current { background: #b2d991; z-index: 1; }
+.battle-portrait-stage { position: relative; }
+.battle-damage-number { position: absolute; z-index: 6; top: 20%; left: 50%; transform: translateX(-50%); color: #fff8df; font-size: clamp(32px, 5vw, 54px); font-weight: 900; line-height: 1; white-space: nowrap; text-shadow: -2px -2px #351e20, 2px -2px #351e20, -2px 2px #351e20, 2px 3px #351e20, 0 0 12px #000; pointer-events: none; animation: battle-damage-rise 1100ms ease-out both; }
+@keyframes battle-damage-rise { 0% { opacity: 1; transform: translate(-50%, 10px) scale(1.2); } 18% { transform: translate(-50%, 0) scale(1); } 75% { opacity: 1; } 100% { opacity: 0; transform: translate(-50%, -40px); } }
+@media (prefers-reduced-motion: reduce) { .battle-hp-trail { transition: none; } .battle-damage-number { animation: none; } }

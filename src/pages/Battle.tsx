@@ -9,6 +9,7 @@ import { createBattle, getCoreMonster } from "../mocks/game";
 import { Portrait } from "../components/MonsterView";
 import { BattleEffect } from "../components/BattleEffect";
 import { BattleResult } from "../components/BattleResult";
+import { BattleHpBar } from "../components/BattleHpBar";
 import type { BattleCue } from "../components/BattleEffect";
 export function Battle(props: { monsters: Monster[]; adapter: GameAdapter }) {
   if (props.monsters.length < 2) {
@@ -36,6 +37,7 @@ function BattleSession({
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
   const [cue, setCue] = useState<BattleCue | null>(null);
+  const [displayHp, setDisplayHp] = useState<Record<number, number> | null>(null);
   const [motions, setMotions] = useState<Record<number, SpriteMotion>>({});
   const active = useRef<AbortController | null>(null);
   const arena = useRef<HTMLDivElement>(null);
@@ -80,6 +82,8 @@ function BattleSession({
     arena.current?.scrollIntoView({ block: "center", behavior: "instant" });
     try {
       const next = await adapter.calculateBattleTurn(state, action);
+      // Replay the authoritative log for display only; never modify core state.
+      const replayHp: Record<number, number> = { 0: state.playerHp, 1: state.enemyHp };
       for (const entry of next.coreState?.log.slice(
         state.coreState?.log.length ?? 0,
       ) ?? []) {
@@ -93,10 +97,13 @@ function BattleSession({
             (c) => c.id === entry.targetId,
           );
           if (target && (entry.damage ?? 0) > 0) {
+            if (controller.signal.aborted) break;
+            replayHp[target.side] = Math.max(0, replayHp[target.side] - (entry.damage ?? 0));
+            setDisplayHp({ ...replayHp });
             const skill = actor.skills.find(s => s.id === entry.skillId);
             const major = getLearnableMoves(getCoreMonster(actor.monsterId)).some(m => m.skill.id === entry.skillId && m.category === "finisher");
             if (!controller.signal.aborted) setCue({ sequence: ++serial.current, name: skill ? skillLabel(skill) : "攻撃", skillId: skill?.id ?? "attack", element: skill?.element ?? actor.element, target: target.side, finisher: major, damage: entry.damage ?? 0 });
-            await play(target.side, "hurt", controller.signal, major ? 1250 : 850);
+            await play(target.side, "hurt", controller.signal, major ? 1250 : 1100);
             if (!controller.signal.aborted) setCue(null);
           }
         }
@@ -111,6 +118,7 @@ function BattleSession({
         setBusy(false);
         setMotions({});
         setCue(null);
+        setDisplayHp(null);
       }
     }
   }
@@ -157,17 +165,20 @@ function BattleSession({
       <div className="battle-field" ref={arena}>
         {cue && <BattleEffect key={cue.sequence} cue={cue} />}
         {[
-          { monster: state.player, hp: state.playerHp, label: "PLAYER" },
-          { monster: state.enemy, hp: state.enemyHp, label: "ENEMY" },
+          { monster: state.player, hp: displayHp?.[0] ?? state.playerHp, label: "PLAYER" },
+          { monster: state.enemy, hp: displayHp?.[1] ?? state.enemyHp, label: "ENEMY" },
         ].map((side, i) => (
           <section key={i}>
             <div className="eyebrow">{side.label}</div>
+            <div className="battle-portrait-stage">
             <Portrait
               monster={side.monster}
               large
               facingRight={i === 0}
               motion={motions[i]}
             />
+            {cue?.target === i && <span key={cue.sequence} className="battle-damage-number" aria-hidden="true">−{cue.damage}</span>}
+            </div>
             <h2>{side.monster.name}</h2>
             <p className="battle-resources">
               {side.monster.genes.element}属性
@@ -178,10 +189,11 @@ function BattleSession({
                 {side.hp} / {side.monster.stats.hp}
               </span>
             </div>
-            <progress
-              aria-label={`${side.label} HP`}
+            <BattleHpBar
+              key={side.monster.id}
+              label={`${side.label} HP`}
               max={side.monster.stats.hp}
-              value={side.hp}
+              hp={side.hp}
             />
             <div className="hp-label mp-label"><span>MP</span><span>{state.coreState?.combatants.find(c => c.side === i)?.mp ?? 0} / 99</span></div>
             <progress className="mp-bar" aria-label={`${side.label} MP`} max={99} value={state.coreState?.combatants.find(c => c.side === i)?.mp ?? 0} />

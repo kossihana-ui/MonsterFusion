@@ -31,7 +31,6 @@ export function BattleEffect({ cue }: { cue: BattleCue }) {
         {shape === "burst" && Array.from({length: 8}, (_, i) => <path key={i} transform={`rotate(${i * 45} 100 100)`} d="M94 25 L100 5 L108 25 L100 60Z"/>)}
       </svg>
       <div className="fx-ring" />
-      <b className="fx-damage">−{cue.damage}</b>
     </div>
   </div>;
 }
