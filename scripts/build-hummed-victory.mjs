@@ -6,7 +6,7 @@ const scores=JSON.parse(readFileSync('src/mocks/hummedVictory.json','utf8'));
 const sr=44100;
 mkdirSync('public/audio/music',{recursive:true});
 for(const score of scores){
-  const duration=Math.max(...score.notes.map(([,s,d])=>s+d))+.45;
+  const duration=Math.max(...score.notes.map(([,s,d])=>s+d),score.endTom ?? 0)+.45;
   const pcm=new Float64Array(Math.ceil(duration*sr));
   for(const [pitch,start,length] of score.notes){
     const f=440*2**((pitch+12+(score.transpose ?? 0)-69)/12);
@@ -16,6 +16,17 @@ for(const score of scores){
       const p=2*Math.PI*f*t;
       const brass=Math.sin(p)+(score.soft ? .10 : .27)*Math.sin(2*p)+(score.soft ? .015 : .1)*Math.sin(3*p)*Math.exp(-t*5);
       pcm[k]+=brass*attack*release*.45;
+    }
+  }
+  if (score.endTom !== undefined) {
+    // One original high electronic tom: a fast pitch fall and damped membrane modes.
+    // No noise burst or sampled game sound; keep the attack rounded rather than metallic.
+    for(let i=0;i<.3*sr;i++) {
+      const t=i/sr,k=Math.round((score.endTom+.05)*sr)+i;
+      if(k>=pcm.length)break;
+      const phase=2*Math.PI*(300*t+260*.022*(1-Math.exp(-t/.022)));
+      const env=Math.sin(Math.min(1,t/.003)*Math.PI/2)**2*Math.exp(-t/ .055)*Math.max(0,1-t/.3);
+      pcm[k]+=.42*env*(Math.sin(phase)+.18*Math.sin(phase*1.58)*Math.exp(-t/ .025));
     }
   }
   const dry=pcm.slice();
