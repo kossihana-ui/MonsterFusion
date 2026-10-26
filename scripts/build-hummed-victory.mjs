@@ -24,9 +24,11 @@ for(const score of scores){
     for(let i=0;i<.3*sr;i++) {
       const t=i/sr,k=Math.round((score.endTom+.05)*sr)+i;
       if(k>=pcm.length)break;
-      const phase=2*Math.PI*(300*t+260*.022*(1-Math.exp(-t/.022)));
-      const env=Math.sin(Math.min(1,t/.003)*Math.PI/2)**2*Math.exp(-t/ .055)*Math.max(0,1-t/.3);
-      pcm[k]+=.42*env*(Math.sin(phase)+.18*Math.sin(phase*1.58)*Math.exp(-t/ .025));
+      // The deeper revision avoids the chirpy, large pitch sweep and metallic mode.
+      const base=score.deepTom ? 155 : 300, sweep=score.deepTom ? 45 : 260;
+      const phase=2*Math.PI*(base*t+sweep*.022*(1-Math.exp(-t/.022)));
+      const env=Math.sin(Math.min(1,t/(score.deepTom ? .005 : .003))*Math.PI/2)**2*Math.exp(-t/(score.deepTom ? .085 : .055))*Math.max(0,1-t/.3);
+      pcm[k]+=(score.deepTom ? .48 : .42)*env*(Math.sin(phase)+(score.deepTom ? .04 : .18)*Math.sin(phase*1.58)*Math.exp(-t/ .025));
     }
   }
   const dry=pcm.slice();
