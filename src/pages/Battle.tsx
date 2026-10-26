@@ -1,4 +1,5 @@
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
+import { ArenaEntrance } from "../components/ArenaEntrance";
 import { animationDuration, DEFAULT_BATTLE_CONFIG, elementMultiplier, getLearnableMoves } from "@core/core/index.ts";
 import { matchupLabel, skillLabel } from "../shared/battlePresentation";
 import { MoveBadges } from "../components/MoveBadges";
@@ -12,6 +13,8 @@ import { BattleResult } from "../components/BattleResult";
 import { BattleHpBar } from "../components/BattleHpBar";
 import type { BattleCue } from "../components/BattleEffect";
 export function Battle(props: { monsters: Monster[]; adapter: GameAdapter }) {
+  const [entrant, setEntrant] = useState<string | null>(null);
+  const enter = useCallback((id: string) => setEntrant(id), []);
   if (props.monsters.length < 2) {
     return (
       <section className="panel">
@@ -22,7 +25,9 @@ export function Battle(props: { monsters: Monster[]; adapter: GameAdapter }) {
       </section>
     );
   }
-  return <BattleSession {...props} />;
+  if (!entrant) return <ArenaEntrance monsters={props.monsters} onEnter={enter} />;
+  const ordered = [...props.monsters].sort((a, b) => Number(b.id === entrant) - Number(a.id === entrant));
+  return <BattleSession monsters={ordered} adapter={props.adapter} />;
 }
 function BattleSession({
   monsters,
