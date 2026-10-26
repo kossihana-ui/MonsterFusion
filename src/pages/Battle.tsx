@@ -104,7 +104,7 @@ function BattleSession({
         );
         if (actor && (entry.kind === "attack" || entry.kind === "skill")) {
           stopSound.current();
-          stopSound.current = battleSound(entry.skillId ?? 'attack', mutedRef.current);
+          stopSound.current = battleSound(entry.skillId ?? 'attack', mutedRef.current, actor.skills.find(s => s.id === entry.skillId)?.element ?? actor.element);
           await play(actor.side, "attack", controller.signal);
           const target = next.coreState?.combatants.find(
             (c) => c.id === entry.targetId,

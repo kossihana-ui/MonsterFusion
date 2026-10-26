@@ -2,211 +2,289 @@
   {
     "id": "final-tail",
     "name": "ファイナルテール",
-    "major": true
+    "major": true,
+    "element": "self"
   },
   {
     "id": "twin-lash",
     "name": "ツインラッシュ",
-    "major": false
+    "major": false,
+    "element": "self"
   },
   {
     "id": "bind-whip",
     "name": "バインドウィップ",
-    "major": false
+    "major": false,
+    "element": "earth"
   },
   {
     "id": "tail-sweep",
     "name": "テールスイープ",
-    "major": false
+    "major": false,
+    "element": "neutral"
   },
   {
     "id": "ram-charge",
     "name": "ラムチャージ",
-    "major": true
+    "major": true,
+    "element": "self"
   },
   {
     "id": "impact-horn",
     "name": "インパクトホーン",
-    "major": false
+    "major": false,
+    "element": "neutral"
   },
   {
     "id": "double-gore",
     "name": "ダブルゴア",
-    "major": false
+    "major": false,
+    "element": "self"
   },
   {
     "id": "crown-break",
     "name": "クラウンブレイク",
-    "major": true
+    "major": true,
+    "element": "light"
   },
   {
     "id": "single-thrust",
     "name": "シングルスラスト",
-    "major": false
+    "major": false,
+    "element": "neutral"
   },
   {
     "id": "wing-cutter",
     "name": "ウィングカッター",
-    "major": false
+    "major": false,
+    "element": "wind"
   },
   {
     "id": "dive-attack",
     "name": "ダイブアタック",
-    "major": false
+    "major": false,
+    "element": "self"
   },
   {
     "id": "crystal-shard",
     "name": "クリスタルシャード",
-    "major": false
+    "major": false,
+    "element": "self"
   },
   {
     "id": "soul-wing",
     "name": "ソウルウィング",
-    "major": true
+    "major": true,
+    "element": "dark"
   },
   {
     "id": "death-bite",
     "name": "デスバイト",
-    "major": true
+    "major": true,
+    "element": "self"
   },
   {
     "id": "fang-bite",
     "name": "ファングバイト",
-    "major": false
+    "major": false,
+    "element": "self"
   },
   {
     "id": "tusk-rush",
     "name": "タスクラッシュ",
-    "major": false
+    "major": false,
+    "element": "earth"
   },
   {
     "id": "pierce-beak",
     "name": "ピアースビーク",
-    "major": false
+    "major": false,
+    "element": "neutral"
   },
   {
     "id": "magic-eye",
     "name": "マジックアイ",
-    "major": false
+    "major": false,
+    "element": "self"
   },
   {
     "id": "multi-gaze",
     "name": "マルチゲイズ",
-    "major": false
+    "major": false,
+    "element": "dark"
   },
   {
     "id": "pierce-gaze",
     "name": "ペネトレイト",
-    "major": false
+    "major": false,
+    "element": "neutral"
   },
   {
     "id": "pollen-burst",
     "name": "ポレンバースト",
-    "major": false
+    "major": false,
+    "element": "earth"
   },
   {
     "id": "crystal-ray",
     "name": "クリスタルレイ",
-    "major": false
+    "major": false,
+    "element": "light"
   },
   {
     "id": "royal-order",
     "name": "ロイヤルオーダー",
-    "major": true
+    "major": true,
+    "element": "self"
   },
   {
     "id": "fin-slash",
     "name": "フィンスラッシュ",
-    "major": false
+    "major": false,
+    "element": "water"
   },
   {
     "id": "mane-guard",
     "name": "メインクラッシュ",
-    "major": false
+    "major": false,
+    "element": "self"
   },
   {
     "id": "antenna-pulse",
     "name": "アンテナパルス",
-    "major": false
+    "major": false,
+    "element": "self"
   },
   {
     "id": "power-slam",
     "name": "パワースラム",
-    "major": false
+    "major": false,
+    "element": "neutral"
   },
   {
     "id": "hydro-ram",
     "name": "ハイドロラム",
-    "major": false
+    "major": false,
+    "element": "water"
   },
   {
     "id": "coil-crush",
     "name": "コイルクラッシュ",
-    "major": false
+    "major": false,
+    "element": "self"
   },
   {
     "id": "giant-press",
     "name": "ジャイアントプレス",
-    "major": true
+    "major": true,
+    "element": "neutral"
   },
   {
     "id": "attack",
     "name": "通常攻撃",
-    "major": false
+    "major": false,
+    "element": "neutral"
   },
   {
     "id": "defend",
     "name": "守る",
-    "major": false
+    "major": false,
+    "element": "neutral"
   },
   {
     "id": "strike",
     "name": "基本技",
-    "major": false
+    "major": false,
+    "element": "neutral"
   },
   {
     "id": "sig-neutral",
     "name": "インパクト",
-    "major": false
+    "major": false,
+    "element": "neutral"
   },
   {
     "id": "sig-fire",
     "name": "フレアバースト",
-    "major": false
+    "major": false,
+    "element": "fire"
   },
   {
     "id": "sig-water",
     "name": "アクアランス",
-    "major": false
+    "major": false,
+    "element": "water"
   },
   {
     "id": "sig-earth",
     "name": "ストーンクラッシュ",
-    "major": false
+    "major": false,
+    "element": "earth"
   },
   {
     "id": "sig-wind",
     "name": "ゲイルスラッシュ",
-    "major": false
+    "major": false,
+    "element": "wind"
   },
   {
     "id": "sig-light",
     "name": "レイディアンス",
-    "major": false
+    "major": false,
+    "element": "light"
   },
   {
     "id": "sig-dark",
     "name": "アンブラルファング",
-    "major": false
+    "major": false,
+    "element": "dark"
   },
   {
     "id": "chest",
     "name": "宝箱が開く",
-    "major": false
+    "major": false,
+    "element": "neutral"
   },
   {
     "id": "collect",
     "name": "パーツ獲得",
+    "major": false,
+    "element": "neutral"
+  },
+  {
+    "id": "element-fire",
+    "name": "炎の燃焼",
+    "element": "fire",
+    "major": false
+  },
+  {
+    "id": "element-water",
+    "name": "水の奔流",
+    "element": "water",
+    "major": false
+  },
+  {
+    "id": "element-earth",
+    "name": "岩の連続衝撃",
+    "element": "earth",
+    "major": false
+  },
+  {
+    "id": "element-wind",
+    "name": "風の斬撃",
+    "element": "wind",
+    "major": false
+  },
+  {
+    "id": "element-light",
+    "name": "光の閃光",
+    "element": "light",
+    "major": false
+  },
+  {
+    "id": "element-dark",
+    "name": "闇のうなり",
+    "element": "dark",
     "major": false
   }
 ]

@@ -23,7 +23,7 @@ export function SoundLab() {
   }, []);
   async function play(id: string, folder = 'selection') {
     player.current?.pause();
-    const audio = new Audio(import.meta.env.BASE_URL + "audio/" + folder + "/" + id + ".wav?v=3");
+    const audio = new Audio(import.meta.env.BASE_URL + "audio/" + folder + "/" + id + ".wav?v=4");
     player.current = audio; audio.volume = volume;
     setError(""); setPlaying(id);
     audio.onended = () => { if (player.current === audio) setPlaying(""); };
@@ -67,7 +67,7 @@ export function SoundLab() {
     </section>)}</div>
     <LootPreview />
     <h2>技と宝箱の効果音 · {battleSounds.length}音</h2>
-    <p>低めの電子音と短い残響。技ごとに音程・打撃・うなりを変えています。</p>
+    <p>炎は燃焼、石は連続衝撃、光は澄んだ閃光。水・風・闇も音の質から作り分けています。使用者の属性で変わる技は、戦闘中に属性音が重なります。</p>
     <div className="sound-grid">{battleSounds.map(sound => <section className="panel sound-card" key={sound.id}>
       <h3>{sound.name}{sound.major ? ' · 大技' : ''}</h3>
       <button onClick={() => void play(sound.id,'battle')}>{playing === sound.id ? '♪ もう一度' : '▶ 聴いてみる'}<span className="sr-only"> {sound.name}</span></button>

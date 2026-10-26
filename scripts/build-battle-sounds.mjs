@@ -5,11 +5,13 @@ const server = await createServer({ server: { middlewareMode: true } });
 try {
   const { MOVE_CATALOGUE } = await server.ssrLoadModule('@core/core/index.ts');
   const extras = [['attack','通常攻撃'],['defend','守る'],['strike','基本技'],['sig-neutral','インパクト'],['sig-fire','フレアバースト'],['sig-water','アクアランス'],['sig-earth','ストーンクラッシュ'],['sig-wind','ゲイルスラッシュ'],['sig-light','レイディアンス'],['sig-dark','アンブラルファング'],['chest','宝箱が開く'],['collect','パーツ獲得']];
-  const sounds = [...MOVE_CATALOGUE.map(m => ({id:m.id,name:m.name,major:m.category==='finisher'})), ...extras.map(([id,name])=>({id,name,major:false}))];
+  const elements=['fire','water','earth','wind','light','dark'];
+  const labels=['炎の燃焼','水の奔流','岩の連続衝撃','風の斬撃','光の閃光','闇のうなり'];
+  const sounds = [...MOVE_CATALOGUE.map(m => ({id:m.id,name:m.name,major:m.category==='finisher',element:m.element})), ...extras.map(([id,name])=>({id,name,major:false,element:id.startsWith('sig-')?id.slice(4):'neutral'})), ...elements.map((element,i)=>({id:`element-${element}`,name:labels[i],element,major:false}))];
   await mkdir('public/audio/battle',{recursive:true});
   for (const [index, sound] of sounds.entries()) {
-    const id=sound.id, sr=32000, duration=sound.major?1.18:.68, count=Math.ceil(sr*duration);
-    const out=new Float64Array(count); let seed=149+index*701, smooth=0;
+    const id=sound.id, sr=32000, duration=sound.major?1.18:elements.includes(sound.element)?1.05:.68, count=Math.ceil(sr*duration);
+    const out=new Float64Array(count); let seed=149+index*701, smooth=0, low=0, crack=0;
     const magic=/eye|gaze|ray|crystal|soul|royal|pulse|pollen|sig|collect/.test(id);
     const sweep=/tail|lash|whip|wing|slash|wind|fin/.test(id);
     const double=/twin|double|multi|rush/.test(id);
@@ -17,6 +19,9 @@ try {
     for(let i=0;i<count;i++) {
       const t=i/sr; seed=(Math.imul(seed,1664525)+1013904223)>>>0;
       smooth=.84*smooth+.16*(seed/2147483648-1);
+      const noise=seed/2147483648-1;
+      low=.985*low+.015*noise;
+      crack=crack*.82+(noise>.991 ? .7 : 0);
       const attack=Math.min(1,t/.012), release=Math.pow(1-t/duration,2);
       let v=0;
       for(let hit=0;hit<(double?2:1);hit++) {
@@ -30,6 +35,43 @@ try {
       if(magic) v+=Math.sin(2*Math.PI*base*1.5*t)*.18*Math.exp(-t*4)*( .65+.35*Math.cos(t*(18+index)));
       if(id==='chest') v+=Math.sin(2*Math.PI*310*t)*Math.exp(-Math.abs(t-.22)*35)*.4;
       if(id==='collect') v+=Math.sin(2*Math.PI*(220*t+150*t*t))*.25*Math.exp(-t*4);
+      // Distinct material acoustics instead of transposing the same electronic tone.
+      const hitTone=(u,f,decay)=>u<0?0:Math.sin(2*Math.PI*(f*u+2*(1-Math.exp(-u*40))))*Math.exp(-u*decay)*Math.min(1,u/.004);
+      const variant=1+(index%5)*.035;
+      switch(sound.element) {
+        case 'fire':
+          // Air-fed roar, a low ignition thump and sparse bright embers.
+          v=(smooth*2.6+low*3)*( .7+.22*Math.sin(t*39)+.08*Math.sin(t*107))*Math.exp(-t*1.1)+crack*noise*.6+hitTone(t,55,15)*.45;
+          break;
+        case 'earth':
+          // Three separate stone impacts, rubble between each strike.
+          v=0;
+          for(const onset of [0,.19/variant,.4/variant]){const u=t-onset;if(u>=0)v+=hitTone(u,48*variant,11)*.85+(smooth*1.6+noise*.15)*Math.exp(-u*20);}
+          v+=low*.8*Math.exp(-t*2);
+          break;
+        case 'light': {
+          // Brief "sha" onset followed by a stable, clear "peen" tail.
+          const u=Math.max(0,t-.065),env=Math.min(1,u/.012)*Math.exp(-u*3);
+          v=(noise-smooth)*.22*Math.exp(-t*32)+env*(Math.sin(2*Math.PI*784*variant*u)*.38+Math.sin(2*Math.PI*1176*variant*u)*.17+Math.sin(2*Math.PI*1568*variant*u)*.04);
+          break;
+        }
+        case 'water':
+          v=smooth*2*Math.sin(Math.PI*Math.min(1,t/.8))+hitTone(t,170,5)*.2;
+          for(const onset of [.05,.22,.43,.57]){const u=t-onset;if(u>=0)v+=Math.sin(2*Math.PI*(350*u+90*u*u))*Math.exp(-u*24)*.22;}
+          break;
+        case 'wind':
+          v=(noise-smooth)*.3*(Math.exp(-(((t-.14)/.08)**2))+.8*Math.exp(-(((t-.39)/.1)**2)))+smooth*.6*Math.sin(Math.PI*t/duration);
+          break;
+        case 'dark':
+          v=(Math.sin(2*Math.PI*74*t+2*Math.sin(2*Math.PI*37*t))*.4+Math.sin(2*Math.PI*111*t)*.18)*( .7+.3*Math.sin(t*26))*Math.exp(-t*2)+low*1.3;
+          break;
+      }
+      if(elements.includes(sound.element) && !id.startsWith('sig-') && !id.startsWith('element-')) {
+        // Feature moves retain a physical gesture under their element.
+        v+=hitTone(t,double?85:base,14)*.18;
+        if(double)v+=hitTone(t-.17,base,15)*.16;
+        if(sweep)v+=smooth*.4*Math.exp(-(((t-.12)/.08)**2));
+      }
       out[i]=v*attack*release;
     }
     // Quiet, dark short reflections; fade ends and normalize with headroom.
