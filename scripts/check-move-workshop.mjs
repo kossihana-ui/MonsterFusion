@@ -1,0 +1,28 @@
+import assert from 'node:assert/strict';
+import {createServer} from 'vite';
+const server=await createServer({server:{middlewareMode:true}});
+try {
+  const m=await server.ssrLoadModule('/src/components/moveWorkshopModel.ts');
+  const row=m.rows.find(r=>r.id==='final-tail');
+  const before=JSON.stringify(m.rows);
+  const drafts={[row.id]:{base:{...row.base},value:{...row.base,name:'テストの尾',traits:'防御を貫通\n使用後1ターン休む',sound:'element-earth',soundRequest:'ズドドド、短く'}}};
+  const restored=m.parseDrafts(JSON.stringify({version:1,drafts}));
+  assert.deepEqual(restored,drafts);
+  const p=m.proposal(restored);
+  assert.equal(p.moves.length,1);
+  assert.deepEqual(Object.keys(p.moves[0].changes),['name','traits','sound','soundRequest']);
+  const text=m.proposalText(restored);
+  const machine=text.split('--- 機械読み取り用JSON（こちらを正本にしてください） ---\n')[1];
+  assert.deepEqual(JSON.parse(machine),p);
+  assert.equal(p.moves[0].id,'final-tail');
+  assert.equal(p.mode,'proposal-only');
+  assert.equal(JSON.stringify(m.rows),before);
+  assert.equal(m.proposal({[row.id]:{base:{...row.base},value:{...row.base}}}).moves.length,0);
+  assert.throws(()=>m.parseDrafts('{broken'));
+  assert.throws(()=>m.parseDrafts(JSON.stringify({version:1,drafts:{wrong:drafts[row.id]}})));
+  assert.throws(()=>m.parseDrafts(JSON.stringify({version:1,drafts:{[row.id]:{base:row.base,value:{...row.base,element:'invalid'}}}})));
+  const stale={[row.id]:{base:{...row.base,name:'古い名前'},value:{...row.base,name:'新しい名前'}}};
+  assert.equal(m.proposal(stale).moves[0].base.name,'古い名前');
+  assert.equal(m.proposal(stale).moves[0].current.name,row.base.name);
+  console.log(`${m.rows.length} core moves: draft persistence, changed-only export, JSON roundtrip, stale baseline, invalid data and core immutability passed.`);
+} finally {await server.close();}
