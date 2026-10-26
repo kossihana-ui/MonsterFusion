@@ -7,6 +7,7 @@ import { Register } from "./pages/Register";
 import { SoundLab } from "./pages/SoundLab";
 import { initialMonsters, gameAdapter } from "./mocks/game";
 import { playUiSound } from "./components/uiSound";
+import { GameGuide } from "./components/GameGuide";
 import type { GameAdapter, Monster } from "./shared/ui";
 type Page = "collection" | "fusion" | "battle" | "register" | "detail" | "sound";
 const tabs: { id: Page; label: string; icon: string; english: string }[] = [
@@ -85,6 +86,7 @@ export default function App({
       </aside>
       <div className="main-shell">
         <header className="topbar">
+          <GameGuide />
           <span>
             WORKSPACE <span>/</span>{" "}
             {page === "detail"

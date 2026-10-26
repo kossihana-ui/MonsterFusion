@@ -7,6 +7,8 @@ import type { SpriteMotion } from "../components/MonsterSprite";
 import type { BattleAction, GameAdapter, Monster } from "../shared/ui";
 import { createBattle, getCoreMonster } from "../mocks/game";
 import { Portrait } from "../components/MonsterView";
+import { BattleEffect } from "../components/BattleEffect";
+import type { BattleCue } from "../components/BattleEffect";
 export function Battle(props: { monsters: Monster[]; adapter: GameAdapter }) {
   if (props.monsters.length < 2) {
     return (
@@ -32,8 +34,10 @@ function BattleSession({
   );
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
+  const [cue, setCue] = useState<BattleCue | null>(null);
   const [motions, setMotions] = useState<Record<number, SpriteMotion>>({});
   const active = useRef<AbortController | null>(null);
+  const arena = useRef<HTMLDivElement>(null);
   const serial = useRef(0);
   const player = state.coreState?.combatants.find((c) => c.side === 0);
   const enemy = state.coreState?.combatants.find((c) => c.side === 1);
@@ -45,6 +49,7 @@ function BattleSession({
     side: number,
     animation: "attack" | "hurt",
     signal: AbortSignal,
+    duration?: number,
   ) {
     if (
       signal.aborted ||
@@ -61,7 +66,7 @@ function BattleSession({
         signal.removeEventListener("abort", finish);
         resolve();
       };
-      const timer = window.setTimeout(finish, animationDuration(animation));
+      const timer = window.setTimeout(finish, duration ?? animationDuration(animation));
       signal.addEventListener("abort", finish, { once: true });
     });
   }
@@ -71,6 +76,7 @@ function BattleSession({
     active.current = controller;
     setBusy(true);
     setError("");
+    arena.current?.scrollIntoView({ block: "center", behavior: "instant" });
     try {
       const next = await adapter.calculateBattleTurn(state, action);
       for (const entry of next.coreState?.log.slice(
@@ -85,8 +91,13 @@ function BattleSession({
           const target = next.coreState?.combatants.find(
             (c) => c.id === entry.targetId,
           );
-          if (target && (entry.damage ?? 0) > 0)
-            await play(target.side, "hurt", controller.signal);
+          if (target && (entry.damage ?? 0) > 0) {
+            const skill = actor.skills.find(s => s.id === entry.skillId);
+            const major = getLearnableMoves(getCoreMonster(actor.monsterId)).some(m => m.skill.id === entry.skillId && m.category === "finisher");
+            if (!controller.signal.aborted) setCue({ sequence: ++serial.current, name: skill ? skillLabel(skill) : "攻撃", skillId: skill?.id ?? "attack", element: skill?.element ?? actor.element, target: target.side, finisher: major, damage: entry.damage ?? 0 });
+            await play(target.side, "hurt", controller.signal, major ? 1250 : 850);
+            if (!controller.signal.aborted) setCue(null);
+          }
         }
       }
       if (!controller.signal.aborted) setState(next);
@@ -98,6 +109,7 @@ function BattleSession({
       if (!controller.signal.aborted) {
         setBusy(false);
         setMotions({});
+        setCue(null);
       }
     }
   }
@@ -141,7 +153,8 @@ function BattleSession({
           {monsters.filter((m) => m.id !== state.player.id).map((m) => <option key={m.id} value={m.id}>{m.name}</option>)}
         </select>
       </label>
-      <div className="battle-field">
+      <div className="battle-field" ref={arena}>
+        {cue && <BattleEffect key={cue.sequence} cue={cue} />}
         {[
           { monster: state.player, hp: state.playerHp, label: "PLAYER" },
           { monster: state.enemy, hp: state.enemyHp, label: "ENEMY" },

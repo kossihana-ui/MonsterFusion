@@ -1,0 +1,15 @@
+.guide-trigger { padding: 8px 12px; color: #d9eac5; background: #21352d; border: 1px solid #52684b; border-radius: 6px; white-space: nowrap; }
+.game-guide { box-sizing: border-box; width: min(660px, calc(100% - 24px)); max-height: 88dvh; overflow-y: auto; background: #152026; color: #e2e9df; border: 1px solid #708764; border-radius: 12px; padding: 28px; line-height: 1.8; }
+.game-guide::backdrop { background: #040a10cc; }
+.guide-heading { display: flex; align-items: flex-start; justify-content: space-between; gap: 16px; }
+.guide-heading h2 { margin: 4px 0 10px; }
+.guide-heading small { color: #b4d99b; letter-spacing: .12em; }
+.guide-heading button { padding: 6px 14px; color: #fff; background: #2c3b3f; border: 1px solid #596967; }
+.guide-steps { padding-left: 24px; }
+.guide-steps li { padding-left: 8px; margin: 16px 0; }
+.guide-steps h3 { color: #c8e5b2; font-size: 1rem; margin-bottom: 4px; }
+.guide-steps p { margin: 0; }
+.game-guide details { border-top: 1px solid #3c504a; padding: 12px 0; }
+.game-guide summary { cursor: pointer; font-weight: bold; }
+.guide-start { width: 100%; padding: 14px; margin-top: 18px; color: #16241c; background: #c2e29e; border: 0; border-radius: 6px; font-weight: bold; }
+@media (max-width: 650px) { .game-guide { padding: 20px; } .topbar { flex-wrap: wrap; height: auto; gap: 8px; } }

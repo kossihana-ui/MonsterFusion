@@ -1,0 +1,26 @@
+.battle-field { overflow: hidden; isolation: isolate; }
+.battle-fx { position: absolute; inset: 0; z-index: 4; pointer-events: none; --fx: var(--type-color, #d5edff); }
+.fx-title { position: absolute; top: 12px; left: 8%; right: 8%; padding: 10px; text-align: center; background: #101820ee; color: var(--fx); border: 1px solid var(--fx); font-weight: bold; animation: fx-banner .85s both; }
+.fx-title small { color: #ffe4a2; margin-right: 10px; }
+.fx-hit { position: absolute; top: 45%; width: 180px; height: 180px; transform: translate(-50%, -50%); }
+.fx-art { width: 100%; height: 100%; fill: var(--fx); stroke: var(--fx); stroke-width: 4; filter: drop-shadow(0 0 10px var(--fx)); animation: fx-strike .85s both; }
+.fx-sweep, .fx-slash { transform-origin: 20% 80%; animation-name: fx-sweep; }
+.fx-wave, .fx-beam { animation-name: fx-beam; }
+.fx-vortex { animation-name: fx-vortex; }
+.fx-flame { transform-origin: 50% 100%; animation-name: fx-flame; }
+.fx-bite { animation-name: fx-bite; }
+.fx-ring { position: absolute; inset: 20%; border: 4px solid var(--fx); border-radius: 50%; animation: fx-ring .85s both; }
+.fx-damage { position: absolute; top: 15%; left: 35%; color: #fff; text-shadow: 2px 2px #172024; font-size: 28px; animation: fx-number .85s both; }
+.battle-fx-major { background: #080e1955; }
+.battle-fx-major .fx-hit { width: 245px; height: 245px; }
+.battle-fx-major .fx-art, .battle-fx-major .fx-ring, .battle-fx-major .fx-title, .battle-fx-major .fx-damage { animation-duration: 1.25s; }
+@keyframes fx-banner { 0% { opacity: 0; transform: translateY(-12px); } 15%,80% { opacity: 1; transform: none; } 100% { opacity: 0; } }
+@keyframes fx-strike { 0%,15% { opacity: 0; transform: scale(.1) rotate(-25deg); } 35% { opacity: 1; transform: scale(1.2); } 100% { opacity: 0; transform: scale(1.5); } }
+@keyframes fx-sweep { 0% { opacity: 0; transform: rotate(-100deg) scale(.4); } 35% { opacity: 1; } 75%,100% { opacity: 0; transform: rotate(45deg) scale(1.25); } }
+@keyframes fx-beam { 0%,15% { opacity: 0; transform: scaleX(.05); } 35%,60% { opacity: 1; transform: scaleX(1.25); } 100% { opacity: 0; transform: scaleY(.1); } }
+@keyframes fx-vortex { 0% { opacity: 0; transform: rotate(0) scale(.2); } 30% { opacity: 1; } 100% { opacity: 0; transform: rotate(260deg) scale(1.2); } }
+@keyframes fx-flame { 0% { opacity: 0; transform: scaleY(.05); } 35% { opacity: 1; transform: scaleY(1.2); } 100% { opacity: 0; transform: translateY(-40px) scale(.7); } }
+@keyframes fx-bite { 0% { opacity: 0; transform: scaleY(1.6); } 35% { opacity: 1; transform: scaleY(.65); } 60% { transform: scaleY(.9); } 100% { opacity: 0; } }
+@keyframes fx-ring { 0%,25% { opacity: 0; transform: scale(.1); } 40% { opacity: .8; } 100% { opacity: 0; transform: scale(2.3); } }
+@keyframes fx-number { 0%,25% { opacity: 0; } 40% { opacity: 1; } 100% { opacity: 0; transform: translateY(-45px); } }
+@media (prefers-reduced-motion: reduce) { .battle-fx { display: none; } }
