@@ -115,6 +115,12 @@ function assemble(
 
 export interface CreateMonsterOptions {
   readonly name?: string;
+  /**
+   * Evolution rank for a monster built directly rather than fused into
+   * existence - an arena boss, say, which has to stand above the collection
+   * without being descended from it.
+   */
+  readonly tier?: number;
   /** Supply a genome instead of rolling one. */
   readonly genes?: MonsterGenes;
   /**
@@ -122,6 +128,11 @@ export interface CreateMonsterOptions {
    * whose ids must stay stable across sessions and saves.
    */
   readonly id?: MonsterId;
+  /**
+   * locus -> value the child must express, from a gene part. Pinned as the
+   * dominant allele, leaving the inherited partner as a recessive.
+   */
+  readonly pinnedLoci?: Readonly<Record<string, unknown>>;
 }
 
 /** Creates a generation-0 monster with a freshly rolled genome. */
@@ -140,15 +151,15 @@ export function createRootMonster(
     parentAId: null,
     parentBId: null,
     generation: 0,
+    tier: options.tier ?? 0,
     genes,
     phenotype,
     traits,
-    stats: computeStats(phenotype, 0, ctx.config.stats),
+    stats: computeStats(phenotype, 0, ctx.config.stats, options.tier ?? 0),
     mutationCount: 0,
     mutatedLoci: [],
     atavismLoci: [],
     createdAt: ctx.now(),
-    tier: 0,
     fusionHistory: [],
   });
 }
@@ -299,6 +310,8 @@ export interface FusionResult {
    * the UI can show as "kept from the parents".
    */
   readonly lockedLoci: readonly string[];
+  /** Loci a gene part pinned dominant on the child. */
+  readonly pinnedLoci: readonly string[];
   /** What the fusion turned out to be, matching `canFuse`'s preview. */
   readonly evolution: EvolutionPreview;
 }
@@ -345,7 +358,7 @@ export function fuseDetailed(
     parentB.genes,
     ctx.rng,
     ctx.config.genetics,
-    { locked },
+    { locked, ...(options.pinnedLoci ? { pinned: options.pinnedLoci } : {}) },
   );
   const phenotype = expressGenes(inheritance.genes, ctx.rng, ctx.config.genetics);
   const traits = deriveTraits(
@@ -406,6 +419,7 @@ export function fuseDetailed(
     mutatedLoci: inheritance.mutatedLoci,
     atavismLoci: inheritance.atavismLoci,
     lockedLoci: inheritance.lockedLoci,
+    pinnedLoci: inheritance.pinnedLoci,
     evolution,
   };
 }

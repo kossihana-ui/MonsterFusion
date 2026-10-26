@@ -352,6 +352,27 @@ MOVE_TIERS                                     // 大技の威力230・MP16な�
 - 読み込み時は**修復**します（覚えられない技を落とす・空なら既定に戻す）。拒否しません
 - **`startingMp` を 20 → 10 に下げました**。大技が初手から撃てないようにするためです。MPバーの表示に影響します
 
+## 8.11 アリーナ・パーツ報酬・素材融合
+
+ARENA_PARTS_HANDOFF.md への対応は [ARENA.md](ARENA.md) にまとめてあります。
+
+```ts
+startArena(player, loadout, context, { id? });
+advanceArenaTurn(run, action, context);
+claimArenaReward(run, inventory, context);
+nextArenaEncounter(run, context);
+previewPartFusion(a, b, part, inventory?);
+fuseWithPart(a, b, part, inventory, context, requestId);
+```
+
+**仕様6の判断**: 投入部位は**必ず子に発現します**（優性の活性アレルとして固定）。相手のアレルは劣性として残るので遺伝子は失われません。UIは `preview.guaranteedExpression` を見てください。自前で判断しないでください。
+
+- `ArenaRun` は値です。すべての関数が新しい run を返します
+- 敵は run の id と戦闘番号から決まります。表示し直しても再抽選されません
+- 報酬を受け取るまで次戦に進めません。二重取得は拒否されます
+- 素材は**成功時のみ1個消費**。同じ `requestId` の再送では二重消費・二重生成しません
+- 保存は `MonsterSaveFile` の `inventory` / `arena` に統合済みです
+
 ## 9. コマンド
 
 ```bash

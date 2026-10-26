@@ -21,6 +21,7 @@ export {
 // Configuration (every probability and coefficient lives here).
 export type {
   AllelePools,
+  ArenaConfig,
   BattleConfig,
   FusionConfig,
   GameConfig,
@@ -29,6 +30,7 @@ export type {
   StatsConfig,
 } from './config.ts';
 export {
+  createArenaConfig,
   createBattleConfig,
   createFusionConfig,
   createGameConfig,
@@ -36,6 +38,7 @@ export {
   createGraftConfig,
   createStatsConfig,
   DEFAULT_ALLELE_POOLS,
+  DEFAULT_ARENA_CONFIG,
   DEFAULT_BATTLE_CONFIG,
   DEFAULT_FUSION_CONFIG,
   DEFAULT_GAME_CONFIG,
@@ -211,6 +214,47 @@ export {
   skillsForLoadout,
   validateMoveLoadout,
 } from './moves.ts';
+
+// Gene parts (what a defeated monster leaves behind, and spending it).
+export type {
+  GenePart,
+  PartFusionPreview,
+  PartFusionResult,
+  PartInventory,
+  PartStack,
+} from './parts.ts';
+export {
+  addPart,
+  countOf,
+  createPartInventory,
+  fuseWithPart,
+  hasCompleted,
+  partFromFeature,
+  partIdFor,
+  partsOf,
+  pinnableLoci,
+  previewPartFusion,
+  removePart,
+  REQUEST_LEDGER_LIMIT,
+} from './parts.ts';
+
+// Arena (five fights, then a boss).
+export type {
+  ArenaEncounter,
+  ArenaPhase,
+  ArenaRewardResult,
+  ArenaRun,
+} from './arena.ts';
+export {
+  advanceArenaTurn,
+  arenaRules,
+  BOSS_TEMPLATE,
+  claimArenaReward,
+  createArenaEnemy,
+  isArenaOver,
+  nextArenaEncounter,
+  startArena,
+} from './arena.ts';
 
 // Starters.
 export type { StarterSpec, TendencySpec } from './starters.ts';

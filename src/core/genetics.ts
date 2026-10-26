@@ -200,6 +200,16 @@ export function allelesAt(genes: MonsterGenes, locus: NumericLocus | Categorical
 export interface InheritanceOptions {
   /** locus -> the value the child must express. Mutation is skipped there. */
   readonly locked?: Readonly<Record<string, unknown>>;
+  /**
+   * locus -> a value the child must express, pinned as the DOMINANT allele
+   * only.
+   *
+   * Unlike `locked`, which fixes both active alleles because it is copying a
+   * creature forward, this leaves the inherited partner allele in place as a
+   * recessive. A gene part has to guarantee a feature without deleting what
+   * the parents would otherwise have passed on.
+   */
+  readonly pinned?: Readonly<Record<string, unknown>>;
 }
 
 export interface InheritanceResult {
@@ -211,6 +221,8 @@ export interface InheritanceResult {
   readonly atavismLoci: readonly (CategoricalLocus | NumericLocus)[];
   /** Loci that were pinned by `InheritanceOptions.locked`. */
   readonly lockedLoci: readonly CategoricalLocus[];
+  /** Loci pinned dominant by `InheritanceOptions.pinned`. */
+  readonly pinnedLoci: readonly CategoricalLocus[];
 }
 
 /** Picks the gamete a parent contributes at one locus. */
@@ -283,7 +295,9 @@ export function inheritGenes(
   const mutatedLoci: (CategoricalLocus | NumericLocus)[] = [];
   const atavismLoci: (CategoricalLocus | NumericLocus)[] = [];
   const lockedLoci: CategoricalLocus[] = [];
+  const pinnedLoci: CategoricalLocus[] = [];
   const locked = options.locked ?? {};
+  const pinned = options.pinned ?? {};
   const [, domHi] = config.dominanceRange;
 
   for (const locus of CATEGORICAL_LOCI) {
@@ -298,6 +312,22 @@ export function inheritGenes(
       b: fromB.allele,
       hidden: carrierFrom(pairA, pairB, [fromA.allele, fromB.allele]),
     };
+
+    const pinnedValue = pinned[locus];
+    if (pinnedValue !== undefined) {
+      // Dominant enough to express, and clear of the co-dominance band so it
+      // cannot be mixed away. The inherited allele it displaced becomes the
+      // recessive, where it is still carried and can come back later.
+      const partner = pair.a.dominance >= pair.b.dominance ? pair.b : pair.a;
+      pair.a = { value: pinnedValue, dominance: domHi };
+      pair.b = {
+        value: partner.value,
+        dominance: Math.min(partner.dominance, domHi - config.codominanceThreshold - 0.01),
+      };
+      pinnedLoci.push(locus);
+      child[locus] = pair;
+      continue;
+    }
 
     const lockedValue = locked[locus];
     if (lockedValue !== undefined) {
@@ -357,6 +387,7 @@ export function inheritGenes(
     mutatedLoci,
     atavismLoci,
     lockedLoci,
+    pinnedLoci,
   };
 }
 

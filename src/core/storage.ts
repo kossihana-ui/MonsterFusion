@@ -20,6 +20,9 @@ import type {
 } from '../shared/types.ts';
 import type { MoveLoadout } from './moves.ts';
 import { reconcileLoadout } from './moves.ts';
+import type { PartInventory, PartStack } from './parts.ts';
+import { createPartInventory, REQUEST_LEDGER_LIMIT } from './parts.ts';
+import type { ArenaRun } from './arena.ts';
 import {
   CATEGORICAL_LOCI,
   NUMERIC_LOCI,
@@ -43,6 +46,10 @@ export interface MonsterSaveFile {
    * loadouts existed simply has none.
    */
   readonly loadouts: readonly MoveLoadout[];
+  /** Gene parts the player is holding. */
+  readonly inventory: PartInventory;
+  /** An arena run in progress, so a streak survives closing the game. */
+  readonly arena: ArenaRun | null;
 }
 
 export interface SerializeOptions {
@@ -50,6 +57,10 @@ export interface SerializeOptions {
   readonly now?: () => number;
   /** Chosen moves to save alongside the monsters. */
   readonly loadouts?: readonly MoveLoadout[];
+  /** Gene parts in hand. */
+  readonly inventory?: PartInventory;
+  /** An arena run in progress. */
+  readonly arena?: ArenaRun | null;
 }
 
 export function createSaveFile(
@@ -73,6 +84,8 @@ export function createSaveFile(
     savedAt: now(),
     monsters: monsters.map(normalizeMonster),
     loadouts,
+    inventory: options.inventory ?? createPartInventory(),
+    arena: options.arena ?? null,
   };
 }
 
@@ -439,8 +452,74 @@ export function deserializeSaveFile(json: string): ValidationResult<MonsterSaveF
       savedAt: typeof migrated.savedAt === 'number' ? migrated.savedAt : 0,
       monsters,
       loadouts,
+      inventory: readInventory(migrated.inventory),
+      arena: readArena(migrated.arena),
     },
   };
+}
+
+/**
+ * Reads an inventory back, keeping only well formed stacks.
+ *
+ * A corrupt or hand-edited entry is dropped rather than failing the load: the
+ * collection is worth more than one stack of parts.
+ */
+function readInventory(value: unknown): PartInventory {
+  if (!isRecord(value)) return createPartInventory();
+
+  const stacks: PartStack[] = [];
+  if (Array.isArray(value.stacks)) {
+    for (const entry of value.stacks) {
+      if (!isRecord(entry) || !isRecord(entry.part)) continue;
+      const part = entry.part;
+      const count = typeof entry.count === 'number' ? Math.floor(entry.count) : 0;
+      if (count <= 0) continue;
+      if (
+        typeof part.id !== 'string' ||
+        typeof part.name !== 'string' ||
+        typeof part.locus !== 'string' ||
+        typeof part.value !== 'string'
+      ) {
+        continue;
+      }
+      if (!CATEGORICAL_LOCI.includes(part.locus as never)) continue;
+      stacks.push({
+        part: {
+          id: part.id,
+          name: part.name,
+          locus: part.locus as PartStack['part']['locus'],
+          value: part.value,
+          fromMonsterName:
+            typeof part.fromMonsterName === 'string' ? part.fromMonsterName : '',
+        },
+        count,
+      });
+    }
+  }
+
+  const completed = Array.isArray(value.completedRequests)
+    ? value.completedRequests
+        .filter((id): id is string => typeof id === 'string')
+        .slice(-REQUEST_LEDGER_LIMIT)
+    : [];
+
+  return { stacks, completedRequests: completed };
+}
+
+/**
+ * Reads a run back. Anything missing its essentials is treated as no run at
+ * all, which simply returns the player to the arena entrance.
+ */
+function readArena(value: unknown): ArenaRun | null {
+  if (!isRecord(value)) return null;
+  if (typeof value.id !== 'string') return null;
+  if (!isRecord(value.encounter) || !isRecord(value.battle)) return null;
+  if (typeof value.wins !== 'number') return null;
+  const phase = value.phase;
+  if (phase !== 'battle' && phase !== 'reward' && phase !== 'cleared' && phase !== 'failed') {
+    return null;
+  }
+  return value as unknown as ArenaRun;
 }
 
 // ---------------------------------------------------------------------------

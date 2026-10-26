@@ -445,11 +445,62 @@ export function createGraftConfig(overrides: Partial<GraftConfig> = {}): GraftCo
 }
 
 // ---------------------------------------------------------------------------
+// Arena
+// ---------------------------------------------------------------------------
+
+export interface ArenaConfig {
+  /** Ordinary fights before the boss. */
+  readonly normalWins: number;
+  /** Opponent strength as a share of the player, first and last normal fight. */
+  readonly firstStrength: number;
+  readonly lastStrength: number;
+  readonly bossStrength: number;
+  /** The boss stands above the collection, so it gets a rank of its own. */
+  readonly bossTier: number;
+  /** Chance each eligible feature drops. */
+  readonly dropChance: number;
+  readonly bossDropChance: number;
+  /** Most parts one fight can give. */
+  readonly dropCount: number;
+  readonly bossDropCount: number;
+  /**
+   * Which features can be carried away. Cosmetic loci only to begin with:
+   * a part that changes an ability tendency is a different kind of item and
+   * wants its own rules.
+   */
+  readonly dropLoci: readonly CategoricalLocus[];
+  /** A feature whose value means "none" is nothing to carry away. */
+  readonly skipAbsentFeatures: boolean;
+  /** Parts that can go into a single fusion. */
+  readonly partsPerFusion: number;
+}
+
+export const DEFAULT_ARENA_CONFIG: ArenaConfig = {
+  normalWins: 5,
+  firstStrength: 0.85,
+  lastStrength: 1.1,
+  bossStrength: 1.35,
+  bossTier: 2,
+  dropChance: 0.35,
+  bossDropChance: 0.75,
+  dropCount: 1,
+  bossDropCount: 2,
+  dropLoci: ['horns', 'wings', 'tail', 'jaw', 'crest'],
+  skipAbsentFeatures: true,
+  partsPerFusion: 1,
+};
+
+export function createArenaConfig(overrides: Partial<ArenaConfig> = {}): ArenaConfig {
+  return { ...DEFAULT_ARENA_CONFIG, ...overrides };
+}
+
+// ---------------------------------------------------------------------------
 // Bundle
 // ---------------------------------------------------------------------------
 
 /** Everything the core needs, in one object a UI can hold and tweak. */
 export interface GameConfig {
+  readonly arena: ArenaConfig;
   readonly genetics: GeneticsConfig;
   readonly stats: StatsConfig;
   readonly fusion: FusionConfig;
@@ -458,6 +509,7 @@ export interface GameConfig {
 }
 
 export const DEFAULT_GAME_CONFIG: GameConfig = {
+  arena: DEFAULT_ARENA_CONFIG,
   genetics: DEFAULT_GENETICS_CONFIG,
   stats: DEFAULT_STATS_CONFIG,
   fusion: DEFAULT_FUSION_CONFIG,
@@ -467,6 +519,7 @@ export const DEFAULT_GAME_CONFIG: GameConfig = {
 
 /** Partial overrides, nested one level deep. */
 export interface GameConfigOverrides {
+  readonly arena?: Partial<ArenaConfig>;
   readonly genetics?: Partial<GeneticsConfig>;
   readonly stats?: Partial<StatsConfig>;
   readonly fusion?: Partial<FusionConfig>;
@@ -476,6 +529,7 @@ export interface GameConfigOverrides {
 
 export function createGameConfig(overrides: GameConfigOverrides = {}): GameConfig {
   return {
+    arena: createArenaConfig(overrides.arena ?? {}),
     genetics: createGeneticsConfig(overrides.genetics ?? {}),
     stats: createStatsConfig(overrides.stats ?? {}),
     fusion: createFusionConfig(overrides.fusion ?? {}),
