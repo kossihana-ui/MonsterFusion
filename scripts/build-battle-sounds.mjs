@@ -55,12 +55,25 @@ try {
           v=(noise-smooth)*.22*Math.exp(-t*32)+env*(Math.sin(2*Math.PI*784*variant*u)*.38+Math.sin(2*Math.PI*1176*variant*u)*.17+Math.sin(2*Math.PI*1568*variant*u)*.04);
           break;
         }
-        case 'water':
-          v=smooth*2*Math.sin(Math.PI*Math.min(1,t/.8))+hitTone(t,170,5)*.2;
-          for(const onset of [.05,.22,.43,.57]){const u=t-onset;if(u>=0)v+=Math.sin(2*Math.PI*(350*u+90*u*u))*Math.exp(-u*24)*.22;}
+        case 'water': {
+          // One broad breaking wave: rushing approach, heavy splash, receding wash.
+          const crash=Math.max(0,t-.075);
+          const surge=Math.min(1,t/.09)*Math.exp(-crash*2.9);
+          const spray=Math.exp(-crash*8)*Math.min(1,crash/.008);
+          v=(smooth*2.9+low*4.5)*surge+noise*.36*spray+hitTone(crash,58,13)*.38;
+          v+=smooth*.65*Math.exp(-t*2)*( .65+.35*Math.sin(t*48));
           break;
+        }
         case 'wind':
-          v=(noise-smooth)*.3*(Math.exp(-(((t-.14)/.08)**2))+.8*Math.exp(-(((t-.39)/.1)**2)))+smooth*.6*Math.sin(Math.PI*t/duration);
+          // Two separate airy whistles, descending smoothly: pyuu / pyuu.
+          v=0;
+          for(const onset of [0,.47]) {
+            const u=t-onset;
+            if(u<0 || u>.37)continue;
+            const env=Math.max(0,Math.sin(Math.PI*u/.37))**1.4;
+            const phase=2*Math.PI*variant*(740*u-420*u*u);
+            v+=env*(Math.sin(phase)*.34+Math.sin(phase*2)*.025+smooth*.38+(noise-smooth)*.045);
+          }
           break;
         case 'dark':
           v=(Math.sin(2*Math.PI*74*t+2*Math.sin(2*Math.PI*37*t))*.4+Math.sin(2*Math.PI*111*t)*.18)*( .7+.3*Math.sin(t*26))*Math.exp(-t*2)+low*1.3;
@@ -72,10 +85,11 @@ try {
         if(double)v+=hitTone(t-.17,base,15)*.16;
         if(sweep)v+=smooth*.4*Math.exp(-(((t-.12)/.08)**2));
       }
-      out[i]=v*attack*release;
+      out[i]=v*attack*(sound.element==='wind' || sound.element==='water' ? Math.min(1,(duration-t)/.12) : release);
     }
     // Quiet, dark short reflections; fade ends and normalize with headroom.
     for(let i=count-1;i>=0;i--) if(i>sr*.09)out[i]+=out[i-Math.floor(sr*.09)]*.16;
+    if(!out.every(Number.isFinite)) throw new Error(`${id}: invalid synthesis sample`);
     const peak=Math.max(...out.map(Math.abs));
     const wav=Buffer.alloc(44+count*2);wav.write('RIFF');wav.writeUInt32LE(wav.length-8,4);wav.write('WAVEfmt ',8);wav.writeUInt32LE(16,16);wav.writeUInt16LE(1,20);wav.writeUInt16LE(1,22);wav.writeUInt32LE(sr,24);wav.writeUInt32LE(sr*2,28);wav.writeUInt16LE(2,32);wav.writeUInt16LE(16,34);wav.write('data',36);wav.writeUInt32LE(count*2,40);
     out.forEach((v,i)=>wav.writeInt16LE(Math.round(v/peak*.72*32767*Math.min(1,(count-i)/320)),44+i*2));

@@ -23,7 +23,7 @@ export function SoundLab() {
   }, []);
   async function play(id: string, folder = 'selection') {
     player.current?.pause();
-    const audio = new Audio(import.meta.env.BASE_URL + "audio/" + folder + "/" + id + ".wav?v=4");
+    const audio = new Audio(import.meta.env.BASE_URL + "audio/" + folder + "/" + id + ".wav?v=5");
     player.current = audio; audio.volume = volume;
     setError(""); setPlaying(id);
     audio.onended = () => { if (player.current === audio) setPlaying(""); };

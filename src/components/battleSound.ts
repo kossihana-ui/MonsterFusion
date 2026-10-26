@@ -13,7 +13,7 @@ export function battleSound(id: string, muted = false, element?: string) {
   if (muted) return () => {};
   const layers = battleSoundLayers(id, element);
   const players = layers.map((file,i) => {
-    const audio = new Audio(`${import.meta.env.BASE_URL}audio/${file}.wav?v=2`);
+    const audio = new Audio(`${import.meta.env.BASE_URL}audio/${file}.wav?v=3`);
     audio.volume = layers.length > 1 ? (i === 0 ? .15 : .32) : .38;
     void audio.play().catch(() => {});
     return audio;
