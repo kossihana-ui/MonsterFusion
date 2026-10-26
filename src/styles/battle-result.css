@@ -1,0 +1,23 @@
+.battle-result { position: relative; isolation: isolate; overflow: hidden; margin: 24px 0; padding: 32px 20px; text-align: center; border: 2px solid #d9ba68; border-radius: 12px; background: radial-gradient(ellipse at 50% 40%, #5d4e2d88, transparent 65%), #142126; color: #fff2c9; animation: result-arrive .45s ease-out both; }
+.battle-result:focus { outline: 2px solid #ecdfa6; outline-offset: 4px; }
+.result-content { position: relative; z-index: 1; }
+.result-eyebrow { letter-spacing: .35em; font-size: .85rem; }
+.battle-result h2 { font-size: clamp(48px, 9vw, 88px); line-height: 1.2; margin: 12px 0; color: #ffe7a1; text-shadow: 0 4px #514123, 0 0 28px #e6bb5955; animation: result-title .65s cubic-bezier(.2,.8,.3,1) both; }
+.result-message { font-size: 1.1rem; }
+.result-winner { max-width: 300px; margin: 0 auto; animation: result-monster .8s ease-out both; }
+.result-winner .portrait.large { height: 230px; }
+.result-turns { color: #c9cebe; }
+.battle-result button { padding: 13px 26px; border: 1px solid #e9cc7b; border-radius: 6px; background: #dec780; color: #192622; font-weight: bold; }
+.result-lost { border-color: #8795b5; background: radial-gradient(ellipse at 50% 40%, #34445c77, transparent 65%), #142126; color: #cbd8e8; }
+.result-lost h2 { color: #c8d6ed; text-shadow: 0 4px #26374b; }
+.result-draw { border-color: #8abcb0; background: #192d30; }
+.result-draw h2 { color: #b3e3db; text-shadow: none; }
+.result-pair { display: flex; justify-content: center; gap: 24px; }
+.result-pair > * { width: 120px; }
+.result-sparks { position: absolute; inset: 0; pointer-events: none; }
+.result-sparks i { position: absolute; top: 30%; left: 50%; width: 7px; height: 18px; background: #ffe6a2; opacity: 0; animation: result-spark 1.5s var(--delay) ease-out both; }
+@keyframes result-arrive { from { opacity: 0; transform: translateY(18px); } to { opacity: 1; transform: none; } }
+@keyframes result-title { from { opacity: 0; transform: scale(.65); } 70% { transform: scale(1.07); } to { opacity: 1; transform: scale(1); } }
+@keyframes result-monster { from { opacity: 0; transform: translateY(18px); } to { opacity: 1; transform: none; } }
+@keyframes result-spark { 0% { opacity: 0; transform: rotate(var(--angle)) translateY(25px); } 20% { opacity: 1; } 100% { opacity: 0; transform: rotate(var(--angle)) translateY(280px) rotate(110deg); } }
+@media (prefers-reduced-motion: reduce) { .battle-result, .battle-result h2, .result-winner { animation: none; } .result-sparks { display: none; } }

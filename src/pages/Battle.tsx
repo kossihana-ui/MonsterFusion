@@ -8,6 +8,7 @@ import type { BattleAction, GameAdapter, Monster } from "../shared/ui";
 import { createBattle, getCoreMonster } from "../mocks/game";
 import { Portrait } from "../components/MonsterView";
 import { BattleEffect } from "../components/BattleEffect";
+import { BattleResult } from "../components/BattleResult";
 import type { BattleCue } from "../components/BattleEffect";
 export function Battle(props: { monsters: Monster[]; adapter: GameAdapter }) {
   if (props.monsters.length < 2) {
@@ -188,7 +189,12 @@ function BattleSession({
         ))}
         <span className="versus">VS</span>
       </div>
-      <section className="panel battle-command-panel" aria-label="バトルコマンド">
+      {state.status !== "active" && <BattleResult state={state} onRetry={() => {
+        setError("");
+        setState(createBattle(state.player, state.enemy));
+        arena.current?.scrollIntoView({ block: "center", behavior: "instant" });
+      }} />}
+      {state.status === "active" && <section className="panel battle-command-panel" aria-label="バトルコマンド">
         <h2>行動を選ぶ</h2>
         <p>技で攻める。MPが減ったら、守って回復。</p>
         <div className="battle-command-grid">
@@ -211,6 +217,7 @@ function BattleSession({
         </div>
         <p className="battle-help">MPは毎ターン +{DEFAULT_BATTLE_CONFIG.mpRegenPerTurn}。守ると、さらに回復します。</p>
       </section>
+      }
       {error && <p role="alert">{error}</p>}
       <section className="panel battle-log">
         <h2>
