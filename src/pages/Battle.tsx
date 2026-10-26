@@ -11,6 +11,9 @@ import { Portrait } from "../components/MonsterView";
 import { BattleEffect } from "../components/BattleEffect";
 import { BattleResult } from "../components/BattleResult";
 import { BattleHpBar } from "../components/BattleHpBar";
+import { battleSound } from "../components/battleSound";
+import { LootReveal, PartIcon } from "../components/LootReveal";
+import type { GenePart } from "@core/core/index.ts";
 import type { BattleCue } from "../components/BattleEffect";
 export function Battle(props: { monsters: Monster[]; adapter: GameAdapter }) {
   const [initial, setInitial] = useState<BattleState | null>(() => resumeArena());
@@ -32,6 +35,14 @@ function BattleSession({
 }) {
   const [state, setState] = useState(initial);
   const [rewardMessage, setRewardMessage] = useState("");
+  const [loot, setLoot] = useState<readonly GenePart[]>([]);
+  const [muted, setMuted] = useState(false);
+  const [showInventory, setShowInventory] = useState(false);
+  const stopSound = useRef<() => void>(() => {});
+  const mutedRef = useRef(muted); mutedRef.current = muted;
+  const enemyStage = useRef<HTMLDivElement>(null);
+  const inventoryDock = useRef<HTMLButtonElement>(null);
+  const rewardPanel = useRef<HTMLElement>(null);
   const run = state.arenaRun;
   const claimed = !!run?.claimed.includes(run.encounter.index);
   const [busy, setBusy] = useState(false);
@@ -47,7 +58,7 @@ function BattleSession({
   const availableMp = Math.min(99, (player?.mp ?? 0) + DEFAULT_BATTLE_CONFIG.mpRegenPerTurn);
   const locked = busy || state.status !== "active";
   const finishers = new Set(getLearnableMoves(getCoreMonster(state.player.id)).filter(m => m.category === "finisher").map(m => m.skill.id));
-  useEffect(() => () => active.current?.abort(), []);
+  useEffect(() => () => { active.current?.abort(); stopSound.current(); }, []);
   async function play(
     side: number,
     animation: "attack" | "hurt",
@@ -92,6 +103,8 @@ function BattleSession({
           (c) => c.id === entry.actorId,
         );
         if (actor && (entry.kind === "attack" || entry.kind === "skill")) {
+          stopSound.current();
+          stopSound.current = battleSound(entry.skillId ?? 'attack', mutedRef.current);
           await play(actor.side, "attack", controller.signal);
           const target = next.coreState?.combatants.find(
             (c) => c.id === entry.targetId,
@@ -132,6 +145,12 @@ function BattleSession({
         </div>
         <span className="badge">{run?.encounter.isBoss ? "BOSS" : "勝ち抜きアリーナ"}</span>
       </div>
+      <button className="text-button" aria-pressed={!muted} disabled={loot.length > 0} onClick={() => { stopSound.current(); setMuted(!muted); }}>戦闘音：{muted ? "オフ" : "オン"}</button>
+      <button ref={inventoryDock} className={`inventory-dock ${loot.length ? 'is-receiving' : ''}`} onClick={() => setShowInventory(v => !v)} aria-expanded={showInventory} aria-label="アイテムボックス">
+        <span aria-hidden="true">▣</span> アイテムボックス · {getPartInventory().stacks.reduce((n,s)=>n+s.count,0)}
+      </button>
+      {showInventory && <section className="inventory-popover panel" aria-label="所持パーツ一覧"><h2>アイテムボックス</h2><button onClick={() => setShowInventory(false)}>閉じる</button>{getPartInventory().stacks.length ? getPartInventory().stacks.map(s => <p key={s.part.id}><PartIcon part={s.part} /> {s.part.name} ×{s.count}</p>) : <p>まだ素材を持っていません。</p>}</section>}
+      {loot.length > 0 && <LootReveal parts={loot} source={enemyStage} destination={inventoryDock} muted={muted} onDone={() => setLoot([])} />}
       {!run && <><label className="battle-select">
         出場モンスター
         <select
@@ -171,7 +190,7 @@ function BattleSession({
         ].map((side, i) => (
           <section key={i}>
             <div className="eyebrow">{side.label}</div>
-            <div className="battle-portrait-stage">
+            <div className="battle-portrait-stage" ref={i === 1 ? enemyStage : undefined}>
             <Portrait
               monster={side.monster}
               large
@@ -203,19 +222,21 @@ function BattleSession({
         <span className="versus">VS</span>
       </div>
       {state.status !== "active" && <BattleResult state={state} />}
-      {state.status !== "active" && <section className="panel arena-reward" aria-label="アリーナ報酬">
+      {state.status !== "active" && <section ref={rewardPanel} className="panel arena-reward" aria-label="アリーナ報酬">
         <h2>{run?.phase === "cleared" ? "アリーナ制覇！" : state.status === "won" ? "勝利報酬" : "挑戦終了"}</h2>
         {state.status === "won" && !claimed && <button onClick={() => {
-          try { const reward = receiveArenaReward(); setRewardMessage(reward.message + (reward.parts.length ? ` 獲得：${reward.parts.map(p => p.name).join("、")}` : "")); setState(resumeArena()!); }
+          try { const reward = receiveArenaReward(); setRewardMessage(reward.message + (reward.parts.length ? ` 獲得：${reward.parts.map(p => p.name).join("、")}` : "")); setState(resumeArena()!);
+            if (reward.parts.length) { arena.current?.scrollIntoView({block:'center',behavior:'instant'}); setLoot(reward.parts); }
+          }
           catch { setError("報酬を受け取れませんでした。"); }
-        }}>報酬を受け取る</button>}
+        }}>戦利品を確認する</button>}
         <p role="status">{rewardMessage || (claimed ? "この戦いの報酬は受取済みです。" : "")}</p>
-        {claimed && run?.phase === "reward" && <button onClick={() => { setRewardMessage(""); setError(""); setState(continueArena()); arena.current?.scrollIntoView({ block: "center" }); }}>
+        {claimed && run?.phase === "reward" && <button disabled={loot.length > 0} onClick={() => { setRewardMessage(""); setError(""); setState(continueArena()); arena.current?.scrollIntoView({ block: "center" }); }}>
           {run.wins === DEFAULT_ARENA_CONFIG.normalWins ? "ボスの待つ最終戦へ" : "全回復して次の戦いへ"}
         </button>}
         {(claimed || state.status !== "won") && <button className="text-button" onClick={onLeave}>入口へ戻る（今回の挑戦を終了）</button>}
         <h3>所持パーツ</h3>
-        {getPartInventory().stacks.length ? getPartInventory().stacks.map(s => <p key={s.part.id}>{s.part.name} ×{s.count}</p>) : <p>まだ素材を持っていません。</p>}
+        {getPartInventory().stacks.length ? getPartInventory().stacks.map(s => <p key={s.part.id}><PartIcon part={s.part} /> {s.part.name} ×{s.count}</p>) : <p>まだ素材を持っていません。</p>}
         <p className="battle-help">獲得したパーツは融合画面で使えます。進行と素材はプレイ中のみ保持されます。</p>
       </section>}
       {state.status === "active" && <section className="panel battle-command-panel" aria-label="バトルコマンド">
@@ -227,7 +248,7 @@ function BattleSession({
             {player && <MoveBadges element={player.element} scaling="attack" />}
             <span>MP 0 {player && enemy ? ` · ${matchupLabel(elementMultiplier(player.element, enemy.element))}` : ""}</span>
           </button>
-          <button disabled={locked} onClick={() => act("defend")}>
+          <button disabled={locked} onClick={() => { stopSound.current(); stopSound.current = battleSound('defend',muted); void act("defend"); }}>
             <strong>◇ 守る</strong><span>受けるダメージを減らす</span>
             <span>MP回復 +{DEFAULT_BATTLE_CONFIG.defendMpBonus}</span>
           </button>

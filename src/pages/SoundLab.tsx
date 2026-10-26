@@ -1,5 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import "../styles/sound-lab.css";
+import battleSounds from '../mocks/battleSounds.json';
+import { LootPreview } from '../components/LootPreview';
 
 const sounds = [
   { id: "fusion-motor-door", title: "05 / 遠心融合", text: "回転が止まり、重いロックがガチャコン。圧力が抜けるプシューーで装置が開きます。3.6秒。", word: "ガチャコン → プシュー", tags: "融合音の候補 · 解錠と排気" },
@@ -18,9 +20,9 @@ export function SoundLab() {
     if (audio) { audio.pause(); audio.onended = null; audio.onerror = null; }
     player.current = null;
   }, []);
-  async function play(id: string) {
+  async function play(id: string, folder = 'selection') {
     player.current?.pause();
-    const audio = new Audio(import.meta.env.BASE_URL + "audio/selection/" + id + ".wav?v=3");
+    const audio = new Audio(import.meta.env.BASE_URL + "audio/" + folder + "/" + id + ".wav?v=3");
     player.current = audio; audio.volume = volume;
     setError(""); setPlaying(id);
     audio.onended = () => { if (player.current === audio) setPlaying(""); };
@@ -46,6 +48,14 @@ export function SoundLab() {
         {playing === sound.id ? "♪ 再生中 · もう一度" : "▶ 聴いてみる"}
       </button>
       <a download href={import.meta.env.BASE_URL+"audio/selection/"+sound.id+".wav"}>WAVを保存 ↓</a>
+    </section>)}</div>
+    <LootPreview />
+    <h2>技と宝箱の効果音 · {battleSounds.length}音</h2>
+    <p>低めの電子音と短い残響。技ごとに音程・打撃・うなりを変えています。</p>
+    <div className="sound-grid">{battleSounds.map(sound => <section className="panel sound-card" key={sound.id}>
+      <h3>{sound.name}{sound.major ? ' · 大技' : ''}</h3>
+      <button onClick={() => void play(sound.id,'battle')}>{playing === sound.id ? '♪ もう一度' : '▶ 聴いてみる'}<span className="sr-only"> {sound.name}</span></button>
+      <a download href={`${import.meta.env.BASE_URL}audio/battle/${sound.id}.wav`}>WAVを保存 ↓</a>
     </section>)}</div>
     {error && <p role="alert">{error}</p>}
     <p className="sound-note">①〜③は0.48秒、④は0.84秒、⑤は3.6秒のオリジナル音です。ゲーム本編への融合音の適用は、試聴後に行います。</p>

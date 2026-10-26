@@ -1,0 +1,212 @@
+[
+  {
+    "id": "final-tail",
+    "name": "ファイナルテール",
+    "major": true
+  },
+  {
+    "id": "twin-lash",
+    "name": "ツインラッシュ",
+    "major": false
+  },
+  {
+    "id": "bind-whip",
+    "name": "バインドウィップ",
+    "major": false
+  },
+  {
+    "id": "tail-sweep",
+    "name": "テールスイープ",
+    "major": false
+  },
+  {
+    "id": "ram-charge",
+    "name": "ラムチャージ",
+    "major": true
+  },
+  {
+    "id": "impact-horn",
+    "name": "インパクトホーン",
+    "major": false
+  },
+  {
+    "id": "double-gore",
+    "name": "ダブルゴア",
+    "major": false
+  },
+  {
+    "id": "crown-break",
+    "name": "クラウンブレイク",
+    "major": true
+  },
+  {
+    "id": "single-thrust",
+    "name": "シングルスラスト",
+    "major": false
+  },
+  {
+    "id": "wing-cutter",
+    "name": "ウィングカッター",
+    "major": false
+  },
+  {
+    "id": "dive-attack",
+    "name": "ダイブアタック",
+    "major": false
+  },
+  {
+    "id": "crystal-shard",
+    "name": "クリスタルシャード",
+    "major": false
+  },
+  {
+    "id": "soul-wing",
+    "name": "ソウルウィング",
+    "major": true
+  },
+  {
+    "id": "death-bite",
+    "name": "デスバイト",
+    "major": true
+  },
+  {
+    "id": "fang-bite",
+    "name": "ファングバイト",
+    "major": false
+  },
+  {
+    "id": "tusk-rush",
+    "name": "タスクラッシュ",
+    "major": false
+  },
+  {
+    "id": "pierce-beak",
+    "name": "ピアースビーク",
+    "major": false
+  },
+  {
+    "id": "magic-eye",
+    "name": "マジックアイ",
+    "major": false
+  },
+  {
+    "id": "multi-gaze",
+    "name": "マルチゲイズ",
+    "major": false
+  },
+  {
+    "id": "pierce-gaze",
+    "name": "ペネトレイト",
+    "major": false
+  },
+  {
+    "id": "pollen-burst",
+    "name": "ポレンバースト",
+    "major": false
+  },
+  {
+    "id": "crystal-ray",
+    "name": "クリスタルレイ",
+    "major": false
+  },
+  {
+    "id": "royal-order",
+    "name": "ロイヤルオーダー",
+    "major": true
+  },
+  {
+    "id": "fin-slash",
+    "name": "フィンスラッシュ",
+    "major": false
+  },
+  {
+    "id": "mane-guard",
+    "name": "メインクラッシュ",
+    "major": false
+  },
+  {
+    "id": "antenna-pulse",
+    "name": "アンテナパルス",
+    "major": false
+  },
+  {
+    "id": "power-slam",
+    "name": "パワースラム",
+    "major": false
+  },
+  {
+    "id": "hydro-ram",
+    "name": "ハイドロラム",
+    "major": false
+  },
+  {
+    "id": "coil-crush",
+    "name": "コイルクラッシュ",
+    "major": false
+  },
+  {
+    "id": "giant-press",
+    "name": "ジャイアントプレス",
+    "major": true
+  },
+  {
+    "id": "attack",
+    "name": "通常攻撃",
+    "major": false
+  },
+  {
+    "id": "defend",
+    "name": "守る",
+    "major": false
+  },
+  {
+    "id": "strike",
+    "name": "基本技",
+    "major": false
+  },
+  {
+    "id": "sig-neutral",
+    "name": "インパクト",
+    "major": false
+  },
+  {
+    "id": "sig-fire",
+    "name": "フレアバースト",
+    "major": false
+  },
+  {
+    "id": "sig-water",
+    "name": "アクアランス",
+    "major": false
+  },
+  {
+    "id": "sig-earth",
+    "name": "ストーンクラッシュ",
+    "major": false
+  },
+  {
+    "id": "sig-wind",
+    "name": "ゲイルスラッシュ",
+    "major": false
+  },
+  {
+    "id": "sig-light",
+    "name": "レイディアンス",
+    "major": false
+  },
+  {
+    "id": "sig-dark",
+    "name": "アンブラルファング",
+    "major": false
+  },
+  {
+    "id": "chest",
+    "name": "宝箱が開く",
+    "major": false
+  },
+  {
+    "id": "collect",
+    "name": "パーツ獲得",
+    "major": false
+  }
+]
