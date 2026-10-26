@@ -4,7 +4,7 @@ import type { BattleState } from "../shared/ui";
 import { Portrait } from "./MonsterView";
 import "../styles/battle-result.css";
 
-export function BattleResult({ state, onRetry }: { state: BattleState; onRetry: () => void }) {
+export function BattleResult({ state, onRetry }: { state: BattleState; onRetry?: () => void }) {
   const ref = useRef<HTMLElement>(null);
   const won = state.status === "won";
   const draw = state.status === "draw";
@@ -21,7 +21,7 @@ export function BattleResult({ state, onRetry }: { state: BattleState; onRetry: 
       <p className="result-message">{won ? `${state.player.name}、よくやった！` : draw ? "互いに一歩も譲らない戦いだった。" : "技の組み合わせを変えて、もう一度挑もう。"}</p>
       {draw ? <div className="result-pair"><Portrait monster={state.player} facingRight /><Portrait monster={state.enemy} /></div> : <><div className="result-winner"><Portrait monster={winner} large /></div><p>{won ? "WINNER" : "相手の勝者"} · {winner.name}</p></>}
       <p className="result-turns">{state.coreState?.turn ?? Math.max(0, state.turn - 1)}ターンの戦い</p>
-      <button type="button" onClick={onRetry}>↻ もう一度バトル</button>
+      {onRetry && <button type="button" onClick={onRetry}>↻ もう一度バトル</button>}
       <p className="battle-help">下の戦闘ログで振り返れます。</p>
     </div>
   </section>;

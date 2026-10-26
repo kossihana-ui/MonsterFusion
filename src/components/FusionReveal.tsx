@@ -61,11 +61,12 @@ export function FusionReveal({ result, onFinished, soundContext, muted, onMute }
     <div className="reveal-tags" aria-label="受け継いだ特徴">
       {steps.slice(0, count).map((step, i) => <span key={i} className={"reveal-tag fx-" + step.kind}>
         <strong>{step.locusLabel ? step.locusLabel + "：" : ""}{step.label}</strong>
-        <small>{step.note}</small>
+        <small>{result.spentPart && step.locus === result.spentPart.locus ? "投入した素材から発現" : step.note}</small>
       </span>)}
     </div>
     {complete && <>
       <p>親：{result.parents.map(p => p.name).join(" × ")}</p>
+      {result.spentPart && <p>使用した素材：{result.spentPart.name} ×1（発現保証）</p>}
       {result.summary && <p>突然変異 {result.summary.mutationCount} · 先祖返り {result.summary.atavismCount}{result.summary.evolved ? " · 進化しました" : ""}</p>}
       <FeatureTags monster={result.child} compact />
     </>}

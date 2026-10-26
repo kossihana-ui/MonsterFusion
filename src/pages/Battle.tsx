@@ -1,44 +1,39 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { ArenaEntrance } from "../components/ArenaEntrance";
-import { animationDuration, DEFAULT_BATTLE_CONFIG, elementMultiplier, getLearnableMoves } from "@core/core/index.ts";
+import { animationDuration, DEFAULT_ARENA_CONFIG, DEFAULT_BATTLE_CONFIG, elementMultiplier, getLearnableMoves } from "@core/core/index.ts";
 import { matchupLabel, skillLabel } from "../shared/battlePresentation";
 import { MoveBadges } from "../components/MoveBadges";
 import "../styles/battle.css";
 import type { SpriteMotion } from "../components/MonsterSprite";
-import type { BattleAction, GameAdapter, Monster } from "../shared/ui";
-import { createBattle, getCoreMonster } from "../mocks/game";
+import type { BattleAction, BattleState, GameAdapter, Monster } from "../shared/ui";
+import { createBattle, getCoreMonster, enterArena, resumeArena, receiveArenaReward, continueArena, leaveArena, getPartInventory } from "../mocks/game";
 import { Portrait } from "../components/MonsterView";
 import { BattleEffect } from "../components/BattleEffect";
 import { BattleResult } from "../components/BattleResult";
 import { BattleHpBar } from "../components/BattleHpBar";
 import type { BattleCue } from "../components/BattleEffect";
 export function Battle(props: { monsters: Monster[]; adapter: GameAdapter }) {
-  const [entrant, setEntrant] = useState<string | null>(null);
-  const enter = useCallback((id: string) => setEntrant(id), []);
-  if (props.monsters.length < 2) {
-    return (
-      <section className="panel">
-        <h1>バトルアリーナ</h1>
-        <p>
-          バトルにはモンスターが2体必要です。「モンスター登録」から32×32のPNGを登録してください。
-        </p>
-      </section>
-    );
-  }
-  if (!entrant) return <ArenaEntrance monsters={props.monsters} onEnter={enter} />;
-  const ordered = [...props.monsters].sort((a, b) => Number(b.id === entrant) - Number(a.id === entrant));
-  return <BattleSession monsters={ordered} adapter={props.adapter} />;
+  const [initial, setInitial] = useState<BattleState | null>(() => resumeArena());
+  const [session, setSession] = useState(0);
+  const enter = useCallback((id: string) => { setInitial(enterArena(id)); setSession(n => n + 1); }, []);
+  if (!props.monsters.length) return <section className="panel"><h1>バトルアリーナ</h1><p>まずモンスターを登録してください。</p></section>;
+  if (!initial) return <ArenaEntrance monsters={props.monsters} onEnter={enter} />;
+  return <BattleSession key={session} {...props} initial={initial} onLeave={() => { leaveArena(); setInitial(null); }} />;
 }
+
 function BattleSession({
   monsters,
-  adapter,
+  adapter, initial, onLeave,
 }: {
   monsters: Monster[];
   adapter: GameAdapter;
+  initial: BattleState;
+  onLeave: () => void;
 }) {
-  const [state, setState] = useState(() =>
-    createBattle(monsters[0], monsters[1] ?? monsters[0]),
-  );
+  const [state, setState] = useState(initial);
+  const [rewardMessage, setRewardMessage] = useState("");
+  const run = state.arenaRun;
+  const claimed = !!run?.claimed.includes(run.encounter.index);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
   const [cue, setCue] = useState<BattleCue | null>(null);
@@ -133,11 +128,11 @@ function BattleSession({
         <div>
           <div className="eyebrow">TRAINING GROUNDS</div>
           <h1>バトルアリーナ</h1>
-          <p>1対1の模擬戦で、モンスターの力を試そう。</p>
+          <p>{run?.encounter.isBoss ? "大型ボス出現！ 最後の戦いです。" : `第${(run?.encounter.index ?? 0) + 1}戦 · ${run?.wins ?? 0}勝`}</p>
         </div>
-        <span className="badge">模擬バトル</span>
+        <span className="badge">{run?.encounter.isBoss ? "BOSS" : "勝ち抜きアリーナ"}</span>
       </div>
-      <label className="battle-select">
+      {!run && <><label className="battle-select">
         出場モンスター
         <select
           disabled={busy}
@@ -167,7 +162,8 @@ function BattleSession({
           {monsters.filter((m) => m.id !== state.player.id).map((m) => <option key={m.id} value={m.id}>{m.name}</option>)}
         </select>
       </label>
-      <div className="battle-field" ref={arena}>
+      </>}
+      <div className={`battle-field ${run?.encounter.isBoss ? "arena-boss-field" : ""}`} ref={arena}>
         {cue && <BattleEffect key={cue.sequence} cue={cue} />}
         {[
           { monster: state.player, hp: displayHp?.[0] ?? state.playerHp, label: "PLAYER" },
@@ -206,11 +202,22 @@ function BattleSession({
         ))}
         <span className="versus">VS</span>
       </div>
-      {state.status !== "active" && <BattleResult state={state} onRetry={() => {
-        setError("");
-        setState(createBattle(state.player, state.enemy));
-        arena.current?.scrollIntoView({ block: "center", behavior: "instant" });
-      }} />}
+      {state.status !== "active" && <BattleResult state={state} />}
+      {state.status !== "active" && <section className="panel arena-reward" aria-label="アリーナ報酬">
+        <h2>{run?.phase === "cleared" ? "アリーナ制覇！" : state.status === "won" ? "勝利報酬" : "挑戦終了"}</h2>
+        {state.status === "won" && !claimed && <button onClick={() => {
+          try { const reward = receiveArenaReward(); setRewardMessage(reward.message + (reward.parts.length ? ` 獲得：${reward.parts.map(p => p.name).join("、")}` : "")); setState(resumeArena()!); }
+          catch { setError("報酬を受け取れませんでした。"); }
+        }}>報酬を受け取る</button>}
+        <p role="status">{rewardMessage || (claimed ? "この戦いの報酬は受取済みです。" : "")}</p>
+        {claimed && run?.phase === "reward" && <button onClick={() => { setRewardMessage(""); setError(""); setState(continueArena()); arena.current?.scrollIntoView({ block: "center" }); }}>
+          {run.wins === DEFAULT_ARENA_CONFIG.normalWins ? "ボスの待つ最終戦へ" : "全回復して次の戦いへ"}
+        </button>}
+        {(claimed || state.status !== "won") && <button className="text-button" onClick={onLeave}>入口へ戻る（今回の挑戦を終了）</button>}
+        <h3>所持パーツ</h3>
+        {getPartInventory().stacks.length ? getPartInventory().stacks.map(s => <p key={s.part.id}>{s.part.name} ×{s.count}</p>) : <p>まだ素材を持っていません。</p>}
+        <p className="battle-help">獲得したパーツは融合画面で使えます。進行と素材はプレイ中のみ保持されます。</p>
+      </section>}
       {state.status === "active" && <section className="panel battle-command-panel" aria-label="バトルコマンド">
         <h2>行動を選ぶ</h2>
         <p>技で攻める。MPが減ったら、守って回復。</p>
@@ -252,13 +259,13 @@ function BattleSession({
           ))}
         </div>
       </section>
-      <button
+      {!run && <button
         className="text-button"
         disabled={busy}
         onClick={() => setState(createBattle(state.player, state.enemy))}
       >
         ↻ バトルをリセット
-      </button>
+      </button>}
     </>
   );
 }

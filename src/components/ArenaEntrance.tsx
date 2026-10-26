@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import type { Monster } from "../shared/ui";
 import { Portrait } from "./MonsterView";
+import { arenaRules } from "@core/core/index.ts";
 import "../styles/arena-entrance.css";
 
 export function ArenaEntrance({ monsters, onEnter }: { monsters: Monster[]; onEnter: (id: string) => void }) {
@@ -19,7 +20,8 @@ export function ArenaEntrance({ monsters, onEnter }: { monsters: Monster[]; onEn
       <section className="panel"><h2>出場モンスター</h2>
         <div className="arena-roster">{monsters.map(m => <button key={m.id} type="button" aria-pressed={chosen.id === m.id} disabled={opening} onClick={() => setSelected(m.id)}><strong>{m.name}</strong><span>{m.genes.element} · 第{m.generation}世代</span></button>)}</div>
         <p className="battle-help">技は図鑑の「技セット」で変更できます。</p>
-        <p className="battle-help">現在は所有モンスター同士の模擬戦です。ランダム敵・5連勝後のボス・パーツ報酬は準備中です。</p>
+        <ul className="battle-help">{arenaRules().map(rule => <li key={rule}>{rule}</li>)}</ul>
+        <p className="battle-help">進行・パーツはプレイ中のみ保持されます。再読み込みすると戻ります。</p>
         <button type="button" className="arena-enter" disabled={opening} onClick={() => { if (!pending.current) { pending.current = true; setOpening(true); } }}> {opening ? "扉を開いています…" : `${chosen.name}で入場する`} </button>
       </section>
       <section className={`arena-gate ${opening ? "is-opening" : ""}`} aria-label="アリーナの扉">

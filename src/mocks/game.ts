@@ -15,11 +15,14 @@ import {
   validateMoveLoadout,
   stepTurn,
   createBasicPolicy,
+  startArena, advanceArenaTurn, claimArenaReward, nextArenaEncounter,
+  createPartInventory, previewPartFusion, fuseWithPart,
 } from "@core/core/index.ts";
 import type {
   Monster as CoreMonster,
   BattleState as CoreBattleState,
   MoveLoadout,
+  ArenaRun,
 } from "@core/core/index.ts";
 import type { Monster, BattleState, GameAdapter } from "../shared/ui";
 import { battleLogLabel } from "../shared/battlePresentation";
@@ -27,6 +30,35 @@ import { battleLogLabel } from "../shared/battlePresentation";
 // UI presentation adapter. Core objects are kept intact and never edited here.
 const context = { rng: createSeededRandom(12345) };
 const records = new Map<string, CoreMonster>();
+let arenaRun: ArenaRun | null = null;
+let inventory = createPartInventory();
+export const getPartInventory = () => inventory;
+export function previewMaterial(a: Monster, b: Monster, partId: string) {
+  const part = inventory.stacks.find(s => s.part.id === partId)?.part;
+  if (!part) return { ok: false, message: "素材を所持していません。", guaranteedExpression: false };
+  return previewPartFusion(getCoreMonster(a.id), getCoreMonster(b.id), part, inventory);
+}
+function presentArena(run: ArenaRun): BattleState {
+  const spec = findStarterSpec(run.player.id);
+  return { ...presentBattle(run.battle, present(run.player, spec ? starterArt[spec.art] : ""), present(run.encounter.enemy)), arenaRun: run };
+}
+export function resumeArena(): BattleState | null { return arenaRun ? presentArena(arenaRun) : null; }
+export function enterArena(id: string): BattleState {
+  arenaRun = startArena(getCoreMonster(id), getMoveLoadout(id), context);
+  return presentArena(arenaRun);
+}
+export function receiveArenaReward() {
+  if (!arenaRun) throw new Error("挑戦がありません。");
+  const result = claimArenaReward(arenaRun, inventory, context);
+  arenaRun = result.run; inventory = result.inventory;
+  return result;
+}
+export function continueArena(): BattleState {
+  if (!arenaRun) throw new Error("挑戦がありません。");
+  arenaRun = nextArenaEncounter(arenaRun, context);
+  return presentArena(arenaRun);
+}
+export function leaveArena() { arenaRun = null; }
 // Session preferences, separate from canonical monsters, like the demo collection.
 const loadouts = new Map<string, MoveLoadout>();
 export function getMoveLoadout(id: string): MoveLoadout {
@@ -132,11 +164,19 @@ export function createBattle(player: Monster, enemy: Monster): BattleState {
   );
 }
 export const gameAdapter: GameAdapter = {
-  async fuseMonsters(a, b) {
+  async fuseMonsters(a, b, partId) {
     const parentA = getCoreMonster(a.id),
       parentB = getCoreMonster(b.id);
     const check = canFuse(parentA, parentB);
     if (!check.ok) throw new Error(check.message);
+    if (partId) {
+      const part = inventory.stacks.find(s => s.part.id === partId)?.part;
+      if (!part) throw new Error("素材を所持していません。");
+      const result = fuseWithPart(parentA, parentB, part, inventory, context, crypto.randomUUID());
+      if (!result.ok || !result.child || !result.fusion) throw new Error(result.message);
+      inventory = result.inventory;
+      return { child: present(result.child), parents: [a, b], spentPart: result.spent ?? undefined, summary: describeFusion(result.child, result.fusion.evolution.willEvolve) };
+    }
     const result = fuseDetailed(parentA, parentB, context);
     return { child: present(result.child), parents: [a, b],
       summary: describeFusion(result.child, result.evolution.willEvolve) };
@@ -145,6 +185,12 @@ export const gameAdapter: GameAdapter = {
     if (state.status !== "active") return state;
     const coreState = state.coreState;
     if (!coreState) throw new Error("バトル状態がありません。");
+    if (state.arenaRun) {
+      if (arenaRun !== state.arenaRun) throw new Error("最新のアリーナ状態で操作してください。");
+      const target = coreState.combatants.find(c => c.side === 1)!;
+      arenaRun = advanceArenaTurn(state.arenaRun, typeof action === "object" ? { ...action, targetId: target.id } : action === "defend" ? { kind: "defend" } : { kind: "attack", targetId: target.id }, context);
+      return presentArena(arenaRun);
+    }
     const enemyPolicy = createBasicPolicy(context.rng);
     const next = stepTurn(
       coreState,

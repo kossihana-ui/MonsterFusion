@@ -4,6 +4,10 @@
 .arena-roster button[aria-pressed="true"] { background: #314735; border: 2px solid #c9dc91; }
 .arena-roster span { font-size: .8rem; }
 .arena-enter { width: 100%; padding: 16px; margin-top: 16px; background: #c9dc91; color: #17292c; border: 0; border-radius: 6px; font-weight: bold; }
+.arena-reward { margin: 20px 0; border-color: #b8c68d; }
+.arena-reward button { margin: 8px; padding: 12px; }
+.arena-boss-field { border: 2px solid #d19e68; background: radial-gradient(ellipse, #593c3144, #172024); }
+.arena-boss-field section:nth-of-type(2) .portrait { transform: scale(1.12); }
 .arena-gate { position: relative; overflow: hidden; min-height: 380px; border: 6px solid #415454; border-radius: 12px; background: radial-gradient(ellipse, #789b5b55, #101d24 70%); }
 .arena-gate-inner { height: 100%; min-height: 380px; display: flex; flex-direction: column; justify-content: center; align-items: center; }
 .arena-gate-inner .portrait { width: 100%; }

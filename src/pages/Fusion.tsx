@@ -2,6 +2,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import type { FusionResult, GameAdapter, Monster } from "../shared/ui";
 import { Portrait } from "../components/MonsterView";
 import { FusionReveal } from "../components/FusionReveal";
+import { getPartInventory, previewMaterial } from "../mocks/game";
 export function Fusion({
   monsters,
   adapter,
@@ -13,6 +14,7 @@ export function Fusion({
 }) {
   const [a, setA] = useState(monsters[0]?.id ?? "");
   const [b, setB] = useState(monsters[1]?.id ?? "");
+  const [partId, setPartId] = useState("");
   const [result, setResult] = useState<FusionResult | null>(null);
   const [busy, setBusy] = useState(false);
   const [animating, setAnimating] = useState(false);
@@ -24,6 +26,7 @@ export function Fusion({
   const [error, setError] = useState("");
   const parentA = monsters.find((m) => m.id === a);
   const parentB = monsters.find((m) => m.id === b);
+  const preview = partId && parentA && parentB ? previewMaterial(parentA, parentB, partId) : null;
   async function fuse() {
     if (!parentA || !parentB || a === b || pending.current || animating) return;
     pending.current = true;
@@ -38,7 +41,8 @@ export function Fusion({
     setError("");
     setResult(null);
     try {
-      const r = await adapter.fuseMonsters(parentA, parentB);
+      const r = await adapter.fuseMonsters(parentA, parentB, partId || undefined);
+      setPartId("");
       onCreated(r.child);
       setAnimating(true);
       setResult(r);
@@ -94,13 +98,22 @@ export function Fusion({
         ))}
       </div>
       <div className="fusion-action">
+        <section className="panel" aria-label="融合素材">
+          <h2>パーツを混ぜる</h2>
+          <label>素材（任意）<select value={partId} disabled={busy || animating} onChange={e => setPartId(e.target.value)}>
+            <option value="">素材を使わない</option>
+            {getPartInventory().stacks.filter(s => s.count > 0).map(s => <option key={s.part.id} value={s.part.id}>{s.part.name} ×{s.count}</option>)}
+          </select></label>
+          {preview && <p role="status">{preview.message}{preview.ok && preview.guaranteedExpression ? "（発現保証）" : ""}</p>}
+          <p>アリーナで獲得したパーツを1個投入できます。成功したときだけ消費します。</p>
+        </section>
         <button className="text-button" onClick={() => setMuted(value => !value)} aria-pressed={!muted}>
           {muted ? "融合音：オフ" : "融合音：オン"}
         </button>
         <span>✧</span>
         <button
           className="primary"
-          disabled={!parentA || !parentB || a === b || busy || animating}
+          disabled={!parentA || !parentB || a === b || busy || animating || (!!preview && !preview.ok)}
           onClick={fuse}
         >
           {busy ? "融合中…" : "✦ 融合する"}

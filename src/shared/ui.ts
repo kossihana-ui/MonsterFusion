@@ -29,12 +29,14 @@ export interface Monster {
   parentIds: string[];
 }
 export interface FusionResult {
+  spentPart?: import("@core/core/index.ts").GenePart;
   summary?: import("@core/core/index.ts").FusionSummary;
   child: Monster;
   parents: [Monster, Monster];
 }
 export type BattleAction = "attack" | "defend" | { kind: "skill"; skillId: string };
 export interface BattleState {
+  arenaRun?: import("@core/core/index.ts").ArenaRun;
   coreState?: import("@core/core/index.ts").BattleState;
   player: Monster;
   enemy: Monster;
@@ -45,7 +47,7 @@ export interface BattleState {
   status: "active" | "won" | "lost" | "draw";
 }
 export interface GameAdapter {
-  fuseMonsters(a: Monster, b: Monster): Promise<FusionResult>;
+  fuseMonsters(a: Monster, b: Monster, partId?: string): Promise<FusionResult>;
   calculateBattleTurn(
     state: BattleState,
     action: BattleAction,
