@@ -121,7 +121,13 @@ function BattleSession({
           }
         }
       }
-      if (!controller.signal.aborted) setState(next);
+      if (!controller.signal.aborted) {
+        setState(next);
+        if (next.status === 'won') {
+          stopSound.current();
+          stopSound.current = battleSound('victory', mutedRef.current);
+        }
+      }
     } catch {
       if (!controller.signal.aborted)
         setError("行動を処理できませんでした。もう一度お試しください。");
@@ -225,7 +231,7 @@ function BattleSession({
       {state.status !== "active" && <section ref={rewardPanel} className="panel arena-reward" aria-label="アリーナ報酬">
         <h2>{run?.phase === "cleared" ? "アリーナ制覇！" : state.status === "won" ? "勝利報酬" : "挑戦終了"}</h2>
         {state.status === "won" && !claimed && <button onClick={() => {
-          try { const reward = receiveArenaReward(); setRewardMessage(reward.message + (reward.parts.length ? ` 獲得：${reward.parts.map(p => p.name).join("、")}` : "")); setState(resumeArena()!);
+          try { const reward = receiveArenaReward(); stopSound.current(); setRewardMessage(reward.message + (reward.parts.length ? ` 獲得：${reward.parts.map(p => p.name).join("、")}` : "")); setState(resumeArena()!);
             if (reward.parts.length) { arena.current?.scrollIntoView({block:'center',behavior:'instant'}); setLoot(reward.parts); }
           }
           catch { setError("報酬を受け取れませんでした。"); }

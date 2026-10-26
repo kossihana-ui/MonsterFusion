@@ -41,6 +41,13 @@ export function SoundLab() {
       <button className="text-button" onClick={() => { player.current?.pause(); setPlaying(""); }}>停止</button>
       <p>初期音量は50%。再生ボタンを押すまで音は鳴りません。</p>
     </section>
+    <section className="panel sound-card">
+      <div className="eyebrow">VICTORY FANFARE · ORIGINAL</div>
+      <h2>勝利のメロディ</h2>
+      <p>電子ブラスが駆け上がり、低音と厚い和音で締める5.3秒のオリジナル曲。バトルの勝利時に鳴ります。</p>
+      <button className="primary" onClick={() => void play('victory','music')} aria-label="勝利のメロディを再生">{playing === 'victory' ? '♪ 再生中 · もう一度' : '▶ 勝利のメロディを聴く'}</button>
+      <a download href={`${import.meta.env.BASE_URL}audio/music/victory.wav`}>WAVを保存 ↓</a>
+    </section>
     <div className="sound-grid">{sounds.map(sound => <section className="panel sound-card" key={sound.id}>
       <div className="eyebrow">{sound.tags}</div><h2>{sound.title}</h2>
       <div className="sound-word" aria-hidden="true">{sound.word}</div><p>{sound.text}</p>
