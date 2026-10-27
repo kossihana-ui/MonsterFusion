@@ -658,6 +658,17 @@ export function stepTurn(
       ...(skill ? { element: skill.element } : {}),
     });
 
+    // The seed pays off only for whoever planted it, and only once. Read
+    // before the hit, because the hit spends it.
+    const seed = statusOf(target.statuses, 'seed');
+    const seedIsMine = Boolean(seed && seed.sourceId === actor.id);
+    const attackElement = skill?.element ?? actor.element;
+    const seedBoosts =
+      seedIsMine && attackElement === config.seedPayoff.boostElement;
+    const seedBinds =
+      seedIsMine && attackElement === config.seedPayoff.bindElement;
+    const seedFactor = seedBoosts ? config.seedPayoff.boostFactor : 1;
+
     let dealt = 0;
     let anyCritical = false;
     let connected = true;
@@ -743,7 +754,7 @@ export function stepTurn(
             ...(resolved.piercesDefense ? { pierce: true } : {}),
             ...(resolved.shattersDefense ? { shatter: true } : {}),
             ...(resolved.power !== undefined ? { power: resolved.power } : {}),
-            ...(factor !== 1 ? { factor } : {}),
+            ...(factor * seedFactor !== 1 ? { factor: factor * seedFactor } : {}),
           },
           rng,
           config,
@@ -783,6 +794,34 @@ export function stepTurn(
           hit,
           hits: swings,
           pierced: resolved.piercesDefense || resolved.shattersDefense,
+        });
+      }
+    }
+
+    // --- the seed pays out, and is spent --------------------------------
+    if (resolved.attacks && connected && (seedBoosts || seedBinds)) {
+      target.statuses = removeStatuses(target.statuses ?? [], ['seed']).statuses;
+      effects.push({
+        type: 'cleanse',
+        actorId: actor.id,
+        targetId: target.id,
+        ...(logSkillId ? { skillId: logSkillId } : {}),
+        removed: ['seed'],
+      });
+      if (seedBinds) {
+        target.statuses = applyStatus(target.statuses ?? [], {
+          kind: 'bind',
+          turns: config.statusTurns.bind,
+          appliedTurn: turn,
+          sourceId: actor.id,
+        });
+        effects.push({
+          type: 'status',
+          actorId: actor.id,
+          targetId: target.id,
+          ...(logSkillId ? { skillId: logSkillId } : {}),
+          status: 'bind',
+          turns: config.statusTurns.bind,
         });
       }
     }

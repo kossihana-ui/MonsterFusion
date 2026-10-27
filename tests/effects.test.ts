@@ -26,7 +26,7 @@ import {
 } from '../src/core/battle.ts';
 import { createStarterMonsters } from '../src/core/starters.ts';
 import { createMonsterFromAnalysis } from '../src/core/fusion.ts';
-import type { CrestType, HornType, TailType, WingType, BodyShape } from '../src/shared/types.ts';
+import type { CrestType, Element, HornType, TailType, WingType, BodyShape } from '../src/shared/types.ts';
 import { MOVE_CATALOGUE } from '../src/core/moves.ts';
 import { createSeededRandom } from '../src/core/random.ts';
 import { createBattleConfig, DEFAULT_BATTLE_CONFIG } from '../src/core/config.ts';
@@ -701,4 +701,154 @@ test('a weak move transfers its own debuffs rather than keeping them', () => {
   assert.ok(giver && taker);
   assert.equal(hasStatus(giver.statuses, 'poison'), false, 'it should have handed the poison over');
   assert.equal(hasStatus(taker.statuses, 'poison'), true, 'and the target should have it');
+});
+
+// ---------------------------------------------------------------------------
+// The seed, settled 2026-10-28: the planter's own follow-up collects
+// ---------------------------------------------------------------------------
+
+/** Puts a seed on the defender, credited to the attacker. */
+function seeded(state: BattleState, plantedBy: string) {
+  const target = state.combatants.find((c) => c.side === 1);
+  assert.ok(target);
+  target.statuses = [{ kind: 'seed', turns: 2, sourceId: plantedBy }];
+  return target;
+}
+
+function duelWithElements(attackerElement: Element, seed: number) {
+  const attacker = createMonsterFromAnalysis(
+    { element: attackerElement, bodyShape: 'muscular', confidence: 1 },
+    testContext(seed),
+    { name: 'planter', id: 'planter' },
+  );
+  const { moss } = pair(seed);
+  return { attacker, defender: moss };
+}
+
+test('a fire follow-up from the planter hits harder', () => {
+  const { attacker, defender } = duelWithElements('fire', 301);
+  const config = createBattleConfig({ damageVariance: 0 });
+
+  const damageWith = (planted: boolean): number => {
+    const state = createDuelWithLoadouts(attacker, defender, [], config);
+    const me = state.combatants[0];
+    assert.ok(me);
+    if (planted) seeded(state, me.id);
+    const next = stepTurn(
+      state,
+      [createScriptedPolicy([{ kind: 'attack' }]), createScriptedPolicy([{ kind: 'defend' }])],
+      createSeededRandom(11),
+      config,
+    );
+    const victim = next.combatants.find((c) => c.side === 1);
+    assert.ok(victim);
+    return victim.maxHp - victim.hp;
+  };
+
+  const plain = damageWith(false);
+  const paid = damageWith(true);
+  assert.ok(paid > plain, `a seeded fire follow-up took ${paid}, plain took ${plain}`);
+  const ratio = paid / plain;
+  const expected = DEFAULT_BATTLE_CONFIG.seedPayoff.boostFactor;
+  assert.ok(
+    Math.abs(ratio - expected) < 0.2,
+    `expected about ${expected}x, got ${ratio.toFixed(2)}x`,
+  );
+});
+
+test('a water follow-up from the planter binds instead', () => {
+  const { attacker, defender } = duelWithElements('water', 303);
+  const state = createDuelWithLoadouts(attacker, defender, []);
+  const me = state.combatants[0];
+  assert.ok(me);
+  seeded(state, me.id);
+
+  const next = stepTurn(
+    state,
+    [createScriptedPolicy([{ kind: 'attack' }]), createScriptedPolicy([{ kind: 'defend' }])],
+    createSeededRandom(13),
+  );
+
+  const victim = next.combatants.find((c) => c.side === 1);
+  assert.ok(victim);
+  assert.equal(hasStatus(victim.statuses, 'bind'), true, 'water should have bound it');
+  assert.equal(hasStatus(victim.statuses, 'seed'), false, 'and spent the seed');
+
+  const bound = effectsOf(next).filter(
+    (e) => e.type === 'status' && e.status === 'bind',
+  );
+  assert.ok(bound.length > 0, 'the bind should be reported');
+});
+
+test('someone else attacking the seeded target collects nothing', () => {
+  // The seed belongs to whoever planted it: a third party, or the target's
+  // own ally, does not get paid for it.
+  const { attacker, defender } = duelWithElements('fire', 305);
+  const config = createBattleConfig({ damageVariance: 0 });
+
+  const damage = (sourceId: string): number => {
+    const state = createDuelWithLoadouts(attacker, defender, [], config);
+    seeded(state, sourceId);
+    const next = stepTurn(
+      state,
+      [createScriptedPolicy([{ kind: 'attack' }]), createScriptedPolicy([{ kind: 'defend' }])],
+      createSeededRandom(17),
+      config,
+    );
+    const victim = next.combatants.find((c) => c.side === 1);
+    assert.ok(victim);
+    return victim.maxHp - victim.hp;
+  };
+
+  const mine = damage('0-0:planter');
+  const someoneElse = damage('a-stranger');
+  assert.ok(mine > someoneElse, 'the planter should be the one who collects');
+});
+
+test('the wrong element collects nothing and leaves the seed', () => {
+  const { attacker, defender } = duelWithElements('earth', 307);
+  const state = createDuelWithLoadouts(attacker, defender, []);
+  const me = state.combatants[0];
+  assert.ok(me);
+  seeded(state, me.id);
+
+  const next = stepTurn(
+    state,
+    [createScriptedPolicy([{ kind: 'attack' }]), createScriptedPolicy([{ kind: 'defend' }])],
+    createSeededRandom(19),
+  );
+
+  const victim = next.combatants.find((c) => c.side === 1);
+  assert.ok(victim);
+  assert.equal(hasStatus(victim.statuses, 'bind'), false, 'earth does not bind');
+  assert.equal(hasStatus(victim.statuses, 'seed'), true, 'and the seed is still there');
+});
+
+test('the seed is spent once, not on every hit of a multi-hit move', () => {
+  const planter = createMonsterFromAnalysis(
+    { element: 'fire', horns: 'twin', confidence: 1 },
+    testContext(309),
+    { name: 'twinner', id: 'twinner' },
+  );
+  const { moss } = pair(309);
+  const state = createDuelWithLoadouts(planter, moss, [
+    { monsterId: planter.id, skillIds: ['double-gore', 'strike'] },
+  ]);
+  const me = state.combatants[0];
+  assert.ok(me);
+  seeded(state, me.id);
+
+  const next = stepTurn(
+    state,
+    [
+      createScriptedPolicy([{ kind: 'skill', skillId: 'double-gore' }]),
+      createScriptedPolicy([{ kind: 'defend' }]),
+    ],
+    createSeededRandom(23),
+  );
+
+  const spent = effectsOf(next).filter(
+    (e) => e.type === 'cleanse' && e.removed.includes('seed'),
+  );
+  assert.equal(spent.length, 1, 'one seed, one payout');
 });

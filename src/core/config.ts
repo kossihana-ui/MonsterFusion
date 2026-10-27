@@ -398,6 +398,19 @@ export interface BattleConfig {
   };
   /** Chance a move that can stun the target does so. */
   readonly flinchChance: number;
+  /**
+   * What a seeded target is worth to the monster that seeded it.
+   *
+   * Only the planter's own follow-up triggers this, and it fires once: the
+   * seed is spent whichever branch takes it.
+   */
+  readonly seedPayoff: {
+    /** A follow-up of this element hits harder. */
+    readonly boostElement: Element;
+    readonly boostFactor: number;
+    /** A follow-up of this element binds instead. */
+    readonly bindElement: Element;
+  };
   /** element -> element -> damage multiplier. Missing pairs are 1. */
   readonly elementChart: Partial<Record<Element, Partial<Record<Element, number>>>>;
 }
@@ -427,6 +440,7 @@ export const DEFAULT_BATTLE_CONFIG: BattleConfig = {
   statusTurns: { poison: 3, blind: 2, bind: 1, bindExtended: 2, seed: 1, flinch: 1 },
   powerSteps: { one: 70, two: 110, three: 160, heavy: 180 },
   flinchChance: 0.3,
+  seedPayoff: { boostElement: 'fire', boostFactor: 1.5, bindElement: 'water' },
   elementChart: {
     fire: { water: 0.8, wind: 1.25, earth: 1.0 },
     water: { fire: 1.25, earth: 1.25, wind: 0.8 },
