@@ -27,6 +27,7 @@ import type { BattleEffectEvent, MoveBehavior, StatusEffect, StatusKind } from '
 import type { DamageBoost } from './effects.ts';
 import {
   applyStatus,
+  canApplyStatus,
   blindMisses,
   BOOST_REASONS,
   statusOf,
@@ -862,7 +863,16 @@ export function stepTurn(
         ...(logSkillId ? { skillId: logSkillId } : {}),
         removed: ['seed'],
       });
-      if (seedBinds) {
+      if (seedBinds && !canApplyStatus(target.statuses, 'bind')) {
+        effects.push({
+          type: 'noEffect',
+          actorId: actor.id,
+          targetId: target.id,
+          ...(logSkillId ? { skillId: logSkillId } : {}),
+          status: 'bind',
+          reason: 'alreadyActive',
+        });
+      } else if (seedBinds) {
         target.statuses = applyStatus(target.statuses ?? [], {
           kind: 'bind',
           turns: config.statusTurns.bind,
@@ -940,6 +950,19 @@ export function stepTurn(
       const stripped = stripPolarity(actor.statuses ?? [], 'debuff');
       actor.statuses = stripped.statuses;
       for (const status of mine) {
+        // Already carrying it: the debuff comes off the actor either way, but
+        // it does not stack onto what the target is already living with.
+        if (!canApplyStatus(target.statuses, status.kind)) {
+          effects.push({
+            type: 'noEffect',
+            actorId: actor.id,
+            targetId: target.id,
+            ...(logSkillId ? { skillId: logSkillId } : {}),
+            status: status.kind,
+            reason: 'alreadyActive',
+          });
+          continue;
+        }
         target.statuses = applyStatus(target.statuses ?? [], {
           ...status,
           appliedTurn: turn,
@@ -969,6 +992,17 @@ export function stepTurn(
     for (const application of resolved.applies) {
       if (application.chance < 1 && rng.next() >= application.chance) continue;
       const subject = application.target === 'self' ? actor : target;
+      if (!canApplyStatus(subject.statuses, application.status)) {
+        effects.push({
+          type: 'noEffect',
+          actorId: actor.id,
+          targetId: subject.id,
+          ...(logSkillId ? { skillId: logSkillId } : {}),
+          status: application.status,
+          reason: 'alreadyActive',
+        });
+        continue;
+      }
       subject.statuses = applyStatus(subject.statuses ?? [], {
         kind: application.status,
         turns: application.turns,

@@ -3,6 +3,8 @@ import { test } from 'node:test';
 
 import {
   applyStatus,
+  canApplyStatus,
+  statusOf,
   blockingStatus,
   conditionMultiplier,
   getMoveBehavior,
@@ -16,7 +18,7 @@ import {
   STATUS_POLARITY,
   tickStatuses,
 } from '../src/core/effects.ts';
-import type { BattleEffectEvent, StatusEffect } from '../src/core/effects.ts';
+import type { BattleEffectEvent, StatusEffect, StatusKind } from '../src/core/effects.ts';
 import {
   computeDamage,
   createCombatant,
@@ -60,20 +62,57 @@ function effectsOf(state: BattleState): BattleEffectEvent[] {
 // Statuses
 // ---------------------------------------------------------------------------
 
-test('a status is added, refreshed by the longer duration, and ages out', () => {
+test('an ailment that is still running cannot be applied again', () => {
   let statuses: StatusEffect[] = [];
   statuses = applyStatus(statuses, { kind: 'poison', turns: 2 });
   assert.ok(hasStatus(statuses, 'poison'));
+  assert.equal(canApplyStatus(statuses, 'poison'), false);
 
+  // Not longer, not stacked, not reset: the two turns it was given are the
+  // two turns it gets, however many times it is applied again.
   statuses = applyStatus(statuses, { kind: 'poison', turns: 4 });
   assert.equal(statuses.length, 1, 'the same status does not stack up');
-  assert.equal(statuses[0]?.turns, 4, 'the longer duration wins');
+  assert.equal(statuses[0]?.turns, 2, 'and does not get longer');
 
-  statuses = applyStatus(statuses, { kind: 'poison', turns: 1 });
-  assert.equal(statuses[0]?.turns, 4, 'and a shorter one does not cut it short');
+  statuses = tickStatuses(statuses);
+  assert.equal(statuses[0]?.turns, 1, 'it is still ageing out');
+  statuses = applyStatus(statuses, { kind: 'poison', turns: 3 });
+  assert.equal(statuses[0]?.turns, 1, 'even on its last turn');
 
-  for (let i = 0; i < 4; i++) statuses = tickStatuses(statuses);
+  statuses = tickStatuses(statuses);
   assert.equal(hasStatus(statuses, 'poison'), false);
+
+  // Gone now, so it can land again - that is how you keep someone poisoned.
+  assert.equal(canApplyStatus(statuses, 'poison'), true);
+  statuses = applyStatus(statuses, { kind: 'poison', turns: 3 });
+  assert.equal(statuses[0]?.turns, 3);
+});
+
+test('a buff can still be topped up, by the longer of the two', () => {
+  // Holding a buff already costs the turn that was not spent attacking, so
+  // the ailment rule would be charging twice for it.
+  let statuses: StatusEffect[] = [];
+  statuses = applyStatus(statuses, { kind: 'attackUp', turns: 1, magnitude: 2 });
+  assert.equal(canApplyStatus(statuses, 'attackUp'), true);
+
+  statuses = applyStatus(statuses, { kind: 'attackUp', turns: 3, magnitude: 2 });
+  assert.equal(statuses.length, 1, 'the same buff does not stack up');
+  assert.equal(statuses[0]?.turns, 3, 'the longer duration wins');
+
+  statuses = applyStatus(statuses, { kind: 'attackUp', turns: 1, magnitude: 2 });
+  assert.equal(statuses[0]?.turns, 3, 'and a shorter one does not cut it short');
+});
+
+test('every status is one or the other, so the rule covers all of them', () => {
+  for (const kind of Object.keys(STATUS_POLARITY) as StatusKind[]) {
+    const held: StatusEffect[] = [{ kind, turns: 2 }];
+    assert.equal(
+      canApplyStatus(held, kind),
+      STATUS_POLARITY[kind] === 'buff',
+      `${kind} does not follow its own polarity`,
+    );
+    assert.equal(canApplyStatus([], kind), true, `${kind} cannot be applied at all`);
+  }
 });
 
 test('statuses are stripped by name or by polarity', () => {
@@ -220,6 +259,39 @@ test('a heal is capped at full health and says so', () => {
   );
   assert.ok(event);
   assert.equal(event.amount, 5, 'the real amount, not the nominal 30');
+});
+
+test('blindness ages out even while the move that caused it keeps landing', () => {
+  // The whole point of the rule: マジックアイ costs 7 MP and blinds for two
+  // turns, and before this it could be re-cast every turn to hold someone
+  // blind for the whole fight. Now the two turns run out on schedule.
+  const { aqua } = pair(7);
+  let state = createDuelWithLoadouts(aqua, aqua, [
+    { monsterId: aqua.id, skillIds: ['magic-eye'] },
+  ]);
+  // Side 1 moves first here, so side 0 is the one being blinded.
+  const them = state.combatants[0];
+  assert.ok(them);
+
+  const rng = createSeededRandom(3);
+  const policy = createScriptedPolicy([{ kind: 'skill', skillId: 'magic-eye' }]);
+  const blindTurns = () => {
+    const live = state.combatants.find((c) => c.id === them.id);
+    return statusOf(live?.statuses, 'blind')?.turns ?? 0;
+  };
+
+  state = stepTurn(state, policy, rng);
+  assert.equal(blindTurns(), DEFAULT_BATTLE_CONFIG.statusTurns.blind, 'it lands at full length');
+
+  state = stepTurn(state, policy, rng);
+  const refused = effectsOf(state).filter(
+    (e) => e.type === 'noEffect' && e.status === 'blind' && e.reason === 'alreadyActive',
+  );
+  assert.ok(refused.length > 0, 'the second cast should have been reported as doing nothing');
+  assert.equal(blindTurns(), 1, 'and should not have put the two turns back');
+
+  state = stepTurn(state, policy, rng);
+  assert.equal(blindTurns(), 0, 'so it runs out, however many times it was re-cast');
 });
 
 test('a move that cannot repeat is refused on the second turn', () => {

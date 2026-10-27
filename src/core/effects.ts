@@ -115,13 +115,42 @@ export function statusOf(
   return (statuses ?? []).find((status) => status.kind === kind && status.turns > 0);
 }
 
-/** Adds or refreshes a status. The longer of the two durations wins. */
+/**
+ * Whether a status can be put on at all right now.
+ *
+ * An ailment that is already running cannot be re-applied. The spec gives
+ * every ailment a length - blindness two turns, a bind one or two - and
+ * refreshing it on the turn it was about to end makes that length a
+ * formality: a move that costs 7 MP held an opponent blind for the whole
+ * fight. So the length is what it says, and the way to keep someone blind is
+ * to have blinded them recently, not to keep paying for it.
+ *
+ * Buffs still refresh, because the cost of holding one is already the turn
+ * spent on it instead of attacking.
+ */
+export function canApplyStatus(
+  statuses: readonly StatusEffect[] | undefined,
+  kind: StatusKind,
+): boolean {
+  if (STATUS_POLARITY[kind] === 'buff') return true;
+  return !hasStatus(statuses, kind);
+}
+
+/**
+ * Adds a status, refreshes a buff, or refuses an ailment that is still
+ * running. The longer of the two durations wins on a refresh.
+ *
+ * A refusal returns the statuses as they were. Callers that report what
+ * happened should ask `canApplyStatus` first, so they can say that the
+ * status did not land rather than announcing one that never arrived.
+ */
 export function applyStatus(
   statuses: readonly StatusEffect[],
   next: StatusEffect,
 ): StatusEffect[] {
   const existing = statuses.find((s) => s.kind === next.kind);
   if (!existing) return [...statuses, next];
+  if (!canApplyStatus(statuses, next.kind)) return [...statuses];
   return statuses.map((s) =>
     s.kind === next.kind
       ? { ...next, turns: Math.max(s.turns, next.turns) }
@@ -225,6 +254,16 @@ export type BattleEffectEvent =
       readonly skillId?: string; readonly status: StatusKind; readonly turns: number }
   | { readonly type: 'miss'; readonly actorId: string; readonly targetId: string;
       readonly skillId?: string; readonly reason: 'blind' | 'chance' }
+  /**
+   * A status was going to be applied and was not.
+   *
+   * Play nothing on the status bar for this - the status that is already
+   * there is unchanged. It is worth a line of text ("already blind"), and it
+   * is the one event that tells a player why a move did nothing.
+   */
+  | { readonly type: 'noEffect'; readonly actorId: string; readonly targetId: string;
+      readonly skillId?: string; readonly status: StatusKind;
+      readonly reason: 'alreadyActive' }
   | { readonly type: 'skip'; readonly actorId: string; readonly reason: StatusKind }
   | { readonly type: 'blocked'; readonly actorId: string; readonly skillId?: string;
       readonly reason: 'consecutive' | 'mp' };

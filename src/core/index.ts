@@ -206,6 +206,7 @@ export type {
 } from './effects.ts';
 export {
   applyStatus,
+  canApplyStatus,
   blindMisses,
   blockingStatus,
   BOOST_REASONS,
