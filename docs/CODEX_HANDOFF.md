@@ -375,7 +375,7 @@ fuseWithPart(a, b, part, inventory, context, requestId);
 
 ## 8.12 技の効果システム（回復・解除・状態異常）
 
-MOVES_2026_10_27 への対応は [MOVE_EFFECTS.md](MOVE_EFFECTS.md) にまとめてあります。**30技中10技を実装、20技は仕様待ちです。**
+MOVES_2026_10_27 への対応は [MOVE_EFFECTS.md](MOVE_EFFECTS.md) にまとめてあります。**30技すべて実装済みです。**
 
 ```ts
 getMoveBehavior(skillId);   // { attacks, hits, piercesDefense, heal, cleanse, applies, specified }
@@ -390,6 +390,24 @@ pendingMoves();             // 未確定の技と、何が足りないか
 - 回復値・解除後の状態をUIで計算しないでください。返ってきた state を採用してください
 - `specified: false` の技は現在の通常攻撃のまま動きます。UIで「調整中」と出せます
 - `stepTurn` / `advanceArenaTurn` の引数・戻り値の型は変わっていません
+
+## 8.13 倍率の演出（×2倍）
+
+依頼文は [MULTIPLIER_FX_REQUEST.md](MULTIPLIER_FX_REQUEST.md) です。そのまま渡せます。
+
+`damage` イベントが **なぜ大きくなったか** を持ちます。UIで倍率を計算し直さないでください。
+
+```ts
+{ type: 'damage', amount: 15, boostTotal: 3,
+  boosts: [
+    { source: 'attackUp', reason: '攻撃力上昇', factor: 2 },
+    { source: 'seed',     reason: '種',       factor: 1.5 },
+  ] }
+```
+
+- 演出を出す条件は **`boostTotal > 1`** だけです
+- `reason` は日本語でそのまま表示できます。`source` は演出の出し分け用
+- 通常のヒットには `boosts` も `boostTotal` も付きません
 
 ## 9. コマンド
 
