@@ -373,6 +373,21 @@ fuseWithPart(a, b, part, inventory, context, requestId);
 - 素材は**成功時のみ1個消費**。同じ `requestId` の再送では二重消費・二重生成しません
 - 保存は `MonsterSaveFile` の `inventory` / `arena` に統合済みです
 
+## 8.12 技の効果システム（回復・解除・状態異常）
+
+MOVES_2026_10_27 への対応は [MOVE_EFFECTS.md](MOVE_EFFECTS.md) にまとめてあります。**30技中10技を実装、20技は仕様待ちです。**
+
+```ts
+getMoveBehavior(skillId);   // { attacks, hits, piercesDefense, heal, cleanse, applies, specified }
+pendingMoves();             // 未確定の技と、何が足りないか
+```
+
+- **`attacks: false` の技はダメージ処理を一切通りません。** 威力0の攻撃で代用していません
+- `BattleLogEntry.effects` に `damage / heal / cleanse / status / miss / skip / blocked` が順番に入ります。**既存フィールドはそのまま残しています**
+- 回復値・解除後の状態をUIで計算しないでください。返ってきた state を採用してください
+- `specified: false` の技は現在の通常攻撃のまま動きます。UIで「調整中」と出せます
+- `stepTurn` / `advanceArenaTurn` の引数・戻り値の型は変わっていません
+
 ## 9. コマンド
 
 ```bash

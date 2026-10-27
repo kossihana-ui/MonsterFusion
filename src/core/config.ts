@@ -360,6 +360,14 @@ export interface BattleConfig {
    */
   readonly startingMp: number;
   readonly mpRegenPerTurn: number;
+  /**
+   * Chance a blinded monster's physical attack misses.
+   *
+   * From the move spec: 「目をくらませると物理を75パーで回避」.
+   */
+  readonly blindEvasion: number;
+  /** Damage a poisoned monster loses each turn, inclusive range. */
+  readonly poisonDamage: readonly [number, number];
   /** element -> element -> damage multiplier. Missing pairs are 1. */
   readonly elementChart: Partial<Record<Element, Partial<Record<Element, number>>>>;
 }
@@ -384,6 +392,8 @@ export const DEFAULT_BATTLE_CONFIG: BattleConfig = {
   // nearly twice the strength of its counter, which made one starter beat
   // another 98 times in 100. These are deliberately milder than they look -
   // 1.25 and 0.8 still read clearly in play and still decide close fights.
+  blindEvasion: 0.75,
+  poisonDamage: [5, 10],
   elementChart: {
     fire: { water: 0.8, wind: 1.25, earth: 1.0 },
     water: { fire: 1.25, earth: 1.25, wind: 0.8 },

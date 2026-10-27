@@ -56,6 +56,8 @@ export const MOVE_TIERS = {
   signature: { power: 140, cost: 6 },
   feature: { power: 150, cost: 7 },
   finisher: { power: 230, cost: 16 },
+  /** A move that does not attack. Power is unused; the cost is the spec's. */
+  support: { power: 0, cost: 2 },
 } as const;
 
 // ---------------------------------------------------------------------------
@@ -174,8 +176,9 @@ export const MOVE_CATALOGUE: readonly MoveDefinition[] = [
   { id: 'pollen-burst', name: 'ポレンバースト', reason: '花で覚える',
     category: 'normal', element: 'earth', kind: 'magical', tier: 'feature',
     source: 'crest', value: 'flower' },
+  // 解除技。攻撃しない。MP2は仕様指定。
   { id: 'crystal-ray', name: 'クリスタルレイ', reason: '結晶で覚える',
-    category: 'normal', element: 'light', kind: 'magical', tier: 'feature',
+    category: 'normal', element: 'light', kind: 'magical', tier: 'support',
     source: 'crest', value: 'crystal' },
   { id: 'royal-order', name: 'ロイヤルオーダー', reason: '王冠で覚える',
     category: 'finisher', element: 'self', kind: 'magical', tier: 'finisher',
@@ -194,8 +197,9 @@ export const MOVE_CATALOGUE: readonly MoveDefinition[] = [
   { id: 'power-slam', name: 'パワースラム', reason: '筋肉質な体で覚える',
     category: 'normal', element: 'neutral', kind: 'physical', tier: 'feature',
     source: 'bodyShape', value: 'muscular' },
-  { id: 'hydro-ram', name: 'ハイドロラム', reason: '魚型の体で覚える',
-    category: 'normal', element: 'water', kind: 'physical', tier: 'feature',
+  // 回復技。攻撃しないので、威力は使われない（getMoveBehavior が attacks:false）。
+  { id: 'hydro-ram', name: 'ウォーターヒール', reason: '魚型の体で覚える',
+    category: 'normal', element: 'water', kind: 'magical', tier: 'support',
     source: 'bodyShape', value: 'finned' },
   { id: 'coil-crush', name: 'コイルクラッシュ', reason: '蛇型の体で覚える',
     category: 'normal', element: 'self', kind: 'physical', tier: 'feature',

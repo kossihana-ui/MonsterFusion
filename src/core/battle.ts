@@ -23,11 +23,23 @@ import type {
   Skill,
 } from '../shared/types.ts';
 import type { BattleConfig } from './config.ts';
+import type { BattleEffectEvent, MoveBehavior, StatusEffect, StatusKind } from './effects.ts';
+import {
+  applyStatus,
+  blindMisses,
+  blockingStatus,
+  getMoveBehavior,
+  offenceMultiplier,
+  removePolarity,
+  removeStatuses,
+  STATUS_LABELS,
+  tickStatuses,
+} from './effects.ts';
 import type { MoveLoadout } from './moves.ts';
 import { loadoutFor, skillsForLoadout } from './moves.ts';
 import { DEFAULT_BATTLE_CONFIG } from './config.ts';
 import type { Random } from './random.ts';
-import { chance, nextFloat, shuffled } from './random.ts';
+import { chance, nextFloat, nextInt, shuffled } from './random.ts';
 import { clamp } from './util.ts';
 
 // ---------------------------------------------------------------------------
@@ -74,6 +86,7 @@ export function createCombatant(
     element: monster.phenotype.element,
     skills: options.skills ?? skillsForLoadout(monster, options.loadout),
     defending: false,
+    statuses: [],
   };
 }
 
@@ -192,14 +205,18 @@ export interface DamageResult {
 export function computeDamage(
   attacker: Combatant,
   defender: Combatant,
-  options: { skill?: Skill } = {},
+  options: { skill?: Skill; pierce?: boolean } = {},
   rng: Random,
   config: BattleConfig = DEFAULT_BATTLE_CONFIG,
 ): DamageResult {
   const skill = options.skill;
-  const power = offensivePower(attacker, skill, config);
+  // A buff multiplies the offence before anything else sees it.
+  const power = offensivePower(attacker, skill, config) * offenceMultiplier(attacker.statuses);
   const skillFactor = (skill?.power ?? 100) / 100;
-  const defense = Math.max(1, defender.stats.defense * config.defenseScale);
+  // Piercing ignores the defence stat; it also ignores the guard below.
+  const defense = options.pierce
+    ? 1
+    : Math.max(1, defender.stats.defense * config.defenseScale);
 
   const elementMultiplier = elementMultiplierFor(skill, attacker, defender, config);
 
@@ -218,7 +235,7 @@ export function computeDamage(
   if (critical) damage *= config.criticalMultiplier;
 
   const raw = damage;
-  if (defender.defending) damage *= config.defendDamageMultiplier;
+  if (defender.defending && !options.pierce) damage *= config.defendDamageMultiplier;
 
   const variance = config.damageVariance;
   const spread = nextFloat(rng, 1 - variance, 1 + variance);
@@ -231,7 +248,7 @@ export function computeDamage(
     damage: final,
     critical,
     raw: Math.round(raw),
-    mitigated: defender.defending ? Math.max(0, unguarded - final) : 0,
+    mitigated: defender.defending && !options.pierce ? Math.max(0, unguarded - final) : 0,
     elementMultiplier,
   };
 }
@@ -377,7 +394,12 @@ export function toPolicyResolver(
 }
 
 function cloneCombatants(combatants: readonly Combatant[]): Combatant[] {
-  return combatants.map((c) => ({ ...c, stats: { ...c.stats }, skills: c.skills }));
+  return combatants.map((c) => ({
+    ...c,
+    stats: { ...c.stats },
+    skills: c.skills,
+    statuses: (c.statuses ?? []).map((status) => ({ ...status })),
+  }));
 }
 
 function evaluateOutcome(
@@ -542,37 +564,201 @@ export function stepTurn(
     if (!action || action.kind === 'defend') continue;
     if (evaluateOutcome(combatants, turn, config).status !== 'ongoing') break;
 
-    const target = resolveTarget(action, actor, working, byId);
+    const chosen = action.kind === 'skill'
+      ? actor.skills.find((s) => s.id === action.skillId) ?? actor.skills[0]
+      : undefined;
+    const behavior = getMoveBehavior(chosen?.id ?? 'attack');
+
+    // Bound or recoiling: the turn is spent, unless the move says otherwise.
+    const blocked = blockingStatus(actor.statuses);
+    if (blocked && !behavior.usableWhileBound) {
+      log.push({
+        turn,
+        actorId: actor.id,
+        kind: 'status',
+        effects: [{ type: 'skip', actorId: actor.id, reason: blocked }],
+        message: `${actor.name} cannot move (${blocked}).`,
+      });
+      continue;
+    }
+
+    // A move that cannot be used twice running.
+    if (behavior.noConsecutiveUse && actor.lastSkillId === behavior.skillId) {
+      log.push({
+        turn,
+        actorId: actor.id,
+        kind: 'status',
+        ...(chosen ? { skillId: chosen.id } : {}),
+        effects: [
+          { type: 'blocked', actorId: actor.id, ...(chosen ? { skillId: chosen.id } : {}), reason: 'consecutive' },
+        ],
+        message: `${actor.name} cannot use ${chosen?.name ?? 'that'} twice in a row.`,
+      });
+      continue;
+    }
+
+    const target = behavior.target === 'self'
+      ? actor
+      : resolveTarget(action, actor, working, byId);
     if (!target) continue;
 
     let skill: Skill | undefined;
     let mpSpent = 0;
-    if (action.kind === 'skill') {
-      skill = actor.skills.find((s) => s.id === action.skillId) ?? actor.skills[0];
-      if (!skill || skill.cost > actor.mp) {
-        // Not enough MP: fall back to a plain attack rather than wasting the turn.
-        skill = undefined;
+    if (action.kind === 'skill' && chosen) {
+      if (chosen.cost > actor.mp) {
+        // Not enough MP: fall back to a plain attack rather than wasting the
+        // turn - but only for a move that attacks at all.
+        if (!behavior.attacks) {
+          log.push({
+            turn,
+            actorId: actor.id,
+            kind: 'status',
+            skillId: chosen.id,
+            effects: [{ type: 'blocked', actorId: actor.id, skillId: chosen.id, reason: 'mp' }],
+            message: `${actor.name} lacks the MP for ${chosen.name}.`,
+          });
+          continue;
+        }
       } else {
-        actor.mp -= skill.cost;
-        mpSpent = skill.cost;
+        skill = chosen;
+        actor.mp -= chosen.cost;
+        mpSpent = chosen.cost;
       }
     }
 
-    const result = computeDamage(actor, target, skill ? { skill } : {}, rng, config);
-    target.hp = clamp(target.hp - result.damage, 0, target.maxHp);
+    const effects: BattleEffectEvent[] = [];
+    const resolved = skill ? behavior : getMoveBehavior('attack');
+    const logSkillId = skill?.id;
 
+    // --- damage -----------------------------------------------------------
+    let dealt = 0;
+    let anyCritical = false;
+    if (resolved.attacks) {
+      const physical = (skill?.scaling ?? 'attack') === 'attack';
+      for (let hit = 1; hit <= Math.max(1, resolved.hits); hit++) {
+        if (target.hp <= 0) break;
+        if (blindMisses(actor.statuses, physical, rng.next(), config)) {
+          effects.push({
+            type: 'miss',
+            actorId: actor.id,
+            targetId: target.id,
+            ...(logSkillId ? { skillId: logSkillId } : {}),
+            reason: 'blind',
+          });
+          continue;
+        }
+        const result = computeDamage(
+          actor,
+          target,
+          { ...(skill ? { skill } : {}), ...(resolved.piercesDefense ? { pierce: true } : {}) },
+          rng,
+          config,
+        );
+        target.hp = clamp(target.hp - result.damage, 0, target.maxHp);
+        dealt += result.damage;
+        anyCritical = anyCritical || result.critical;
+        effects.push({
+          type: 'damage',
+          actorId: actor.id,
+          targetId: target.id,
+          ...(logSkillId ? { skillId: logSkillId } : {}),
+          amount: result.damage,
+          critical: result.critical,
+          elementMultiplier: result.elementMultiplier,
+          mitigated: result.mitigated,
+          hit,
+          hits: Math.max(1, resolved.hits),
+          pierced: resolved.piercesDefense,
+        });
+      }
+    }
+
+    // --- heal -------------------------------------------------------------
+    if (resolved.heal > 0) {
+      const receiver = resolved.target === 'enemy' ? target : actor;
+      const before = receiver.hp;
+      receiver.hp = clamp(receiver.hp + resolved.heal, 0, receiver.maxHp);
+      effects.push({
+        type: 'heal',
+        actorId: actor.id,
+        targetId: receiver.id,
+        ...(logSkillId ? { skillId: logSkillId } : {}),
+        amount: receiver.hp - before,
+      });
+    }
+
+    // --- cleanse ----------------------------------------------------------
+    for (const entry of resolved.cleanse) {
+      const subject = entry.target === 'self' ? actor : target;
+      const { statuses, removed } = removePolarity(subject.statuses ?? [], entry.polarity);
+      subject.statuses = statuses;
+      effects.push({
+        type: 'cleanse',
+        actorId: actor.id,
+        targetId: subject.id,
+        ...(logSkillId ? { skillId: logSkillId } : {}),
+        removed,
+      });
+    }
+    for (const entry of resolved.cure) {
+      const subject = entry.target === 'self' ? actor : target;
+      const { statuses, removed } = removeStatuses(subject.statuses ?? [], entry.statuses);
+      subject.statuses = statuses;
+      effects.push({
+        type: 'cleanse',
+        actorId: actor.id,
+        targetId: subject.id,
+        ...(logSkillId ? { skillId: logSkillId } : {}),
+        removed,
+      });
+    }
+
+    // --- statuses ---------------------------------------------------------
+    for (const application of resolved.applies) {
+      if (application.chance < 1 && rng.next() >= application.chance) continue;
+      const subject = application.target === 'self' ? actor : target;
+      subject.statuses = applyStatus(subject.statuses ?? [], {
+        kind: application.status,
+        turns: application.turns,
+        ...(application.magnitude !== undefined ? { magnitude: application.magnitude } : {}),
+        sourceId: actor.id,
+      });
+      effects.push({
+        type: 'status',
+        actorId: actor.id,
+        targetId: subject.id,
+        ...(logSkillId ? { skillId: logSkillId } : {}),
+        status: application.status,
+        turns: application.turns,
+      });
+    }
+
+    actor.lastSkillId = skill?.id ?? 'attack';
+
+    // The existing fields stay on the entry: the handoff asked for events to
+    // be added, not for the shape the UI already reads to change. For a move
+    // that hits more than once they summarise, and `effects` has each hit.
+    const firstHit = effects.find((e) => e.type === 'damage');
     log.push({
       turn,
       actorId: actor.id,
-      kind: skill ? 'skill' : 'attack',
-      targetId: target.id,
-      damage: result.damage,
-      critical: result.critical,
-      elementMultiplier: result.elementMultiplier,
-      mitigated: result.mitigated,
-      ...(skill ? { skillId: skill.id } : {}),
+      kind: resolved.attacks ? (skill ? 'skill' : 'attack') : 'status',
+      ...(resolved.attacks
+        ? {
+            targetId: target.id,
+            damage: dealt,
+            critical: anyCritical,
+            elementMultiplier: firstHit?.type === 'damage' ? firstHit.elementMultiplier : 1,
+            mitigated: effects.reduce(
+              (sum, e) => sum + (e.type === 'damage' ? e.mitigated : 0),
+              0,
+            ),
+          }
+        : {}),
+      ...(logSkillId ? { skillId: logSkillId } : {}),
       ...(mpSpent ? { mpSpent } : {}),
-      message: `${actor.name} ${skill ? `casts ${skill.name} on` : 'attacks'} ${target.name} for ${result.damage}${result.critical ? ' (critical!)' : ''}${result.mitigated > 0 ? ` (${result.mitigated} guarded)` : ''}.`,
+      effects,
+      message: describeAction(actor, target, skill, resolved, dealt, anyCritical),
     });
 
     if (target.hp === 0) {
@@ -583,6 +769,47 @@ export function stepTurn(
         message: `${target.name} is defeated.`,
       });
     }
+  }
+
+  // --- end of turn: poison, then statuses age -------------------------------
+  for (const combatant of combatants) {
+    if (combatant.hp <= 0) continue;
+    const poison = (combatant.statuses ?? []).find((s) => s.kind === 'poison' && s.turns > 0);
+    if (poison) {
+      const [low, high] = config.poisonDamage;
+      const amount = nextInt(rng, low, high);
+      combatant.hp = clamp(combatant.hp - amount, 0, combatant.maxHp);
+      log.push({
+        turn,
+        actorId: combatant.id,
+        kind: 'status',
+        damage: amount,
+        effects: [
+          {
+            type: 'damage',
+            actorId: combatant.id,
+            targetId: combatant.id,
+            amount,
+            critical: false,
+            elementMultiplier: 1,
+            mitigated: 0,
+            hit: 1,
+            hits: 1,
+            pierced: true,
+          },
+        ],
+        message: `${combatant.name} takes ${amount} from poison.`,
+      });
+      if (combatant.hp === 0) {
+        log.push({
+          turn,
+          actorId: combatant.id,
+          kind: 'faint',
+          message: `${combatant.name} is defeated.`,
+        });
+      }
+    }
+    combatant.statuses = tickStatuses(combatant.statuses ?? []);
   }
 
   const outcome = evaluateOutcome(combatants, turn, config);
@@ -599,6 +826,23 @@ export function stepTurn(
   }
 
   return { combatants, turn, log, outcome };
+}
+
+/** The English fallback line. The UI builds its own text from `effects`. */
+function describeAction(
+  actor: Combatant,
+  target: Combatant,
+  skill: Skill | undefined,
+  behavior: MoveBehavior,
+  damage: number,
+  critical: boolean,
+): string {
+  if (!behavior.attacks) {
+    const name = skill?.name ?? 'an effect';
+    return `${actor.name} uses ${name}.`;
+  }
+  const verb = skill ? `casts ${skill.name} on` : 'attacks';
+  return `${actor.name} ${verb} ${target.name} for ${damage}${critical ? ' (critical!)' : ''}.`;
 }
 
 function resolveTarget(

@@ -193,6 +193,32 @@ export {
   TRAIT_LABELS,
 } from './tags.ts';
 
+// Effects (statuses, and what a move actually does).
+export type {
+  ActionMode,
+  BattleEffectEvent,
+  MoveBehavior,
+  StatusApplication,
+  StatusEffect,
+  StatusKind,
+} from './effects.ts';
+export {
+  applyStatus,
+  blindMisses,
+  blockingStatus,
+  getMoveBehavior,
+  hasStatus,
+  MOVE_BEHAVIOURS,
+  offenceMultiplier,
+  pendingMoves,
+  removePolarity,
+  removeStatuses,
+  STATUS_LABELS,
+  STATUS_POLARITY,
+  statusOf,
+  tickStatuses,
+} from './effects.ts';
+
 // Moves (what a body teaches, and what the player chose to take in).
 export type {
   LearnableMove,

@@ -359,12 +359,16 @@ export interface Combatant {
   readonly skills: readonly Skill[];
   /** Set for the turn when the combatant defends. */
   defending: boolean;
+  /** Ongoing effects: bind, poison, a buff. Empty for an untouched monster. */
+  statuses: import('../core/effects.ts').StatusEffect[];
+  /** The move used last turn, for the moves that cannot repeat. */
+  lastSkillId?: string;
 }
 
 export interface BattleLogEntry {
   readonly turn: number;
   readonly actorId: string;
-  readonly kind: BattleActionKind | 'faint' | 'start' | 'end';
+  readonly kind: BattleActionKind | 'faint' | 'start' | 'end' | 'status';
   readonly targetId?: string;
   readonly damage?: number;
   readonly critical?: boolean;
@@ -376,6 +380,13 @@ export interface BattleLogEntry {
   readonly mitigated?: number;
   /** MP the actor spent. */
   readonly mpSpent?: number;
+  /**
+   * Everything that happened, in order, for the UI to replay.
+   *
+   * A heal, a removal or a status is reported here rather than left for the
+   * UI to work out from the state it had before.
+   */
+  readonly effects?: readonly import('../core/effects.ts').BattleEffectEvent[];
   /**
    * English sentence describing the entry. The UI is expected to build its own
    * text from the fields above; this is a fallback and a debugging aid.
