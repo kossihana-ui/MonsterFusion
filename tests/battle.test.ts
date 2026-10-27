@@ -19,6 +19,7 @@ import {
   stepTurn,
   turnOrder,
 } from '../src/core/battle.ts';
+import { getMoveBehavior } from '../src/core/effects.ts';
 import { createRootMonster, fuse } from '../src/core/fusion.ts';
 import { createStarterMonsters } from '../src/core/starters.ts';
 import { MAX_MOVE_SLOTS } from '../src/core/moves.ts';
@@ -128,9 +129,11 @@ test('a defend action is recorded on the combatant and in the log', () => {
 test('skills cost MP and fall back to a plain attack when it runs out', () => {
   const [a, b] = twoMonsters(44);
   const state = createDuel(a, b, createBattleConfig({ startingMp: 0, mpRegenPerTurn: 0 }));
+  const broke = deriveSkills(a)[0];
+  assert.ok(broke, 'the fixture should know at least one move');
   const next = stepTurn(
     state,
-    createScriptedPolicy([{ kind: 'skill', skillId: 'strike' }]),
+    createScriptedPolicy([{ kind: 'skill', skillId: broke.id }]),
     createSeededRandom(2),
     createBattleConfig({ startingMp: 0, mpRegenPerTurn: 0 }),
   );
@@ -142,11 +145,10 @@ test('skills cost MP and fall back to a plain attack when it runs out', () => {
 test('skills are derived deterministically from the monster', () => {
   const [a] = twoMonsters(6);
   assert.deepEqual(deriveSkills(a), deriveSkills(a));
-  // What a monster brings is now its default loadout, so the count depends on
-  // how many features it has rather than being fixed at two.
-  assert.ok(deriveSkills(a).length >= 2);
+  // What a monster brings is its default loadout, so the count depends on how
+  // many weaponised features it has.
+  assert.ok(deriveSkills(a).length >= 1);
   assert.ok(deriveSkills(a).length <= MAX_MOVE_SLOTS);
-  assert.ok(deriveSkills(a).some((s) => s.id === 'strike'), 'always something cheap to use');
 });
 
 test('the element chart is applied and configurable', () => {
@@ -296,14 +298,26 @@ test('guarding returns some MP, so it is a move rather than a pause', () => {
 
 test('a hit records what it was, not just how much', () => {
   const [a, b] = twoMonsters(21);
+  // It has to attack and it has to land: a support move is logged as a heal or
+  // a cleanse, and a move with a success roll may be logged as a miss.
+  const used = deriveSkills(a).find((s) => {
+    const behavior = getMoveBehavior(s.id);
+    return (
+      s.cost <= DEFAULT_BATTLE_CONFIG.startingMp &&
+      behavior.attacks &&
+      behavior.successChance === 1 &&
+      behavior.instantDeathChance === 0
+    );
+  });
+  assert.ok(used, 'the fixture should know a reliable attack it can afford on turn one');
   const state = stepTurn(
     createDuel(a, b),
-    createScriptedPolicy([{ kind: 'skill', skillId: 'strike' }]),
+    createScriptedPolicy([{ kind: 'skill', skillId: used.id }]),
     createSeededRandom(5),
   );
   const hit = state.log.find((e) => e.kind === 'skill');
   assert.ok(hit, 'no skill was logged');
-  assert.equal(hit.skillId, 'strike');
+  assert.equal(hit.skillId, used.id);
   assert.equal(typeof hit.elementMultiplier, 'number');
   assert.equal(typeof hit.mitigated, 'number');
   assert.ok((hit.mpSpent ?? 0) > 0, 'a skill costs MP and the log should say so');
@@ -387,37 +401,62 @@ test('speed leans a fight without deciding it', () => {
 });
 
 test('guarding every turn survives far longer than attacking every turn', () => {
-  const [a, b] = twoMonsters(45);
+  // Pooled over matchups on purpose. Now that a monster's slots hold only what
+  // its body taught it, one opponent's whole set may ignore the guard while the
+  // next one's ignores none of it, and a single pair says more about which
+  // moves it drew than about what guarding is worth.
   const length = (action: 'defend' | 'attack'): number => {
     let total = 0;
-    for (let seed = 0; seed < 20; seed++) {
-      const rng = createSeededRandom(700 + seed);
-      total += runBattle(
-        createDuel(a, b),
-        [createScriptedPolicy([{ kind: action }]), createBasicPolicy(rng)],
-        rng,
-      ).turn;
+    let fights = 0;
+    for (const pair of [45, 46, 47, 48, 49, 50, 51, 52, 53, 54]) {
+      const [a, b] = twoMonsters(pair);
+      for (let seed = 0; seed < 20; seed++) {
+        const rng = createSeededRandom(700 + seed);
+        total += runBattle(
+          createDuel(a, b),
+          [createScriptedPolicy([{ kind: action }]), createBasicPolicy(rng)],
+          rng,
+        ).turn;
+        fights++;
+      }
     }
-    return total / 20;
+    return total / fights;
   };
+  const guarded = length('defend');
+  const traded = length('attack');
   assert.ok(
-    length('defend') > length('attack') * 1.5,
-    'guarding should visibly change how long you last',
+    guarded > traded * 1.5,
+    `guarding lasted ${guarded.toFixed(1)} turns against ${traded.toFixed(1)}, so it buys nothing`,
   );
 });
 
-test('the base moves scale off whichever offence the monster actually has', () => {
-  const [base] = twoMonsters(47);
+test('the plain attack swings with whichever offence the monster actually has', () => {
   // A feature move is physical or magical by its own nature - a tail swipe is
-  // a tail swipe - so this is about the two moves every monster has.
-  const baseMoves = (monster: typeof base) =>
-    deriveSkills(monster).filter((s) => s.id === 'strike' || s.id.startsWith('sig-'));
+  // a tail swipe - so the monster that leans on magic needs the plain attack to
+  // read off its magic. Nothing else will: there are no shared moves left.
+  const [base, other] = twoMonsters(47);
+  assert.ok(base && other);
 
-  const caster = { ...base, stats: { ...base.stats, attack: 40, magic: 110 } };
-  assert.ok(baseMoves(caster).every((s) => s.scaling === 'magic'));
+  const asCombatant = (attack: number, magic: number) => ({
+    ...createCombatant({ ...base, stats: { ...base.stats, attack, magic } }, 0),
+  });
 
-  const brawler = { ...base, stats: { ...base.stats, attack: 110, magic: 40 } };
-  assert.ok(baseMoves(brawler).every((s) => s.scaling === 'attack'));
+  const caster = asCombatant(40, 110);
+  const brawler = asCombatant(110, 40);
+
+  // Same totals, mirrored. The plain attack should be worth the same to both.
+  assert.equal(
+    Math.round(offensivePower(caster, undefined)),
+    Math.round(offensivePower(brawler, undefined)),
+    'a caster punches as hard as a brawler swings, with its own stat',
+  );
+
+  // And it is the magic that is doing the work for the caster.
+  const weakened = asCombatant(40, 60);
+  assert.ok(
+    offensivePower(caster, undefined) > offensivePower(weakened, undefined),
+    'losing magic should cost the caster its plain attack',
+  );
 });
 
 test('the off-hand offence still counts for something', () => {

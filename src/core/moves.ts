@@ -11,6 +11,12 @@
  * Two kinds of move: `normal`, and `finisher` for the heavy ones. A finisher
  * costs a slot like anything else and is paid for in MP alone - no accuracy
  * roll, no charge turn, no cooldown - so there is one number to read.
+ *
+ * Every move here comes from a body part. There are no moves a monster knows
+ * merely for existing: those made every monster look the same in its first
+ * three slots and buried the reason to care what a fusion came out as. A
+ * monster with no weaponised features has no moves, and fights with the plain
+ * attack and the guard, which cost no slot and are always there.
  */
 
 import type {
@@ -33,7 +39,10 @@ export interface LearnableMove {
   /** Why this monster knows it, in Japanese. Shown next to the move. */
   readonly reason: string;
   readonly category: MoveCategory;
-  /** The locus that taught it, or null for a move every monster knows. */
+  /**
+   * The locus that taught it. Always set: every move comes from a feature.
+   * `null` is kept in the type for callers written against the older shape.
+   */
   readonly source: CategoricalLocus | null;
 }
 
@@ -48,12 +57,15 @@ export interface MoveLoadout {
 }
 
 /** Attack and defend are always available, so these are the extra slots. */
-export const MAX_MOVE_SLOTS = 4;
+export const MAX_MOVE_SLOTS = 3;
 
 /** Power and MP by tier, so the numbers are in one place and comparable. */
 export const MOVE_TIERS = {
-  basic: { power: 100, cost: 2 },
-  signature: { power: 140, cost: 6 },
+  /**
+   * What the plain attack is worth. No move has this tier - it is the baseline
+   * every other power is read against, and it costs no MP and no slot.
+   */
+  basic: { power: 100, cost: 0 },
   feature: { power: 150, cost: 7 },
   finisher: { power: 230, cost: 16 },
   /** A move that does not attack. Power is unused; the cost is the spec's. */
@@ -83,16 +95,6 @@ interface MoveDefinition {
   readonly source: CategoricalLocus;
   readonly value: string;
 }
-
-const ELEMENT_MOVE_NAMES: Readonly<Record<Element, string>> = {
-  neutral: 'インパクト',
-  fire: 'フレイムバースト',
-  water: 'タイドランス',
-  earth: 'ストーンクラッシュ',
-  wind: 'ゲイルエッジ',
-  light: 'レイディアンス',
-  dark: 'アンブラルファング',
-};
 
 /**
  * Every move a body feature can teach.
@@ -229,44 +231,6 @@ function toSkill(definition: MoveDefinition, phenotype: MonsterPhenotype): Skill
   };
 }
 
-/** The two moves every monster has, whatever body it ended up with. */
-function baseMoves(monster: Monster): LearnableMove[] {
-  const element = monster.phenotype.element;
-  // The stats decide, not the tendency genes that fed them: a monster whose
-  // traits pushed its magic past its attack should swing with the magic.
-  const magical = monster.stats.magic >= monster.stats.attack;
-  const scaling = magical ? 'magic' : 'attack';
-
-  return [
-    {
-      skill: {
-        id: `sig-${element}`,
-        name: ELEMENT_MOVE_NAMES[element],
-        power: MOVE_TIERS.signature.power,
-        scaling,
-        element,
-        cost: MOVE_TIERS.signature.cost,
-      },
-      reason: '属性から覚える',
-      category: 'normal',
-      source: null,
-    },
-    {
-      skill: {
-        id: 'strike',
-        name: magical ? 'マナボルト' : 'ヘビーストライク',
-        power: MOVE_TIERS.basic.power,
-        scaling,
-        element: 'neutral',
-        cost: MOVE_TIERS.basic.cost,
-      },
-      reason: 'すべてのモンスターが覚える',
-      category: 'normal',
-      source: null,
-    },
-  ];
-}
-
 /**
  * Everything this monster can learn, from the body it is actually wearing.
  *
@@ -276,7 +240,7 @@ function baseMoves(monster: Monster): LearnableMove[] {
  */
 export function getLearnableMoves(monster: Monster): LearnableMove[] {
   const phenotype = monster.phenotype as unknown as Record<string, unknown>;
-  const moves: LearnableMove[] = baseMoves(monster);
+  const moves: LearnableMove[] = [];
 
   for (const definition of MOVE_CATALOGUE) {
     if (phenotype[definition.source] !== definition.value) continue;
@@ -298,19 +262,34 @@ export function canLearn(monster: Monster, skillId: string): boolean {
 
 /**
  * The loadout a monster starts with, and what it falls back to when none was
- * chosen.
+ * chosen: its heaviest hitter, then the best of what it can actually pay for.
  *
- * Its own element move and its basic attack first - a monster is never left
- * without something cheap to use - then the heaviest features it has.
+ * Only one finisher. A finisher costs 16 MP against a starting 10, so a set of
+ * two of them is a monster standing still for the first two turns - which it
+ * used to get away with, because the shared moves it no longer has included
+ * something cheap. The player is free to pick a second one; the default should
+ * not hand them a set they cannot use.
+ *
+ * A monster with no weaponised features gets an empty set, which is a real
+ * answer and not a failure - it still has the plain attack and the guard.
  */
 export function defaultLoadout(monster: Monster): MoveLoadout {
-  const learnable = getLearnableMoves(monster);
-  const base = learnable.filter((move) => move.source === null);
-  const features = learnable
-    .filter((move) => move.source !== null)
+  const byPower = getLearnableMoves(monster)
+    .slice()
     .sort((a, b) => b.skill.power - a.skill.power);
 
-  const chosen = [...base, ...features].slice(0, MAX_MOVE_SLOTS);
+  const finishers = byPower.filter((move) => move.category === 'finisher');
+  const rest = byPower.filter((move) => move.category !== 'finisher');
+  const chosen = [...finishers.slice(0, 1), ...rest].slice(0, MAX_MOVE_SLOTS);
+
+  // Nothing but finishers to choose from, so take them.
+  if (chosen.length < MAX_MOVE_SLOTS) {
+    for (const move of finishers.slice(1)) {
+      if (chosen.length >= MAX_MOVE_SLOTS) break;
+      chosen.push(move);
+    }
+  }
+
   return { monsterId: monster.id, skillIds: chosen.map((move) => move.skill.id) };
 }
 
@@ -331,9 +310,8 @@ export function validateMoveLoadout(
   monster: Monster,
   skillIds: readonly string[],
 ): LoadoutCheck {
-  if (skillIds.length === 0) {
-    return { ok: false, message: '技を1つ以上セットしてください。' };
-  }
+  // An empty set is allowed: the plain attack and the guard cost no slot, so a
+  // monster that sets nothing can still fight.
   if (skillIds.length > MAX_MOVE_SLOTS) {
     return {
       ok: false,
@@ -369,15 +347,18 @@ export function validateMoveLoadout(
  * parents chose may be nonsense on it; rather than refusing to load the save,
  * keep what still applies.
  *
- * An empty result falls back to the default, because a monster that cannot
- * act is worse than one carrying a set it did not pick. Otherwise the slots
- * are left as they are: three chosen moves means three, not three plus
- * whatever core would have picked.
+ * Asking for nothing gives nothing back - an empty set is a choice the player
+ * is allowed to make. But a set that named moves and kept none of them is a
+ * set that stopped applying, so that falls back to the default: a save written
+ * before the shared moves were dropped should come back with the monster's own
+ * features rather than with four empty slots.
  */
 export function reconcileLoadout(
   monster: Monster,
   skillIds: readonly string[],
 ): MoveLoadout {
+  if (skillIds.length === 0) return { monsterId: monster.id, skillIds: [] };
+
   const learnable = new Set(getLearnableMoves(monster).map((m) => m.skill.id));
   const kept: string[] = [];
   for (const id of skillIds) {
@@ -392,8 +373,10 @@ export function reconcileLoadout(
 /**
  * The skills a monster takes into battle.
  *
- * An unset or unusable loadout falls back to the default rather than leaving
- * a monster unable to act, which is what the battle engine needs from this.
+ * No loadout at all means nobody has chosen yet, so the default stands in. A
+ * loadout that was passed is honoured as given, an empty one included: the
+ * player who cleared their slots meant it, and the plain attack and the guard
+ * are still there.
  */
 export function skillsForLoadout(
   monster: Monster,
@@ -403,9 +386,9 @@ export function skillsForLoadout(
     ? (loadout as readonly string[])
     : (loadout as MoveLoadout | undefined)?.skillIds;
 
-  const chosen = requested?.length
-    ? reconcileLoadout(monster, requested).skillIds
-    : defaultLoadout(monster).skillIds;
+  const chosen = requested === undefined
+    ? defaultLoadout(monster).skillIds
+    : reconcileLoadout(monster, requested).skillIds;
 
   const byId = new Map(getLearnableMoves(monster).map((m) => [m.skill.id, m.skill]));
   return chosen.map((id) => byId.get(id)).filter((skill): skill is Skill => Boolean(skill));

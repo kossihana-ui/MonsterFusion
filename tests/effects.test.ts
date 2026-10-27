@@ -168,7 +168,7 @@ test('every behaviour entry names a move that exists', () => {
 test('a heal restores HP, reports what it actually restored, and never attacks', () => {
   const { aqua } = pair(3);
   const state = createDuelWithLoadouts(aqua, aqua, [
-    { monsterId: aqua.id, skillIds: ['hydro-ram', 'strike'] },
+    { monsterId: aqua.id, skillIds: ['hydro-ram'] },
   ]);
   const hurt = state.combatants[0];
   assert.ok(hurt);
@@ -199,7 +199,7 @@ test('a heal restores HP, reports what it actually restored, and never attacks',
 test('a heal is capped at full health and says so', () => {
   const { aqua } = pair(5);
   const state = createDuelWithLoadouts(aqua, aqua, [
-    { monsterId: aqua.id, skillIds: ['hydro-ram', 'strike'] },
+    { monsterId: aqua.id, skillIds: ['hydro-ram'] },
   ]);
   const full = state.combatants[0];
   assert.ok(full);
@@ -225,7 +225,7 @@ test('a heal is capped at full health and says so', () => {
 test('a move that cannot repeat is refused on the second turn', () => {
   const { aqua } = pair(7);
   let state = createDuelWithLoadouts(aqua, aqua, [
-    { monsterId: aqua.id, skillIds: ['hydro-ram', 'strike'] },
+    { monsterId: aqua.id, skillIds: ['hydro-ram'] },
   ]);
   const hurt = state.combatants[0];
   assert.ok(hurt);
@@ -250,7 +250,7 @@ test('a cleanse strips both sides and reports what went', () => {
   const caster = wearing({ crest: 'crystal' }, 11, 'caster');
   const { ignis } = pair(11);
   const state = createDuelWithLoadouts(caster, ignis, [
-    { monsterId: caster.id, skillIds: ['crystal-ray', 'strike'] },
+    { monsterId: caster.id, skillIds: ['crystal-ray'] },
   ]);
   for (const combatant of state.combatants) {
     combatant.statuses = [
@@ -295,7 +295,7 @@ test('a two-hit move reports each hit', () => {
   const gorer = wearing({ horns: 'twin' }, 17, 'gorer');
   const { moss } = pair(17);
   const state = createDuelWithLoadouts(gorer, moss, [
-    { monsterId: gorer.id, skillIds: ['double-gore', 'strike'] },
+    { monsterId: gorer.id, skillIds: ['double-gore'] },
   ]);
   const next = stepTurn(
     state,
@@ -472,7 +472,7 @@ test('a condition is read before anything is removed', () => {
   );
 
   const state = createDuelWithLoadouts(crusher, moss, [
-    { monsterId: crusher.id, skillIds: ['coil-crush', 'strike'] },
+    { monsterId: crusher.id, skillIds: ['coil-crush'] },
   ]);
   const victim = state.combatants.find((c) => c.side === 1);
   assert.ok(victim);
@@ -501,7 +501,7 @@ test('a move that can miss sometimes does, and says so', () => {
 
   for (let seed = 0; seed < 40; seed++) {
     const state = createDuelWithLoadouts(thruster, moss, [
-      { monsterId: thruster.id, skillIds: ['single-thrust', 'strike'] },
+      { monsterId: thruster.id, skillIds: ['single-thrust'] },
     ]);
     const next = stepTurn(
       state,
@@ -525,7 +525,7 @@ test('an instant death ends it outright, with no damage roll', () => {
   let killed = 0;
   for (let seed = 0; seed < 60; seed++) {
     const state = createDuelWithLoadouts(reaper, moss, [
-      { monsterId: reaper.id, skillIds: ['soul-wing', 'strike'] },
+      { monsterId: reaper.id, skillIds: ['soul-wing'] },
     ]);
     // A finisher costs more than a monster opens with, by design.
     const caster = state.combatants[0];
@@ -552,7 +552,7 @@ test('a reflected hit goes back to whoever threw it', () => {
   );
 
   const state = createDuelWithLoadouts(sweeper, moss, [
-    { monsterId: sweeper.id, skillIds: ['tail-sweep', 'strike'] },
+    { monsterId: sweeper.id, skillIds: ['tail-sweep'] },
   ]);
   const next = stepTurn(
     state,
@@ -575,7 +575,7 @@ test('a buff doubles the hit, and a cleanse takes it away again', () => {
   const { moss } = pair(213);
 
   const state = createDuelWithLoadouts(charger, moss, [
-    { monsterId: charger.id, skillIds: ['ram-charge', 'strike'] },
+    { monsterId: charger.id, skillIds: ['ram-charge'] },
   ]);
   const user = state.combatants[0];
   assert.ok(user);
@@ -624,7 +624,7 @@ test('a monster that can act while bound still can', () => {
   const royal = wearing({ crest: 'crown' }, 215, 'royal');
   const { moss } = pair(215);
   const state = createDuelWithLoadouts(royal, moss, [
-    { monsterId: royal.id, skillIds: ['royal-order', 'strike'] },
+    { monsterId: royal.id, skillIds: ['royal-order'] },
   ]);
   const bound = state.combatants.find((c) => c.monsterId === royal.id);
   assert.ok(bound);
@@ -684,7 +684,7 @@ test('a weak move transfers its own debuffs rather than keeping them', () => {
   );
   const { moss } = pair(219);
   const state = createDuelWithLoadouts(finned, moss, [
-    { monsterId: finned.id, skillIds: ['fin-slash', 'strike'] },
+    { monsterId: finned.id, skillIds: ['fin-slash'] },
   ]);
   const carrier = state.combatants.find((c) => c.monsterId === finned.id);
   assert.ok(carrier);
@@ -832,7 +832,7 @@ test('the seed is spent once, not on every hit of a multi-hit move', () => {
   );
   const { moss } = pair(309);
   const state = createDuelWithLoadouts(planter, moss, [
-    { monsterId: planter.id, skillIds: ['double-gore', 'strike'] },
+    { monsterId: planter.id, skillIds: ['double-gore'] },
   ]);
   const me = state.combatants[0];
   assert.ok(me);

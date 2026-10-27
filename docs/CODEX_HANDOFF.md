@@ -343,7 +343,7 @@ MOVE_LOADOUT_HANDOFF.md への対応は [MOVES.md](MOVES.md) にまとめてあ�
 getLearnableMoves(monster);                    // 習得可能技（日本語の習得理由つき）
 validateMoveLoadout(monster, skillIds);        // 日本語メッセージで検証
 createDuelWithLoadouts(a, b, loadouts, cfg?);  // 技セットを反映した対戦
-MAX_MOVE_SLOTS                                 // 4
+MAX_MOVE_SLOTS                                 // 3
 MOVE_TIERS                                     // 大技の威力230・MP16など
 ```
 
@@ -408,6 +408,21 @@ pendingMoves();             // 未確定の技と、何が足りないか
 - 演出を出す条件は **`boostTotal > 1`** だけです
 - `reason` は日本語でそのまま表示できます。`source` は演出の出し分け用
 - 通常のヒットには `boosts` も `boostTotal` も付きません
+
+## 8.14 部位技のみ・3枠（FEATURE_ONLY_MOVES_HANDOFF への対応）
+
+依頼の6点すべて対応しました。詳細と測定値は [FEATURE_ONLY_MOVES.md](FEATURE_ONLY_MOVES.md) です。
+
+- `strike` と `sig-*` は**削除**。`getLearnableMoves()` は部位由来の技だけを返します
+- `MAX_MOVE_SLOTS = 3`
+- **0〜3枠を許可。** `validateMoveLoadout(monster, [])` は `ok: true` です
+- `reconcileLoadout` / `skillsForLoadout` は共通技で補完しません。**空指定は空のまま**返ります
+- アリーナの敵とボスも同じ規則です（元から `defaultLoadout` 経由なので自動的に従います）
+- 旧セーブ（4技、`strike` 入り）は読み込み時に修復されます。マイグレーション不要、`schemaVersion` は4のままです
+
+**UI側の暫定定数（`src/mocks/game.ts` の3枠）は公開APIに寄せられます。** `MAX_MOVE_SLOTS` を import してください。
+
+**要注意**: スターターの勝率差が 37.5 → 67.9 ポイントに広がりました。core側の不具合ではなく、3枠・部位技のみにした結果として状態異常技の比重が上がったためです。原因は特定済みで、[FEATURE_ONLY_MOVES.md](FEATURE_ONLY_MOVES.md) の6章に測定値があります。**技の数値の調整はユーザーの判断待ちです。**
 
 ## 9. コマンド
 

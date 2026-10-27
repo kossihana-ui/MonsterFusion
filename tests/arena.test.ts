@@ -23,7 +23,7 @@ import {
 } from '../src/core/parts.ts';
 import type { ArenaRun } from '../src/core/arena.ts';
 import { createStarterMonsters } from '../src/core/starters.ts';
-import { defaultLoadout, getLearnableMoves } from '../src/core/moves.ts';
+import { defaultLoadout, getLearnableMoves, MOVE_CATALOGUE } from '../src/core/moves.ts';
 import { computeStats, statTotal, withinCaps } from '../src/core/stats.ts';
 import { expressGenes } from '../src/core/genetics.ts';
 import { createSeededRandom } from '../src/core/random.ts';
@@ -105,6 +105,51 @@ test('the boss comes after five wins, once', () => {
   assert.deepEqual(bossAppearances, [DEFAULT_ARENA_CONFIG.normalWins], 'exactly one boss, last');
   assert.equal(current.phase, 'cleared');
   assert.ok(isArenaOver(current));
+});
+
+test('the arena arms its own monsters from their bodies, like everyone else', () => {
+  const context = testContext(5);
+  const me = player(5);
+
+  for (let index = 0; index <= DEFAULT_ARENA_CONFIG.normalWins; index++) {
+    const encounter = createArenaEnemy('arming', index, me, context);
+    const learnable = getLearnableMoves(encounter.enemy);
+
+    assert.ok(
+      !learnable.some((m) => m.skill.id === 'strike' || m.skill.id.startsWith('sig-')),
+      `the fight ${index} enemy knows a shared move`,
+    );
+    for (const move of learnable) {
+      assert.ok(move.source !== null, `${move.skill.id} came from nowhere`);
+    }
+
+    const set = defaultLoadout(encounter.enemy);
+    assert.ok(set.skillIds.length <= 3, 'an enemy brought more than three moves');
+    for (const id of set.skillIds) {
+      assert.ok(
+        learnable.some((m) => m.skill.id === id),
+        `${id} was set on an enemy that cannot learn it`,
+      );
+    }
+  }
+});
+
+test('the boss is armed by its silhouette, not by being the boss', () => {
+  const context = testContext(9);
+  const me = player(9);
+  const boss = createArenaEnemy('boss-arming', DEFAULT_ARENA_CONFIG.normalWins, me, context);
+  assert.equal(boss.isBoss, true);
+
+  const learnable = getLearnableMoves(boss.enemy);
+  assert.ok(learnable.length > 0, 'the boss should have learnt something from its body');
+  for (const move of learnable) {
+    assert.ok(move.source !== null, `${move.skill.id} came from nowhere`);
+    // Its silhouette is fixed, so what it knows must come from that silhouette.
+    assert.equal(
+      (boss.enemy.phenotype as unknown as Record<string, unknown>)[move.source],
+      (MOVE_CATALOGUE.find((m) => m.id === move.skill.id) as { value: string }).value,
+    );
+  }
 });
 
 test('losing ends the streak', () => {

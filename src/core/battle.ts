@@ -280,7 +280,14 @@ export function offensivePower(
   skill: Skill | undefined,
   config: BattleConfig = DEFAULT_BATTLE_CONFIG,
 ): number {
-  const scaling = skill?.scaling ?? 'attack';
+  // A plain attack is the monster swinging with what it has, so it uses
+  // whichever offence is actually higher. That used to be the job of the
+  // shared `strike`; with moves coming only from body parts, a magic-heavy
+  // monster whose features are all physical would otherwise have nothing that
+  // reads off its magic - and the plain attack is what everyone falls back to
+  // when the MP runs out.
+  const scaling = skill?.scaling
+    ?? (attacker.stats.magic > attacker.stats.attack ? 'magic' : 'attack');
   const primary = attacker.stats[scaling];
   const offhand = attacker.stats[scaling === 'attack' ? 'magic' : 'attack'];
   return Math.max(1, primary + offhand * config.offhandFactor);
@@ -356,6 +363,12 @@ export function createBasicPolicy(
 /**
  * What a hit is worth on average, with no randomness: the figure a policy
  * compares options with, and the one a UI can show next to a skill.
+ *
+ * Reads the move's behaviour, not just its catalogue power, so the number
+ * agrees with what the move actually does: a move that does not attack is
+ * worth nothing, the spec's power override wins over the tier's, every hit of
+ * a multi-hit move counts, and a move that only lands some of the time is
+ * discounted by how often.
  */
 export function expectedDamage(
   attacker: Combatant,
@@ -363,16 +376,26 @@ export function expectedDamage(
   skill?: Skill,
   config: BattleConfig = DEFAULT_BATTLE_CONFIG,
 ): number {
+  const behavior = getMoveBehavior(skill?.id ?? 'attack');
+  // A heal, a cleanse or a guard-up deals no damage, whatever power its tier
+  // happens to carry. Valuing it as an attack is how an AI ends up spending
+  // every turn on テールスイープ.
+  if (skill && !behavior.attacks) return 0;
+
   const power = offensivePower(attacker, skill, config);
-  const defense = Math.max(1, defender.stats.defense * config.defenseScale);
+  const defense = behavior.shattersDefense
+    ? 1
+    : Math.max(1, defender.stats.defense * config.defenseScale);
   const matchup = elementMultiplier(
     skill?.element ?? attacker.element,
     defender.element,
     config,
   );
+  const movePower = behavior.power ?? skill?.power ?? 100;
+
   return (
-    power * ((skill?.power ?? 100) / 100) * (power / (power + defense))
-    * matchup * config.damageScale
+    power * (movePower / 100) * (power / (power + defense))
+    * matchup * config.damageScale * behavior.hits * behavior.successChance
   );
 }
 
