@@ -36,7 +36,15 @@ export type StatusKind =
   /** Attack doubled while it lasts. */
   | 'attackUp'
   /** Spent the turn after a heavy move. */
-  | 'recoil';
+  | 'recoil'
+  /** Stunned by an opponent: loses the next turn. */
+  | 'flinch'
+  /** Throws an incoming attack back at whoever made it. */
+  | 'reflect'
+  /** Acts twice next turn. */
+  | 'doubleStrike'
+  /** Has a chance to avoid an incoming attack outright. */
+  | 'evasion';
 
 /** Which side of the ledger a status sits on, for "strip buffs" and friends. */
 export const STATUS_POLARITY: Readonly<Record<StatusKind, 'buff' | 'debuff'>> = {
@@ -46,6 +54,10 @@ export const STATUS_POLARITY: Readonly<Record<StatusKind, 'buff' | 'debuff'>> = 
   seed: 'debuff',
   attackUp: 'buff',
   recoil: 'debuff',
+  flinch: 'debuff',
+  reflect: 'buff',
+  doubleStrike: 'buff',
+  evasion: 'buff',
 };
 
 export const STATUS_LABELS: Readonly<Record<StatusKind, string>> = {
@@ -55,12 +67,24 @@ export const STATUS_LABELS: Readonly<Record<StatusKind, string>> = {
   seed: '種',
   attackUp: '攻撃力上昇',
   recoil: '硬直',
+  flinch: 'ひるみ',
+  reflect: '反射',
+  doubleStrike: '連続行動',
+  evasion: '回避',
 };
 
 export interface StatusEffect {
   readonly kind: StatusKind;
   /** Turns left, counted down at the end of a turn. */
   readonly turns: number;
+  /**
+   * The turn it was applied on.
+   *
+   * A status applied this turn is not aged at the end of it. Without this a
+   * one-turn buff is gone before its owner can use it, and a recoil clears
+   * before the turn it is supposed to cost.
+   */
+  readonly appliedTurn?: number;
   /** What the status is worth, where it has a size: a multiplier, a tick. */
   readonly magnitude?: number;
   readonly sourceId?: string;
@@ -120,10 +144,22 @@ export function removePolarity(
   );
 }
 
-/** Counts a turn off every status and drops the expired ones. */
-export function tickStatuses(statuses: readonly StatusEffect[]): StatusEffect[] {
+/**
+ * Counts a turn off every status and drops the expired ones.
+ *
+ * A status applied on `turn` is left alone: it was put there this turn and
+ * has not been lived through yet.
+ */
+export function tickStatuses(
+  statuses: readonly StatusEffect[],
+  turn?: number,
+): StatusEffect[] {
   return statuses
-    .map((status) => ({ ...status, turns: status.turns - 1 }))
+    .map((status) =>
+      turn !== undefined && status.appliedTurn === turn
+        ? status
+        : { ...status, turns: status.turns - 1 },
+    )
     .filter((status) => status.turns > 0);
 }
 
@@ -162,6 +198,24 @@ export type BattleEffectEvent =
 
 export type ActionMode = 'damage' | 'support' | 'reflect';
 
+/**
+ * A multiplier that only applies when the fight is in a particular state.
+ *
+ * `seedElement` is the spec's 種 mechanic: a seeded target takes more from a
+ * follow-up of the named element.
+ */
+export interface ConditionalMultiplier {
+  readonly when:
+    | 'targetDefending'
+    | 'targetNotDefending'
+    | 'targetBound'
+    | 'selfPoisoned'
+    | 'targetSeeded';
+  readonly factor: number;
+  /** For `targetSeeded`: which element the follow-up has to be. */
+  readonly element?: string;
+}
+
 export interface StatusApplication {
   readonly status: StatusKind;
   readonly target: 'self' | 'enemy';
@@ -183,8 +237,38 @@ export interface MoveBehavior {
   readonly attacks: boolean;
   /** How many times it connects. */
   readonly hits: number;
-  /** Ignores the target's defence stat and its guard. */
+  /**
+   * 防御貫通: ignores the target's GUARD - the defend action - while still
+   * meeting its defence stat.
+   */
   readonly piercesDefense: boolean;
+  /**
+   * 砕牙: ignores the target's DEFENCE STAT.
+   *
+   * This is what earns a deliberately weak move its slot: it is small, but it
+   * lands whole against anything. Separate from 防御貫通, which is about the
+   * guard, so a move can have either or both.
+   */
+  readonly shattersDefense: boolean;
+  /** Replaces the move's catalogue power, for the spec's power steps. */
+  readonly power?: number;
+  /**
+   * Success chance when the move was also used last turn.
+   *
+   * The reflect move is meant to be read rather than held down: using it two
+   * turns running drops it to this.
+   */
+  readonly repeatSuccessChance?: number;
+  /** Chance the move connects at all. 1 for the ones that always do. */
+  readonly successChance: number;
+  /** Chance the target is felled outright, before damage is considered. */
+  readonly instantDeathChance: number;
+  /** Multipliers that depend on the state of the fight. */
+  readonly conditions: readonly ConditionalMultiplier[];
+  /** MP handed back to the user. */
+  readonly restoreMp: number;
+  /** Moves the user's own debuffs onto the target. */
+  readonly transfersDebuffs: boolean;
   /** Flat HP restored to the target named by `target`. */
   readonly heal: number;
   /** Statuses stripped, by polarity, from whom. */
@@ -211,6 +295,12 @@ const PLAIN: Omit<MoveBehavior, 'skillId'> = {
   attacks: true,
   hits: 1,
   piercesDefense: false,
+  shattersDefense: false,
+  successChance: 1,
+  instantDeathChance: 0,
+  conditions: [],
+  restoreMp: 0,
+  transfersDebuffs: false,
   heal: 0,
   cleanse: [],
   cure: [],
@@ -224,11 +314,6 @@ function behaviour(skillId: string, overrides: Partial<MoveBehavior> = {}): Move
   return { ...PLAIN, skillId, ...overrides };
 }
 
-/** A move still waiting on a number the spec has not given. */
-function pending(skillId: string, note: string): MoveBehavior {
-  return behaviour(skillId, { specified: false, pending: note });
-}
-
 /**
  * How each move behaves.
  *
@@ -236,19 +321,159 @@ function pending(skillId: string, note: string): MoveBehavior {
  * rest are listed as pending with the question that blocks them, so nothing
  * here is a guess and the open list is visible rather than buried.
  */
-export const MOVE_BEHAVIOURS: Readonly<Record<string, MoveBehavior>> = {
-  // --- fully specified -----------------------------------------------------
+const T = DEFAULT_BATTLE_CONFIG.statusTurns;
+const P = DEFAULT_BATTLE_CONFIG.powerSteps;
+const FLINCH = DEFAULT_BATTLE_CONFIG.flinchChance;
 
-  // 「30回復する／連続で使えない」。回復のみなので攻撃しない。
-  'hydro-ram': behaviour('hydro-ram', {
-    actionMode: 'support',
-    target: 'self',
-    attacks: false,
-    heal: 30,
-    noConsecutiveUse: true,
+/** The spec's 「バインド確率60%」. */
+const BIND_CHANCE = 0.6;
+/** 「2ターン継続確率20%」: of the binds that land, one in five holds on. */
+const BIND_EXTEND_CHANCE = 0.2;
+
+/**
+ * How each of the thirty moves behaves.
+ *
+ * The numbers were settled with the player on 2026-10-27. The power steps and
+ * the durations come from config so they stay adjustable; the per-move
+ * chances the spec stated are written here beside the move they belong to.
+ */
+export const MOVE_BEHAVIOURS: Readonly<Record<string, MoveBehavior>> = {
+  // --- 尻尾 --------------------------------------------------------------
+
+  // 使用後1ターン動けない／火力を強く（大技の230のまま）。
+  'final-tail': behaviour('final-tail', {
+    applies: [{ status: 'recoil', target: 'self', turns: 1, chance: 1 }],
   }),
 
-  // 「お互いのデバフ、バフを消す／消費MP2」。解除のみなので攻撃しない。
+  // 2回攻撃／威力は弱い／30%で暗闇。弱い技なので砕牙を持たせている。
+  'twin-lash': behaviour('twin-lash', {
+    hits: 2,
+    power: P.one,
+    shattersDefense: true,
+    applies: [{ status: 'blind', target: 'enemy', turns: T.blind, chance: 0.3 }],
+  }),
+
+  // バインド60%。そのうち20%が2ターン続く。
+  'bind-whip': behaviour('bind-whip', {
+    applies: [
+      { status: 'bind', target: 'enemy', turns: T.bind, chance: BIND_CHANCE },
+      {
+        status: 'bind',
+        target: 'enemy',
+        turns: T.bindExtended,
+        chance: BIND_CHANCE * BIND_EXTEND_CHANCE,
+      },
+    ],
+  }),
+
+  // 相手の技を跳ね返す。連続で打つと成功率が落ちる。
+  'tail-sweep': behaviour('tail-sweep', {
+    actionMode: 'reflect',
+    attacks: false,
+    target: 'self',
+    repeatSuccessChance: 0.2,
+    applies: [{ status: 'reflect', target: 'self', turns: 1, chance: 1 }],
+  }),
+
+  // --- 角 ----------------------------------------------------------------
+
+  // 1ターン攻撃力2倍。攻撃も伴う。
+  'ram-charge': behaviour('ram-charge', {
+    applies: [{ status: 'attackUp', target: 'self', turns: 1, chance: 1, magnitude: 2 }],
+  }),
+
+  'impact-horn': behaviour('impact-horn', { piercesDefense: true }),
+  'double-gore': behaviour('double-gore', { hits: 2 }),
+
+  // 大ダメージ＋ひるみ。
+  'crown-break': behaviour('crown-break', {
+    power: P.heavy,
+    applies: [{ status: 'flinch', target: 'enemy', turns: T.flinch, chance: FLINCH }],
+  }),
+
+  // 防御貫通＋大ダメージ。当たれば強いが6割。
+  'single-thrust': behaviour('single-thrust', {
+    piercesDefense: true,
+    power: P.heavy,
+    successChance: 0.6,
+  }),
+
+  // --- 翼 ----------------------------------------------------------------
+
+  'wing-cutter': behaviour('wing-cutter', {
+    applies: [{ status: 'seed', target: 'enemy', turns: T.seed, chance: 1 }],
+  }),
+
+  'dive-attack': behaviour('dive-attack', {
+    power: P.heavy,
+    applies: [{ status: 'recoil', target: 'self', turns: 1, chance: 1 }],
+  }),
+
+  'crystal-shard': behaviour('crystal-shard', { piercesDefense: true }),
+
+  // 20%で即死、外れれば通常のダメージ。
+  'soul-wing': behaviour('soul-wing', { instantDeathChance: 0.2 }),
+
+  // --- 口 ----------------------------------------------------------------
+
+  'death-bite': behaviour('death-bite', {
+    piercesDefense: true,
+    applies: [
+      { status: 'bind', target: 'enemy', turns: T.bind, chance: BIND_CHANCE },
+      { status: 'poison', target: 'enemy', turns: T.poison, chance: 1 },
+    ],
+  }),
+
+  // 守っている相手に強い。
+  'fang-bite': behaviour('fang-bite', {
+    conditions: [{ when: 'targetDefending', factor: 1.2 }],
+  }),
+
+  'tusk-rush': behaviour('tusk-rush', {
+    piercesDefense: true,
+    cleanse: [{ target: 'enemy', polarity: 'buff' }],
+  }),
+
+  // 読み合いの技: 守りを狙えば強く、外せば弱い。
+  'pierce-beak': behaviour('pierce-beak', {
+    conditions: [
+      { when: 'targetDefending', factor: 1.6 },
+      { when: 'targetNotDefending', factor: 0.5 },
+    ],
+  }),
+
+  // --- 目 ----------------------------------------------------------------
+
+  'magic-eye': behaviour('magic-eye', {
+    applies: [
+      { status: 'bind', target: 'enemy', turns: T.bind, chance: BIND_CHANCE },
+      { status: 'blind', target: 'enemy', turns: T.blind, chance: 1 },
+    ],
+  }),
+
+  // 威力は低いが砕牙で通る。MPも戻る。
+  'multi-gaze': behaviour('multi-gaze', {
+    power: P.one,
+    shattersDefense: true,
+    restoreMp: 10,
+    applies: [{ status: 'evasion', target: 'self', turns: 1, chance: 1, magnitude: 0.1 }],
+  }),
+
+  // 次のターン2回攻撃。
+  'pierce-gaze': behaviour('pierce-gaze', {
+    applies: [{ status: 'doubleStrike', target: 'self', turns: 1, chance: 1 }],
+  }),
+
+  // --- 頭飾り ------------------------------------------------------------
+
+  'pollen-burst': behaviour('pollen-burst', {
+    applies: [
+      { status: 'poison', target: 'enemy', turns: T.poison, chance: 1 },
+      { status: 'seed', target: 'enemy', turns: T.seed, chance: 1 },
+    ],
+  }),
+
+  // 解除のみなので攻撃しない。
   'crystal-ray': behaviour('crystal-ray', {
     actionMode: 'support',
     target: 'both',
@@ -261,55 +486,58 @@ export const MOVE_BEHAVIOURS: Readonly<Record<string, MoveBehavior>> = {
     ],
   }),
 
-  // 「防御を貫通する／相手のバフ解除」。解除を含むが攻撃は消さない。
-  'tusk-rush': behaviour('tusk-rush', {
-    piercesDefense: true,
-    cleanse: [{ target: 'enemy', polarity: 'buff' }],
+  // バインド中でも打てる、数少ない切り返し。
+  'royal-order': behaviour('royal-order', {
+    usableWhileBound: true,
+    applies: [
+      { status: 'attackUp', target: 'self', turns: 1, chance: 1, magnitude: 2 },
+      { status: 'bind', target: 'enemy', turns: T.bind, chance: BIND_CHANCE },
+    ],
+    cure: [{ target: 'self', statuses: ['poison'] }],
   }),
 
-  // 「相手がバインドだと2倍／相手のバインドを解除」。判定してから解除する。
+  // 自分のデバフを相手に移す。威力は低いので砕牙。
+  'fin-slash': behaviour('fin-slash', {
+    power: P.two,
+    shattersDefense: true,
+    transfersDebuffs: true,
+  }),
+
+  'mane-guard': behaviour('mane-guard', { piercesDefense: true }),
+
+  'antenna-pulse': behaviour('antenna-pulse', {
+    applies: [{ status: 'doubleStrike', target: 'self', turns: 1, chance: 1 }],
+  }),
+
+  // --- 体型・大きさ ------------------------------------------------------
+
+  // 毒を抱えたまま殴る技。バインドも無視する。
+  'power-slam': behaviour('power-slam', {
+    power: P.three,
+    usableWhileBound: true,
+    conditions: [{ when: 'selfPoisoned', factor: 2 }],
+  }),
+
+  // 回復のみなので攻撃しない。
+  'hydro-ram': behaviour('hydro-ram', {
+    actionMode: 'support',
+    target: 'self',
+    attacks: false,
+    heal: 30,
+    noConsecutiveUse: true,
+  }),
+
+  // 倍率を判定してから解除する。順序を逆にすると2倍が乗らない。
   'coil-crush': behaviour('coil-crush', {
+    conditions: [{ when: 'targetBound', factor: 2 }],
     cure: [{ target: 'enemy', statuses: ['bind'] }],
   }),
 
-  // 防御貫通のみ。
-  'impact-horn': behaviour('impact-horn', { piercesDefense: true }),
-  'crystal-shard': behaviour('crystal-shard', { piercesDefense: true }),
-  'mane-guard': behaviour('mane-guard', { piercesDefense: true }),
-
-  // 2回攻撃。
-  'double-gore': behaviour('double-gore', { hits: 2 }),
-
-  // 使用後1ターン動けない。
-  'final-tail': behaviour('final-tail', {
+  'giant-press': behaviour('giant-press', {
+    piercesDefense: true,
+    power: P.heavy,
     applies: [{ status: 'recoil', target: 'self', turns: 1, chance: 1 }],
   }),
-
-  // 相手が守っていると1.2倍。守りの上から入る技。
-  'fang-bite': behaviour('fang-bite'),
-
-  // --- pending: the spec leaves a number open ------------------------------
-
-  'twin-lash': pending('twin-lash', '「威力は1か2」が固定値か倍率か段階か未確定。暗闇の継続ターン数も未指定。'),
-  'bind-whip': pending('bind-whip', 'バインドの20%が「2ターン継続する確率」か「全体の発生確率」か未確定。'),
-  'tail-sweep': pending('tail-sweep', '反射と通常攻撃の区別、連続使用時の成功率20%の適用条件が未確定。'),
-  'ram-charge': pending('ram-charge', '攻撃を伴うかが未明示（強化のみに見える技）。'),
-  'crown-break': pending('crown-break', '「大ダメージ」の値と、ひるみの確率・ターン数が未指定。'),
-  'single-thrust': pending('single-thrust', '「大ダメージ」の値が未指定。'),
-  'wing-cutter': pending('wing-cutter', '攻撃を伴うかが未明示。種の継続ターン数も未指定。'),
-  'dive-attack': pending('dive-attack', '「大ダメージ」の値が未指定。'),
-  'soul-wing': pending('soul-wing', '即死20%は明記されているが、外れたときの「ダメージ」が通常威力か別値か未確定。'),
-  'death-bite': pending('death-bite', '毒とバインドの継続ターン数・発生確率が未指定。'),
-  'pierce-beak': pending('pierce-beak', '倍率は明記されているが、守っていない相手への0.5倍と防御貫通の関係が未確定。'),
-  'magic-eye': pending('magic-eye', '攻撃を伴うかが未明示。バインドと暗闇の継続ターン数も未指定。'),
-  'multi-gaze': pending('multi-gaze', '「威力1」の意味と、MP+10が回復か最大値上昇かが未確定。'),
-  'pierce-gaze': pending('pierce-gaze', '攻撃を伴うかが未明示。'),
-  'pollen-burst': pending('pollen-burst', '攻撃を伴うかが未明示。毒の継続ターン数も未指定。'),
-  'royal-order': pending('royal-order', '攻撃を伴うかが未明示。バインドの継続ターン数も未指定。'),
-  'fin-slash': pending('fin-slash', '「+威力2」の意味が未確定。移すデバフが全部か1つかも未指定。'),
-  'antenna-pulse': pending('antenna-pulse', '攻撃を伴うかが未明示。'),
-  'power-slam': pending('power-slam', '「威力3」の意味が未確定。'),
-  'giant-press': pending('giant-press', '「大ダメージ」の値が未指定。'),
 };
 
 /**
@@ -323,11 +551,60 @@ export function getMoveBehavior(skillId: string): MoveBehavior {
   return known;
 }
 
-/** Moves still waiting on a decision, for a status screen or a report. */
+/**
+ * Moves still waiting on a decision.
+ *
+ * Empty since the numbers were settled on 2026-10-27. Kept because the next
+ * batch of moves will arrive the same way: defined but unspecified, and the
+ * UI should be able to see which ones rather than guessing.
+ */
 export function pendingMoves(): { skillId: string; question: string }[] {
   return Object.values(MOVE_BEHAVIOURS)
     .filter((move) => !move.specified)
     .map((move) => ({ skillId: move.skillId, question: move.pending ?? '' }));
+}
+
+/**
+ * The multiplier a move's conditions are worth right now.
+ *
+ * Read before anything is removed: coil-crush doubles against a bound target
+ * and then frees it, so asking afterwards would always find it unbound.
+ */
+export function conditionMultiplier(
+  conditions: readonly ConditionalMultiplier[],
+  context: {
+    readonly targetDefending: boolean;
+    readonly targetStatuses: readonly StatusEffect[];
+    readonly selfStatuses: readonly StatusEffect[];
+    readonly element?: string;
+  },
+): number {
+  let factor = 1;
+  for (const condition of conditions) {
+    switch (condition.when) {
+      case 'targetDefending':
+        if (context.targetDefending) factor *= condition.factor;
+        break;
+      case 'targetNotDefending':
+        if (!context.targetDefending) factor *= condition.factor;
+        break;
+      case 'targetBound':
+        if (hasStatus(context.targetStatuses, 'bind')) factor *= condition.factor;
+        break;
+      case 'selfPoisoned':
+        if (hasStatus(context.selfStatuses, 'poison')) factor *= condition.factor;
+        break;
+      case 'targetSeeded':
+        if (
+          hasStatus(context.targetStatuses, 'seed') &&
+          (!condition.element || condition.element === context.element)
+        ) {
+          factor *= condition.factor;
+        }
+        break;
+    }
+  }
+  return factor;
 }
 
 // ---------------------------------------------------------------------------
@@ -357,6 +634,7 @@ export function blockingStatus(
   statuses: readonly StatusEffect[] | undefined,
 ): StatusKind | null {
   if (hasStatus(statuses, 'recoil')) return 'recoil';
+  if (hasStatus(statuses, 'flinch')) return 'flinch';
   if (hasStatus(statuses, 'bind')) return 'bind';
   return null;
 }

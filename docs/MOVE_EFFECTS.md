@@ -1,141 +1,150 @@
-# 技の効果システムと、未確定事項の確認
+# 技の効果システム（30技すべて実装）
 
-[MOVES_2026_10_27_HANDOFF.md](../../MonsterFusion-UI/src/mocks/proposals/MOVES_2026_10_27_HANDOFF.md) への対応です。
+[MOVES_2026_10_27_HANDOFF.md](../../MonsterFusion-UI/src/mocks/proposals/MOVES_2026_10_27_HANDOFF.md) への対応です。2026-10-27に数値が確定したため、**30技すべてを実装しました**。`pendingMoves()` は空になります。
 
-**30技のうち10技を実装し、20技は仕様待ちとして保留しました。** 「勝手に数値を決めない」という指示に従い、推測した値は1つも入れていません。
+## 1. 確定した数値
 
-## 1. 実装した基盤
+| 項目 | 値 | 出典 |
+|---|---|---|
+| 威力1 / 2 / 3 | 70 / 110 / 160 | 順序のみ指定。通常攻撃100より弱い〜特徴技150相当に設定 |
+| 大ダメージ | 180 | 指定 |
+| 毒 | 3ターン、毎ターン5〜10 | 指定 |
+| 暗闇 | 2ターン、物理を75%回避 | 指定 |
+| バインド | 60%で1ターン、そのうち20%で2ターン | 指定 |
+| 種 | 1ターン | 指定 |
+| ひるみ | 30% / 1ターン | 他の確率表記（30パー）に合わせました |
 
-### 技の挙動契約
+すべて `DEFAULT_BATTLE_CONFIG` にあります（`statusTurns` / `powerSteps` / `flinchChance`）。
+
+## 2. 防御貫通と砕牙
+
+ご指示どおり**2つを別物として分離**しました。
+
+| | 無視するもの | 対象 |
+|---|---|---|
+| **防御貫通** | 「守る」 | `impact-horn` `crystal-shard` `mane-guard` `tusk-rush` `death-bite` `single-thrust` `giant-press` |
+| **砕牙** | 防御力 | `twin-lash` `multi-gaze` `fin-slash` |
+
+砕牙は**低威力の技が枠を取るに値する理由**として付けました。小さいが、相手がどれだけ硬くても同じだけ通ります。
 
 ```ts
-import { getMoveBehavior } from '@core/core/index.ts';
-
-getMoveBehavior('hydro-ram');
-// { skillId: 'hydro-ram', actionMode: 'support', target: 'self',
-//   attacks: false, hits: 1, piercesDefense: false, heal: 30,
-//   cleanse: [], cure: [], applies: [],
-//   noConsecutiveUse: true, usableWhileBound: false, specified: true }
+getMoveBehavior('impact-horn').piercesDefense   // true  （守る無視）
+getMoveBehavior('impact-horn').shattersDefense  // false
+getMoveBehavior('twin-lash').shattersDefense    // true  （防御力無視）
 ```
 
-**`attacks: false` の技はダメージ処理を一切通りません。** 通常ダメージ計算・最低ダメージ保証・会心判定・被弾イベント、どれも発生しません。威力0の攻撃として代用していません。
+**名称について**: 「砕凱」と書かれていましたが、変換候補として自然な **砕牙（さいが）** を採用しました。別の字をお考えでしたら直します。コード上の識別子は `shattersDefense` なので、表示名の変更はUI側だけで済みます。
 
-物理/魔法やpower値から攻撃の有無を推測する箇所はありません。`attacks` だけが根拠です。
+## 3. 攻撃を伴うか
 
-### 効果イベント
+ご指示どおり、7技すべて**攻撃を伴います**。
 
-`BattleLogEntry.effects` に追加しました。**既存フィールド（damage / critical / elementMultiplier / mitigated）はそのまま残しています。**
+`ram-charge` `wing-cutter` `magic-eye` `pierce-gaze` `pollen-burst` `royal-order` `antenna-pulse`
 
-```ts
-type BattleEffectEvent =
-  | { type:'damage'; actorId; targetId; skillId?; amount; critical;
-      elementMultiplier; mitigated; hit; hits; pierced }
-  | { type:'heal';    actorId; targetId; skillId?; amount }   // 実回復量
-  | { type:'cleanse'; actorId; targetId; skillId?; removed: StatusKind[] }
-  | { type:'status';  actorId; targetId; skillId?; status; turns }
-  | { type:'miss';    actorId; targetId; skillId?; reason: 'blind' | 'chance' }
-  | { type:'skip';    actorId; reason: StatusKind }
-  | { type:'blocked'; actorId; skillId?; reason: 'consecutive' | 'mp' }
+**攻撃しないのは2技だけ**です。`hydro-ram`（ウォーターヒール）と `crystal-ray`。この2技はダメージ処理を一切通りません。
+
+## 4. 30技の挙動
+
+```
+final-tail     ファイナルテール   自硬直1T
+twin-lash      ツインラッシュ     砕牙 2回 威力70 敵暗闇30%/2T
+bind-whip      バインドウィップ   敵バインド60%/1T ＋12%で2T
+tail-sweep     テールスイープ     攻撃なし 自反射1T（連続使用で成功20%）
+ram-charge     ラムチャージ      自攻撃力2倍1T
+impact-horn    インパクトホーン   貫通
+double-gore    ダブルゴア       2回
+crown-break    クラウンブレイク   威力180 敵ひるみ30%/1T
+single-thrust  シングルスラスト   貫通 威力180 成功60%
+wing-cutter    ウィングカッター   敵種1T
+dive-attack    ダイブアタック     威力180 自硬直1T
+crystal-shard  クリスタルシャード  貫通
+soul-wing      ソウルウィング     即死20%
+death-bite     デスバイト       貫通 敵バインド60% 敵毒3T
+fang-bite      ファングバイト     守る相手に1.2倍
+tusk-rush      タスクラッシュ     貫通 敵バフ解除
+pierce-beak    ピアースビーク     守る相手に1.6倍 / 守っていなければ0.5倍
+magic-eye      マジックアイ      敵バインド60% 敵暗闇2T
+multi-gaze     マルチゲイズ      砕牙 威力70 MP+10 自回避10%/1T
+pierce-gaze    ペネトレイト      自連続行動1T
+pollen-burst   ポレンバースト     敵毒3T 敵種1T
+crystal-ray    クリスタルレイ     攻撃なし 双方のバフ・デバフ解除
+royal-order    ロイヤルオーダー   拘束中でも使用可 自攻撃力2倍 敵バインド 自毒解除
+fin-slash      フィンスラッシュ   砕牙 威力110 自分のデバフを相手へ移譲
+mane-guard     メインクラッシュ   貫通
+antenna-pulse  アンテナパルス     自連続行動1T
+power-slam     パワースラム      威力160 拘束無視 自分が毒なら2倍
+hydro-ram      ウォーターヒール   攻撃なし 回復30 連続使用不可
+coil-crush     コイルクラッシュ   相手がバインドなら2倍 → その後解除
+giant-press    ジャイアントプレス  貫通 威力180 自硬直1T
 ```
 
-多段ダメージは `hit` / `hits` で1発ずつ返ります。UIは順番に再生してください。**回復値や解除後の状態をUI側で計算しないでください。** coreが返した新しい state を採用してください。
+## 5. 実装で気づいて直した2点
 
-### 状態異常
+**1. このターンに付与した状態が、同じターンの終わりに消えていました。** 1ターンのバフが使われる前に切れ、硬直も本来止めるはずのターンの前に解けていました。`appliedTurn` を持たせ、付与されたターンは減算しないようにしています。
 
-`Combatant.statuses` に乗ります。
+**2. 条件判定は解除の前に行う必要がありました。** `coil-crush` は「バインドなら2倍、そのバインドを解除」なので、順序を逆にすると2倍が永久に乗りません。判定を先に固定しています。
+
+## 6. UI側への影響（要対応）
+
+**`scripts/check-battle-ui.mjs` が落ちるようになりました。** core側の不具合ではありません。
+
+敵（Moss）が `bind-whip` と `pollen-burst` を覚えるようになったため、**1ターン目に守ったあと、20回中12回でプレイヤーが状態異常を受けます**。バインドされていると2ターン目に技を撃てないので、「2ターン目に必ず大技が撃てる」という前提が崩れました。
+
+これは**新しい仕組みが働いている証拠**です。チェック側を、
+
+- 敵を `createScriptedPolicy([{ kind: 'defend' }])` に固定する、または
+- バインドされなかったシードを使う
+
+のどちらかにしてください。
+
+## 7. 新しい状態異常
 
 | 種別 | 内容 | 区分 |
 |---|---|---|
 | `bind` | 行動不能 | デバフ |
-| `blind` | 物理攻撃が75%外れる | デバフ |
-| `poison` | 毎ターン終了時に5〜10ダメージ | デバフ |
+| `blind` | 物理を75%回避される | デバフ |
+| `poison` | 毎ターン5〜10 | デバフ |
 | `seed` | 種 | デバフ |
+| `flinch` | ひるみ（1ターン行動不能） | デバフ |
 | `attackUp` | 攻撃力2倍 | バフ |
-| `recoil` | 使用後の硬直 | デバフ |
+| `recoil` | 硬直 | デバフ |
+| `reflect` | 攻撃を反射 | バフ |
+| `doubleStrike` | 次ターン2回行動 | バフ |
+| `evasion` | 一定確率で回避 | バフ |
 
-日本語ラベルは `STATUS_LABELS`、バフ/デバフの別は `STATUS_POLARITY` です。「バフだけ解除」はこの区分で動きます。
+`STATUS_LABELS` に日本語名があります。「バフだけ解除」は `STATUS_POLARITY` で動きます。
 
-同じ状態の重ねがけは**長いほうの残りターン数が残ります**（加算しません）。
+## 8. イベント
 
-## 2. 実装した技（10件）
+`BattleLogEntry.effects` に `damage / heal / cleanse / status / miss / skip / blocked` が順番に入ります。**既存フィールドはそのまま**です。
 
-| 技 | 内容 |
-|---|---|
-| `hydro-ram`（ウォーターヒール） | **攻撃しない。** 自分を30回復、連続使用不可。実回復量をイベントで返す |
-| `crystal-ray` | **攻撃しない。** 双方のバフ・デバフを解除。MP2 |
-| `tusk-rush` | 防御貫通＋相手のバフ解除。**攻撃する** |
-| `coil-crush` | 相手のバインドを解除（倍率判定→解除の順） |
-| `impact-horn` | 防御貫通 |
-| `crystal-shard` | 防御貫通 |
-| `mane-guard` | 防御貫通 |
-| `double-gore` | 2回攻撃 |
-| `final-tail` | 使用後1ターン硬直 |
-| `fang-bite` | （守り判定の基盤のみ。倍率1.2は未適用） |
+- 多段攻撃は `hit` / `hits` で1発ずつ
+- `miss` の `reason` は `'blind'`（暗闇）か `'chance'`（成功率・回避）
+- 反射は「相手が自分を攻撃した」damage イベントとして返ります
+- 即死は `critical: true` の1発として返ります
 
-**防御貫通は、防御力だけでなく「守る」の軽減も無視します。** どちらか片方だけ無視する仕様であれば教えてください。
+## 9. 残っている仕様の穴
 
-## 3. 未確定（20件）
+**種（seed）の効果が未実装です。** 仕様書には「次のターンに水で攻撃したらバインド、火で攻撃すると1.5倍」とありますが、これは**種を付けた側ではなく、次に攻撃する側の属性**で決まる書き方になっています。
 
-`pendingMoves()` で一覧が取れます。これらは**現在の通常攻撃のまま**動作し、`specified: false` が返ります。UIで「調整中」と表示できます。
+- 水で攻撃＝誰が？ 種を付けた本人でしょうか、相手でしょうか
+- 1.5倍は技の威力にかかりますか、最終ダメージにかかりますか
 
-### A. 「威力1・2・3」の意味（4技）
+付与と解除は動いていますが、**効果だけ保留**しています。条件倍率の仕組み（`targetSeeded`）は実装済みなので、決まれば1行で繋がります。
 
-`twin-lash` `multi-gaze` `fin-slash` `power-slam`
+## 10. 検証済み
 
-固定ダメージ / 倍率 / 威力段階のどれでしょうか。
+257件のテストが通っています（効果関連32件）。
 
-**提案**: 現在の技の威力は 基本100・属性140・特徴150・大技230 です。「威力1〜3」がこの段階を指すなら、たとえば 1=60 / 2=100 / 3=150 のような対応表を決めていただければ実装します。
-
-### B. 「大ダメージ」の値（4技）
-
-`crown-break` `single-thrust` `dive-attack` `giant-press`
-
-**提案**: 大技（230）と同等、または 180 程度。どれも反動や成功率の制約付きなので、230でも成立すると思います。
-
-### C. 継続ターン数（5技）
-
-`death-bite`（毒・バインド） `magic-eye`（バインド・暗闇） `twin-lash`（暗闇） `pollen-burst`（毒） `wing-cutter`（種）
-
-**提案**: 毒3ターン / 暗闇2ターン / バインド1〜2ターン（仕様書の記述どおり） / 種1ターン。
-
-### D. 確率の解釈（2技）
-
-- `crown-break`: ひるみの確率が未指定
-- `bind-whip`: 「バインド確率60%、2ターン継続確率20%」の20%は、**60%でバインドした中の20%**ですか、**全体の20%**ですか
-
-**提案**: 前者（バインド成功後に20%で2ターン）。文面の並びから自然だと思います。
-
-### E. 攻撃を伴うか（7技）
-
-`ram-charge` `wing-cutter` `magic-eye` `pierce-gaze` `pollen-burst` `royal-order` `antenna-pulse`
-
-強化・状態付与だけに見えますが、**仕様書に攻撃の記述がありません。** 推測しないという方針なので保留しています。
-
-**提案**: `ram-charge`（自分を強化）と `pierce-gaze`（MP0、次ターン2回攻撃）と `antenna-pulse`（次ターン2回行動）は攻撃なし、`wing-cutter` `magic-eye` `pollen-burst` `royal-order` は攻撃ありが自然に思えますが、ご判断ください。
-
-### F. その他（2技）
-
-- `tail-sweep`: 反射ダメージと通常攻撃の区別。「連続で打つと成功率20%」は2回目以降が20%という意味でしょうか
-- `soul-wing`: 即死20%は明記。外れたときの「ダメージ」は通常威力でよいですか
-- `pierce-beak`: 守っていない相手に0.5倍。これは防御貫通と併用しない前提でよいですか
-
-## 4. UI側へ
-
-- **既存のAPIは変わっていません。** `stepTurn` / `advanceArenaTurn` の引数も戻り値の型も同じで、`effects` が増えただけです
-- 回復・解除・状態異常の計算はUIで行わないでください。`effects` を再生し、返ってきた state を採用してください
-- `getMoveBehavior(skillId).specified` が `false` の技は未実装です。「攻撃する技」として扱ってください（現在そう動きます）
-- 技の編集室の `A 攻撃の扱い` は、確定後に `MOVE_BEHAVIOURS` へ反映します
-
-## 5. 検証済み
-
-- 回復のみの技がダメージイベントを1つも出さないこと
-- 回復が最大HPで頭打ちになり、**実回復量**が返ること
-- 連続使用不可が2ターン目に拒否されること
-- 解除が双方に効き、何を消したかを返すこと
-- 防御貫通が防御力と守るの両方を無視すること
-- 2回攻撃が1発ずつイベントを返し、既存の合計フィールドとも一致すること
-- バインド中は行動せず、理由がログに出ること
-- 毒がターン終了時に5〜10入り、残りターンが減ること
-- 入力した state が変更されないこと
-
-243件のテストが通っています（効果関連18件）。
+- 防御貫通が「守る」だけを無視し、防御力は効くこと
+- 砕牙が防御力だけを無視し、「守る」は効くこと
+- 低威力技に砕牙が付いていること
+- 威力段階が順序どおりであること
+- 条件判定が解除より先に行われること
+- 成功率60%の技が外れることも当たることもあること
+- 即死が発動することも、毎回ではないこと
+- 反射が攻撃者に跳ね返ること
+- バフが2倍になり、付与ターンに消えないこと
+- 拘束中でも使える技が使えること
+- デバフ移譲で自分から消えて相手に乗ること
+- 回復のみ・解除のみの技がダメージイベントを出さないこと

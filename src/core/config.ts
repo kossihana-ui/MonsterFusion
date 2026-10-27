@@ -368,6 +368,36 @@ export interface BattleConfig {
   readonly blindEvasion: number;
   /** Damage a poisoned monster loses each turn, inclusive range. */
   readonly poisonDamage: readonly [number, number];
+  /**
+   * How long each status lasts when a move applies it, in turns.
+   *
+   * Settled with the player on 2026-10-27: poison 3, blind 2, bind 1 (with a
+   * one-in-five chance of a second), seed 1.
+   */
+  readonly statusTurns: {
+    readonly poison: number;
+    readonly blind: number;
+    readonly bind: number;
+    readonly bindExtended: number;
+    readonly seed: number;
+    readonly flinch: number;
+  };
+  /**
+   * The power steps behind the spec's 「威力1・2・3」.
+   *
+   * The player picked the ordering rather than the numbers, so these are set
+   * to read clearly against the ordinary moves: a step-1 move is visibly
+   * weaker than a basic attack (100), a step-3 move is around a feature move
+   * (150). 「大ダメージ」 is a step of its own at 180.
+   */
+  readonly powerSteps: {
+    readonly one: number;
+    readonly two: number;
+    readonly three: number;
+    readonly heavy: number;
+  };
+  /** Chance a move that can stun the target does so. */
+  readonly flinchChance: number;
   /** element -> element -> damage multiplier. Missing pairs are 1. */
   readonly elementChart: Partial<Record<Element, Partial<Record<Element, number>>>>;
 }
@@ -394,6 +424,9 @@ export const DEFAULT_BATTLE_CONFIG: BattleConfig = {
   // 1.25 and 0.8 still read clearly in play and still decide close fights.
   blindEvasion: 0.75,
   poisonDamage: [5, 10],
+  statusTurns: { poison: 3, blind: 2, bind: 1, bindExtended: 2, seed: 1, flinch: 1 },
+  powerSteps: { one: 70, two: 110, three: 160, heavy: 180 },
+  flinchChance: 0.3,
   elementChart: {
     fire: { water: 0.8, wind: 1.25, earth: 1.0 },
     water: { fire: 1.25, earth: 1.25, wind: 0.8 },

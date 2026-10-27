@@ -27,8 +27,13 @@ import type { BattleEffectEvent, MoveBehavior, StatusEffect, StatusKind } from '
 import {
   applyStatus,
   blindMisses,
+  statusOf,
   blockingStatus,
+  conditionMultiplier,
   getMoveBehavior,
+  hasStatus,
+  removePolarity as stripPolarity,
+  STATUS_POLARITY,
   offenceMultiplier,
   removePolarity,
   removeStatuses,
@@ -205,16 +210,26 @@ export interface DamageResult {
 export function computeDamage(
   attacker: Combatant,
   defender: Combatant,
-  options: { skill?: Skill; pierce?: boolean } = {},
+  options: {
+    skill?: Skill;
+    /** 防御貫通: ignore the guard. The defence stat still applies. */
+    pierce?: boolean;
+    /** 砕牙: ignore the defence stat. The guard still applies. */
+    shatter?: boolean;
+    /** The move's own power, when it overrides the catalogue's. */
+    power?: number;
+    /** Conditional multiplier, already resolved by the caller. */
+    factor?: number;
+  } = {},
   rng: Random,
   config: BattleConfig = DEFAULT_BATTLE_CONFIG,
 ): DamageResult {
   const skill = options.skill;
   // A buff multiplies the offence before anything else sees it.
   const power = offensivePower(attacker, skill, config) * offenceMultiplier(attacker.statuses);
-  const skillFactor = (skill?.power ?? 100) / 100;
-  // Piercing ignores the defence stat; it also ignores the guard below.
-  const defense = options.pierce
+  const skillFactor = (options.power ?? skill?.power ?? 100) / 100;
+  // 砕牙 ignores the defence stat. 防御貫通 is about the guard, below.
+  const defense = options.shatter
     ? 1
     : Math.max(1, defender.stats.defense * config.defenseScale);
 
@@ -224,7 +239,8 @@ export function computeDamage(
   // monster is strong without being unanswerable. damageScale then sets how
   // many hits a fight takes, which is the pacing dial.
   let damage =
-    power * skillFactor * (power / (power + defense)) * elementMultiplier * config.damageScale;
+    power * skillFactor * (power / (power + defense)) * elementMultiplier
+    * config.damageScale * (options.factor ?? 1);
 
   const speedEdge = Math.max(0, attacker.stats.speed - defender.stats.speed);
   const critChance = Math.min(
@@ -631,12 +647,71 @@ export function stepTurn(
     const logSkillId = skill?.id;
 
     // --- damage -----------------------------------------------------------
+    //
+    // Conditions are read BEFORE anything is removed: coil-crush doubles
+    // against a bound target and then frees it, so asking afterwards would
+    // always find it unbound.
+    const factor = conditionMultiplier(resolved.conditions, {
+      targetDefending: target.defending,
+      targetStatuses: target.statuses ?? [],
+      selfStatuses: actor.statuses ?? [],
+      ...(skill ? { element: skill.element } : {}),
+    });
+
     let dealt = 0;
     let anyCritical = false;
+    let connected = true;
+
     if (resolved.attacks) {
+      // A move that can miss outright, and one that is weaker the second
+      // turn running.
+      const repeat = resolved.repeatSuccessChance !== undefined
+        && actor.lastSkillId === resolved.skillId;
+      const successChance = repeat
+        ? resolved.repeatSuccessChance ?? resolved.successChance
+        : resolved.successChance;
+      if (successChance < 1 && !chance(rng, successChance)) {
+        connected = false;
+        effects.push({
+          type: 'miss',
+          actorId: actor.id,
+          targetId: target.id,
+          ...(logSkillId ? { skillId: logSkillId } : {}),
+          reason: 'chance',
+        });
+      }
+    }
+
+    if (resolved.attacks && connected && resolved.instantDeathChance > 0
+        && chance(rng, resolved.instantDeathChance)) {
+      // Felled outright: no damage roll, no guard, no element.
+      const lost = target.hp;
+      target.hp = 0;
+      dealt = lost;
+      effects.push({
+        type: 'damage',
+        actorId: actor.id,
+        targetId: target.id,
+        ...(logSkillId ? { skillId: logSkillId } : {}),
+        amount: lost,
+        critical: true,
+        elementMultiplier: 1,
+        mitigated: 0,
+        hit: 1,
+        hits: 1,
+        pierced: true,
+      });
+      connected = false;
+    }
+
+    if (resolved.attacks && connected) {
       const physical = (skill?.scaling ?? 'attack') === 'attack';
-      for (let hit = 1; hit <= Math.max(1, resolved.hits); hit++) {
+      const repeats = hasStatus(actor.statuses, 'doubleStrike') ? 2 : 1;
+      const swings = Math.max(1, resolved.hits) * repeats;
+
+      for (let hit = 1; hit <= swings; hit++) {
         if (target.hp <= 0) break;
+
         if (blindMisses(actor.statuses, physical, rng.next(), config)) {
           effects.push({
             type: 'miss',
@@ -647,13 +722,52 @@ export function stepTurn(
           });
           continue;
         }
+
+        const evasion = statusOf(target.statuses, 'evasion');
+        if (evasion && chance(rng, evasion.magnitude ?? 0)) {
+          effects.push({
+            type: 'miss',
+            actorId: actor.id,
+            targetId: target.id,
+            ...(logSkillId ? { skillId: logSkillId } : {}),
+            reason: 'chance',
+          });
+          continue;
+        }
+
         const result = computeDamage(
           actor,
           target,
-          { ...(skill ? { skill } : {}), ...(resolved.piercesDefense ? { pierce: true } : {}) },
+          {
+            ...(skill ? { skill } : {}),
+            ...(resolved.piercesDefense ? { pierce: true } : {}),
+            ...(resolved.shattersDefense ? { shatter: true } : {}),
+            ...(resolved.power !== undefined ? { power: resolved.power } : {}),
+            ...(factor !== 1 ? { factor } : {}),
+          },
           rng,
           config,
         );
+
+        // A guard that reflects throws the hit back instead of taking it.
+        if (hasStatus(target.statuses, 'reflect')) {
+          actor.hp = clamp(actor.hp - result.damage, 0, actor.maxHp);
+          effects.push({
+            type: 'damage',
+            actorId: target.id,
+            targetId: actor.id,
+            ...(logSkillId ? { skillId: logSkillId } : {}),
+            amount: result.damage,
+            critical: result.critical,
+            elementMultiplier: result.elementMultiplier,
+            mitigated: 0,
+            hit,
+            hits: swings,
+            pierced: true,
+          });
+          continue;
+        }
+
         target.hp = clamp(target.hp - result.damage, 0, target.maxHp);
         dealt += result.damage;
         anyCritical = anyCritical || result.critical;
@@ -667,8 +781,8 @@ export function stepTurn(
           elementMultiplier: result.elementMultiplier,
           mitigated: result.mitigated,
           hit,
-          hits: Math.max(1, resolved.hits),
-          pierced: resolved.piercesDefense,
+          hits: swings,
+          pierced: resolved.piercesDefense || resolved.shattersDefense,
         });
       }
     }
@@ -713,6 +827,51 @@ export function stepTurn(
       });
     }
 
+    // --- MP ---------------------------------------------------------------
+    if (resolved.restoreMp > 0) {
+      actor.mp = Math.min(99, actor.mp + resolved.restoreMp);
+      effects.push({
+        type: 'heal',
+        actorId: actor.id,
+        targetId: actor.id,
+        ...(logSkillId ? { skillId: logSkillId } : {}),
+        amount: 0,
+      });
+    }
+
+    // --- debuff transfer ----------------------------------------------------
+    if (resolved.transfersDebuffs) {
+      const mine = (actor.statuses ?? []).filter(
+        (status) => STATUS_POLARITY[status.kind] === 'debuff',
+      );
+      const stripped = stripPolarity(actor.statuses ?? [], 'debuff');
+      actor.statuses = stripped.statuses;
+      for (const status of mine) {
+        target.statuses = applyStatus(target.statuses ?? [], {
+          ...status,
+          appliedTurn: turn,
+          sourceId: actor.id,
+        });
+        effects.push({
+          type: 'status',
+          actorId: actor.id,
+          targetId: target.id,
+          ...(logSkillId ? { skillId: logSkillId } : {}),
+          status: status.kind,
+          turns: status.turns,
+        });
+      }
+      if (stripped.removed.length > 0) {
+        effects.push({
+          type: 'cleanse',
+          actorId: actor.id,
+          targetId: actor.id,
+          ...(logSkillId ? { skillId: logSkillId } : {}),
+          removed: stripped.removed,
+        });
+      }
+    }
+
     // --- statuses ---------------------------------------------------------
     for (const application of resolved.applies) {
       if (application.chance < 1 && rng.next() >= application.chance) continue;
@@ -721,6 +880,7 @@ export function stepTurn(
         kind: application.status,
         turns: application.turns,
         ...(application.magnitude !== undefined ? { magnitude: application.magnitude } : {}),
+        appliedTurn: turn,
         sourceId: actor.id,
       });
       effects.push({
@@ -731,6 +891,11 @@ export function stepTurn(
         status: application.status,
         turns: application.turns,
       });
+    }
+
+    // The extra action is spent by the turn that took it.
+    if (hasStatus(actor.statuses, 'doubleStrike') && resolved.attacks) {
+      actor.statuses = removeStatuses(actor.statuses ?? [], ['doubleStrike']).statuses;
     }
 
     actor.lastSkillId = skill?.id ?? 'attack';
@@ -809,7 +974,7 @@ export function stepTurn(
         });
       }
     }
-    combatant.statuses = tickStatuses(combatant.statuses ?? []);
+    combatant.statuses = tickStatuses(combatant.statuses ?? [], turn);
   }
 
   const outcome = evaluateOutcome(combatants, turn, config);

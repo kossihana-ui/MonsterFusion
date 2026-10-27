@@ -382,7 +382,10 @@ getMoveBehavior(skillId);   // { attacks, hits, piercesDefense, heal, cleanse, a
 pendingMoves();             // 未確定の技と、何が足りないか
 ```
 
+- **30技すべて実装済み**（2026-10-27に数値確定）。`pendingMoves()` は空です
 - **`attacks: false` の技はダメージ処理を一切通りません。** 威力0の攻撃で代用していません
+- **防御貫通（守る無視）と砕牙（防御力無視）は別物**です。`piercesDefense` / `shattersDefense`
+- **`scripts/check-battle-ui.mjs` の更新が必要です。** 敵がバインドを使うようになり「2ターン目に必ず技が撃てる」前提が崩れました
 - `BattleLogEntry.effects` に `damage / heal / cleanse / status / miss / skip / blocked` が順番に入ります。**既存フィールドはそのまま残しています**
 - 回復値・解除後の状態をUIで計算しないでください。返ってきた state を採用してください
 - `specified: false` の技は現在の通常攻撃のまま動きます。UIで「調整中」と出せます
