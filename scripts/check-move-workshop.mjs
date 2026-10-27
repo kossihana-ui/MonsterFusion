@@ -24,5 +24,14 @@ try {
   const stale={[row.id]:{base:{...row.base,name:'古い名前'},value:{...row.base,name:'新しい名前'}}};
   assert.equal(m.proposal(stale).moves[0].base.name,'古い名前');
   assert.equal(m.proposal(stale).moves[0].current.name,row.base.name);
+  const legacy=JSON.parse(JSON.stringify({version:1,drafts}));
+  delete legacy.drafts[row.id].base.attackMode;delete legacy.drafts[row.id].value.attackMode;
+  const migrated=m.parseDrafts(JSON.stringify(legacy));
+  assert.equal(migrated[row.id].value.name,'テストの尾');
+  assert.equal(migrated[row.id].value.attackMode,'unchanged');
+  const support={[row.id]:{base:{...row.base},value:{...row.base,attackMode:'none'}}};
+  assert.equal(m.proposal(support).moves[0].changes.attackMode,'none');
+  assert(m.proposalText(support).includes('攻撃しない（回復・補助のみ）'));
+  assert.throws(()=>m.parseDrafts(JSON.stringify({version:1,drafts:{[row.id]:{base:row.base,value:{...row.base,attackMode:'invalid'}}}})));
   console.log(`${m.rows.length} core moves: draft persistence, changed-only export, JSON roundtrip, stale baseline, invalid data and core immutability passed.`);
 } finally {await server.close();}

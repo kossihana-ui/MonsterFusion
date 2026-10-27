@@ -1,0 +1,910 @@
+{
+  "schema": "monsterfusion.move-proposal",
+  "version": 1,
+  "mode": "proposal-only",
+  "legend": {
+    "name": "N 技名",
+    "element": "E 属性",
+    "kind": "K 物理／魔法",
+    "category": "C 通常／大技",
+    "traits": "T 特性の希望",
+    "sound": "S 効果音ID",
+    "soundRequest": "R 音の希望",
+    "note": "M 補足"
+  },
+  "moves": [
+    {
+      "id": "final-tail",
+      "part": "棘の尻尾",
+      "source": "tail",
+      "base": {
+        "name": "ファイナルテール",
+        "element": "self",
+        "kind": "physical",
+        "category": "finisher",
+        "traits": "",
+        "sound": "final-tail",
+        "soundRequest": "",
+        "note": ""
+      },
+      "current": {
+        "name": "ファイナルテール",
+        "element": "self",
+        "kind": "physical",
+        "category": "finisher",
+        "traits": "",
+        "sound": "final-tail",
+        "soundRequest": "",
+        "note": ""
+      },
+      "changes": {
+        "traits": "使用後1ターン動けない\n火力をめちゃ強く",
+        "soundRequest": "ゴゴゴゴゴゴゴ、バァァン！と轟音\n"
+      }
+    },
+    {
+      "id": "twin-lash",
+      "part": "双尾",
+      "source": "tail",
+      "base": {
+        "name": "ツインラッシュ",
+        "element": "self",
+        "kind": "physical",
+        "category": "normal",
+        "traits": "",
+        "sound": "twin-lash",
+        "soundRequest": "",
+        "note": ""
+      },
+      "current": {
+        "name": "ツインラッシュ",
+        "element": "self",
+        "kind": "physical",
+        "category": "normal",
+        "traits": "",
+        "sound": "twin-lash",
+        "soundRequest": "",
+        "note": ""
+      },
+      "changes": {
+        "element": "light",
+        "traits": "2回攻撃する\n威力は１か２で弱いが30パーで相手の目がくらむ\n目をくらませると物理を７５パーで回避",
+        "soundRequest": "シャピーンと2回",
+        "note": "音に合わせて２回光らす"
+      }
+    },
+    {
+      "id": "bind-whip",
+      "part": "蔓の尻尾",
+      "source": "tail",
+      "base": {
+        "name": "バインドウィップ",
+        "element": "earth",
+        "kind": "magical",
+        "category": "normal",
+        "traits": "",
+        "sound": "bind-whip",
+        "soundRequest": "",
+        "note": ""
+      },
+      "current": {
+        "name": "バインドウィップ",
+        "element": "earth",
+        "kind": "magical",
+        "category": "normal",
+        "traits": "",
+        "sound": "bind-whip",
+        "soundRequest": "",
+        "note": ""
+      },
+      "changes": {
+        "traits": "相手をバインド状態（１から２ターン行動不能にすることがある）\nバインド確率は60パー\n2ターン継続確率は20パー",
+        "soundRequest": "バチンとムチの音",
+        "note": "ムチで締め上げる"
+      }
+    },
+    {
+      "id": "tail-sweep",
+      "part": "長い尻尾",
+      "source": "tail",
+      "base": {
+        "name": "テールスイープ",
+        "element": "neutral",
+        "kind": "physical",
+        "category": "normal",
+        "traits": "",
+        "sound": "tail-sweep",
+        "soundRequest": "",
+        "note": ""
+      },
+      "current": {
+        "name": "テールスイープ",
+        "element": "neutral",
+        "kind": "physical",
+        "category": "normal",
+        "traits": "",
+        "sound": "tail-sweep",
+        "soundRequest": "",
+        "note": ""
+      },
+      "changes": {
+        "traits": "相手の技を跳ね返す（こちらはダメージを受けない）\n連続で打つと技の成功確率20パーになる。\n",
+        "soundRequest": "パチンはね返す音",
+        "note": "相手のモーションに割り込み、跳ね返し、相手に攻撃"
+      }
+    },
+    {
+      "id": "ram-charge",
+      "part": "巻き角",
+      "source": "horns",
+      "base": {
+        "name": "ラムチャージ",
+        "element": "self",
+        "kind": "physical",
+        "category": "finisher",
+        "traits": "",
+        "sound": "ram-charge",
+        "soundRequest": "",
+        "note": ""
+      },
+      "current": {
+        "name": "ラムチャージ",
+        "element": "self",
+        "kind": "physical",
+        "category": "finisher",
+        "traits": "",
+        "sound": "ram-charge",
+        "soundRequest": "",
+        "note": ""
+      },
+      "changes": {
+        "traits": "１ターン自分の攻撃力を２倍にする\nMP消費24",
+        "soundRequest": "ウィーンチン！電子レンジの音",
+        "note": "味方モンスター体が赤く、燃え滾るような感じ、１ターン継続\n"
+      }
+    },
+    {
+      "id": "impact-horn",
+      "part": "立ち角",
+      "source": "horns",
+      "base": {
+        "name": "インパクトホーン",
+        "element": "neutral",
+        "kind": "physical",
+        "category": "normal",
+        "traits": "",
+        "sound": "impact-horn",
+        "soundRequest": "",
+        "note": ""
+      },
+      "current": {
+        "name": "インパクトホーン",
+        "element": "neutral",
+        "kind": "physical",
+        "category": "normal",
+        "traits": "",
+        "sound": "impact-horn",
+        "soundRequest": "",
+        "note": ""
+      },
+      "changes": {
+        "traits": "防御を貫通する\n",
+        "soundRequest": "ガジャギンと鈍い貫く音",
+        "note": "相手に角を刺し、殻を割る演出"
+      }
+    },
+    {
+      "id": "double-gore",
+      "part": "双角",
+      "source": "horns",
+      "base": {
+        "name": "ダブルゴア",
+        "element": "self",
+        "kind": "physical",
+        "category": "normal",
+        "traits": "",
+        "sound": "double-gore",
+        "soundRequest": "",
+        "note": ""
+      },
+      "current": {
+        "name": "ダブルゴア",
+        "element": "self",
+        "kind": "physical",
+        "category": "normal",
+        "traits": "",
+        "sound": "double-gore",
+        "soundRequest": "",
+        "note": ""
+      },
+      "changes": {
+        "traits": "2回攻撃する"
+      }
+    },
+    {
+      "id": "crown-break",
+      "part": "冠角",
+      "source": "horns",
+      "base": {
+        "name": "クラウンブレイク",
+        "element": "light",
+        "kind": "magical",
+        "category": "finisher",
+        "traits": "",
+        "sound": "crown-break",
+        "soundRequest": "",
+        "note": ""
+      },
+      "current": {
+        "name": "クラウンブレイク",
+        "element": "light",
+        "kind": "magical",
+        "category": "finisher",
+        "traits": "",
+        "sound": "crown-break",
+        "soundRequest": "",
+        "note": ""
+      },
+      "changes": {
+        "traits": "相手を１ターンひるませることがある\n大ダメージ\n",
+        "soundRequest": "シャピピピピとレーザーが降り注ぐ感じ",
+        "note": "枠をはみ出て画面全体に集中戦が広がり、青白い光"
+      }
+    },
+    {
+      "id": "single-thrust",
+      "part": "一本角",
+      "source": "horns",
+      "base": {
+        "name": "シングルスラスト",
+        "element": "neutral",
+        "kind": "physical",
+        "category": "normal",
+        "traits": "",
+        "sound": "single-thrust",
+        "soundRequest": "",
+        "note": ""
+      },
+      "current": {
+        "name": "シングルスラスト",
+        "element": "neutral",
+        "kind": "physical",
+        "category": "normal",
+        "traits": "",
+        "sound": "single-thrust",
+        "soundRequest": "",
+        "note": ""
+      },
+      "changes": {
+        "traits": "防御を貫通する\n大ダメージ\n成功確率60パー",
+        "soundRequest": "ぐざっと刺さる音",
+        "note": "大きな角で一撃"
+      }
+    },
+    {
+      "id": "wing-cutter",
+      "part": "羽根翼",
+      "source": "wings",
+      "base": {
+        "name": "ウィングカッター",
+        "element": "wind",
+        "kind": "physical",
+        "category": "normal",
+        "traits": "",
+        "sound": "wing-cutter",
+        "soundRequest": "",
+        "note": ""
+      },
+      "current": {
+        "name": "ウィングカッター",
+        "element": "wind",
+        "kind": "physical",
+        "category": "normal",
+        "traits": "",
+        "sound": "wing-cutter",
+        "soundRequest": "",
+        "note": ""
+      },
+      "changes": {
+        "traits": "相手に種を付与\n種とは※次のターンに水で攻撃したら、バインド状態、火で攻撃するとその技の1.5倍の攻撃力",
+        "note": "草のブーメランを投げる"
+      }
+    },
+    {
+      "id": "dive-attack",
+      "part": "皮膜翼",
+      "source": "wings",
+      "base": {
+        "name": "ダイブアタック",
+        "element": "self",
+        "kind": "physical",
+        "category": "normal",
+        "traits": "",
+        "sound": "dive-attack",
+        "soundRequest": "",
+        "note": ""
+      },
+      "current": {
+        "name": "ダイブアタック",
+        "element": "self",
+        "kind": "physical",
+        "category": "normal",
+        "traits": "",
+        "sound": "dive-attack",
+        "soundRequest": "",
+        "note": ""
+      },
+      "changes": {
+        "traits": "使用後1ターン動けない\n大ダメージ",
+        "soundRequest": "ズジャンと揺れる感じ",
+        "note": "画面全体がゆれる "
+      }
+    },
+    {
+      "id": "crystal-shard",
+      "part": "結晶翼",
+      "source": "wings",
+      "base": {
+        "name": "クリスタルシャード",
+        "element": "self",
+        "kind": "magical",
+        "category": "normal",
+        "traits": "",
+        "sound": "crystal-shard",
+        "soundRequest": "",
+        "note": ""
+      },
+      "current": {
+        "name": "クリスタルシャード",
+        "element": "self",
+        "kind": "magical",
+        "category": "normal",
+        "traits": "",
+        "sound": "crystal-shard",
+        "soundRequest": "",
+        "note": ""
+      },
+      "changes": {
+        "traits": "防御を貫通する",
+        "soundRequest": "シャキーン、ズチャンとクリスタルが生成されて落ちる感じ",
+        "note": "クリスタルが生成されて落ちる感じ"
+      }
+    },
+    {
+      "id": "soul-wing",
+      "part": "霊翼",
+      "source": "wings",
+      "base": {
+        "name": "ソウルウィング",
+        "element": "dark",
+        "kind": "magical",
+        "category": "finisher",
+        "traits": "",
+        "sound": "soul-wing",
+        "soundRequest": "",
+        "note": ""
+      },
+      "current": {
+        "name": "ソウルウィング",
+        "element": "dark",
+        "kind": "magical",
+        "category": "finisher",
+        "traits": "",
+        "sound": "soul-wing",
+        "soundRequest": "",
+        "note": ""
+      },
+      "changes": {
+        "traits": "20パーセントで相手を即死\n外れればダメージ"
+      }
+    },
+    {
+      "id": "death-bite",
+      "part": "大顎",
+      "source": "jaw",
+      "base": {
+        "name": "デスバイト",
+        "element": "self",
+        "kind": "physical",
+        "category": "finisher",
+        "traits": "",
+        "sound": "death-bite",
+        "soundRequest": "",
+        "note": ""
+      },
+      "current": {
+        "name": "デスバイト",
+        "element": "self",
+        "kind": "physical",
+        "category": "finisher",
+        "traits": "",
+        "sound": "death-bite",
+        "soundRequest": "",
+        "note": ""
+      },
+      "changes": {
+        "element": "dark",
+        "traits": "防御を貫通する\n相手にバインド\n相手に毒",
+        "soundRequest": "ガチン！と金属が噛みあうおと",
+        "note": "歯でガチっと噛む"
+      }
+    },
+    {
+      "id": "fang-bite",
+      "part": "牙",
+      "source": "jaw",
+      "base": {
+        "name": "ファングバイト",
+        "element": "self",
+        "kind": "physical",
+        "category": "normal",
+        "traits": "",
+        "sound": "fang-bite",
+        "soundRequest": "",
+        "note": ""
+      },
+      "current": {
+        "name": "ファングバイト",
+        "element": "self",
+        "kind": "physical",
+        "category": "normal",
+        "traits": "",
+        "sound": "fang-bite",
+        "soundRequest": "",
+        "note": ""
+      },
+      "changes": {
+        "traits": "相手が守ってると威力1.2倍"
+      }
+    },
+    {
+      "id": "tusk-rush",
+      "part": "曲牙",
+      "source": "jaw",
+      "base": {
+        "name": "タスクラッシュ",
+        "element": "earth",
+        "kind": "physical",
+        "category": "normal",
+        "traits": "",
+        "sound": "tusk-rush",
+        "soundRequest": "",
+        "note": ""
+      },
+      "current": {
+        "name": "タスクラッシュ",
+        "element": "earth",
+        "kind": "physical",
+        "category": "normal",
+        "traits": "",
+        "sound": "tusk-rush",
+        "soundRequest": "",
+        "note": ""
+      },
+      "changes": {
+        "traits": "防御を貫通する\n相手のバフ解除"
+      }
+    },
+    {
+      "id": "pierce-beak",
+      "part": "嘴",
+      "source": "jaw",
+      "base": {
+        "name": "ピアースビーク",
+        "element": "neutral",
+        "kind": "physical",
+        "category": "normal",
+        "traits": "",
+        "sound": "pierce-beak",
+        "soundRequest": "",
+        "note": ""
+      },
+      "current": {
+        "name": "ピアースビーク",
+        "element": "neutral",
+        "kind": "physical",
+        "category": "normal",
+        "traits": "",
+        "sound": "pierce-beak",
+        "soundRequest": "",
+        "note": ""
+      },
+      "changes": {
+        "traits": "相手が防御していると威力1.6倍\n相手が防御していないと威力0.5倍",
+        "soundRequest": "シャキーンと貫く",
+        "note": "ハンマーで殴る"
+      }
+    },
+    {
+      "id": "magic-eye",
+      "part": "光る目",
+      "source": "eyes",
+      "base": {
+        "name": "マジックアイ",
+        "element": "self",
+        "kind": "magical",
+        "category": "normal",
+        "traits": "",
+        "sound": "magic-eye",
+        "soundRequest": "",
+        "note": ""
+      },
+      "current": {
+        "name": "マジックアイ",
+        "element": "self",
+        "kind": "magical",
+        "category": "normal",
+        "traits": "",
+        "sound": "magic-eye",
+        "soundRequest": "",
+        "note": ""
+      },
+      "changes": {
+        "element": "dark",
+        "traits": "相手をバインドする\n次のターン\n相手の目がくらむ\n目をくらませると物理を７５パーで回避",
+        "note": "相手の背後に黒い目"
+      }
+    },
+    {
+      "id": "multi-gaze",
+      "part": "複眼",
+      "source": "eyes",
+      "base": {
+        "name": "マルチゲイズ",
+        "element": "dark",
+        "kind": "magical",
+        "category": "normal",
+        "traits": "",
+        "sound": "multi-gaze",
+        "soundRequest": "",
+        "note": ""
+      },
+      "current": {
+        "name": "マルチゲイズ",
+        "element": "dark",
+        "kind": "magical",
+        "category": "normal",
+        "traits": "",
+        "sound": "multi-gaze",
+        "soundRequest": "",
+        "note": ""
+      },
+      "changes": {
+        "traits": "相手の技を回避することがある10パー\nMP＋10\n威力１",
+        "note": "味方が横に揺れる、残像"
+      }
+    },
+    {
+      "id": "pierce-gaze",
+      "part": "鋭い目",
+      "source": "eyes",
+      "base": {
+        "name": "ペネトレイト",
+        "element": "neutral",
+        "kind": "physical",
+        "category": "normal",
+        "traits": "",
+        "sound": "pierce-gaze",
+        "soundRequest": "",
+        "note": ""
+      },
+      "current": {
+        "name": "ペネトレイト",
+        "element": "neutral",
+        "kind": "physical",
+        "category": "normal",
+        "traits": "",
+        "sound": "pierce-gaze",
+        "soundRequest": "",
+        "note": ""
+      },
+      "changes": {
+        "kind": "magical",
+        "traits": "消費MP０\n次のターン攻撃する場合、次のターン２回攻撃する\n",
+        "soundRequest": "シャキっとにらむ音",
+        "note": "鋭い目を味方の後ろで光らせる"
+      }
+    },
+    {
+      "id": "pollen-burst",
+      "part": "花",
+      "source": "crest",
+      "base": {
+        "name": "ポレンバースト",
+        "element": "earth",
+        "kind": "magical",
+        "category": "normal",
+        "traits": "",
+        "sound": "pollen-burst",
+        "soundRequest": "",
+        "note": ""
+      },
+      "current": {
+        "name": "ポレンバースト",
+        "element": "earth",
+        "kind": "magical",
+        "category": "normal",
+        "traits": "",
+        "sound": "pollen-burst",
+        "soundRequest": "",
+        "note": ""
+      },
+      "changes": {
+        "traits": "相手を毒にする\n毎ターン5～10\n相手に種を付与",
+        "soundRequest": "ボコボコと毒がはじける音",
+        "note": "相手に花びらを散らす"
+      }
+    },
+    {
+      "id": "crystal-ray",
+      "part": "結晶",
+      "source": "crest",
+      "base": {
+        "name": "クリスタルレイ",
+        "element": "light",
+        "kind": "magical",
+        "category": "normal",
+        "traits": "",
+        "sound": "crystal-ray",
+        "soundRequest": "",
+        "note": ""
+      },
+      "current": {
+        "name": "クリスタルレイ",
+        "element": "light",
+        "kind": "magical",
+        "category": "normal",
+        "traits": "",
+        "sound": "crystal-ray",
+        "soundRequest": "",
+        "note": ""
+      },
+      "changes": {
+        "traits": "お互いのデバフ、バフを消す\n消費MP２\n",
+        "note": "呪文の模様が逆再生で消える",
+        "attackMode": "none"
+      }
+    },
+    {
+      "id": "royal-order",
+      "part": "王冠",
+      "source": "crest",
+      "base": {
+        "name": "ロイヤルオーダー",
+        "element": "self",
+        "kind": "magical",
+        "category": "finisher",
+        "traits": "",
+        "sound": "royal-order",
+        "soundRequest": "",
+        "note": ""
+      },
+      "current": {
+        "name": "ロイヤルオーダー",
+        "element": "self",
+        "kind": "magical",
+        "category": "finisher",
+        "traits": "",
+        "sound": "royal-order",
+        "soundRequest": "",
+        "note": ""
+      },
+      "changes": {
+        "traits": "自分の攻撃力を２倍（１ターン）\n相手をバインド\n自分がバインドでも打てる\n毒を解除",
+        "soundRequest": "老人が唱える、チャリンと小銭の音",
+        "note": "ピエロの顔に王冠をかぶせる"
+      }
+    },
+    {
+      "id": "fin-slash",
+      "part": "頭びれ",
+      "source": "crest",
+      "base": {
+        "name": "フィンスラッシュ",
+        "element": "water",
+        "kind": "physical",
+        "category": "normal",
+        "traits": "",
+        "sound": "fin-slash",
+        "soundRequest": "",
+        "note": ""
+      },
+      "current": {
+        "name": "フィンスラッシュ",
+        "element": "water",
+        "kind": "physical",
+        "category": "normal",
+        "traits": "",
+        "sound": "fin-slash",
+        "soundRequest": "",
+        "note": ""
+      },
+      "changes": {
+        "traits": "自分のデバフを相手に付与\n＋威力２",
+        "note": "波で押し流す"
+      }
+    },
+    {
+      "id": "mane-guard",
+      "part": "たてがみ",
+      "source": "crest",
+      "base": {
+        "name": "メインクラッシュ",
+        "element": "self",
+        "kind": "physical",
+        "category": "normal",
+        "traits": "",
+        "sound": "mane-guard",
+        "soundRequest": "",
+        "note": ""
+      },
+      "current": {
+        "name": "メインクラッシュ",
+        "element": "self",
+        "kind": "physical",
+        "category": "normal",
+        "traits": "",
+        "sound": "mane-guard",
+        "soundRequest": "",
+        "note": ""
+      },
+      "changes": {
+        "traits": "防御を貫通する",
+        "soundRequest": "ドゴーンと音とともに鐘の音",
+        "note": "大きな鐘を上から落とす"
+      }
+    },
+    {
+      "id": "antenna-pulse",
+      "part": "触角",
+      "source": "crest",
+      "base": {
+        "name": "アンテナパルス",
+        "element": "self",
+        "kind": "magical",
+        "category": "normal",
+        "traits": "",
+        "sound": "antenna-pulse",
+        "soundRequest": "",
+        "note": ""
+      },
+      "current": {
+        "name": "アンテナパルス",
+        "element": "self",
+        "kind": "magical",
+        "category": "normal",
+        "traits": "",
+        "sound": "antenna-pulse",
+        "soundRequest": "",
+        "note": ""
+      },
+      "changes": {
+        "traits": "次のターンに２回行動する\n",
+        "note": "ぴょんと跳ねる"
+      }
+    },
+    {
+      "id": "power-slam",
+      "part": "筋肉質",
+      "source": "bodyShape",
+      "base": {
+        "name": "パワースラム",
+        "element": "neutral",
+        "kind": "physical",
+        "category": "normal",
+        "traits": "",
+        "sound": "power-slam",
+        "soundRequest": "",
+        "note": ""
+      },
+      "current": {
+        "name": "パワースラム",
+        "element": "neutral",
+        "kind": "physical",
+        "category": "normal",
+        "traits": "",
+        "sound": "power-slam",
+        "soundRequest": "",
+        "note": ""
+      },
+      "changes": {
+        "traits": "自分が毒状態だと、2倍\nバインドを無視して攻撃（威力3）",
+        "soundRequest": "ブンとハイスピードで殴る",
+        "note": "拳で殴る"
+      }
+    },
+    {
+      "id": "hydro-ram",
+      "part": "魚型",
+      "source": "bodyShape",
+      "base": {
+        "name": "ハイドロラム",
+        "element": "water",
+        "kind": "physical",
+        "category": "normal",
+        "traits": "",
+        "sound": "hydro-ram",
+        "soundRequest": "",
+        "note": ""
+      },
+      "current": {
+        "name": "ハイドロラム",
+        "element": "water",
+        "kind": "physical",
+        "category": "normal",
+        "traits": "",
+        "sound": "hydro-ram",
+        "soundRequest": "",
+        "note": ""
+      },
+      "changes": {
+        "name": "ウォーターヒール",
+        "traits": "30回復する\n連続で使えない",
+        "soundRequest": "ぷくぷく泡の音",
+        "note": "回復の文様、みどり",
+        "attackMode": "none"
+      }
+    },
+    {
+      "id": "coil-crush",
+      "part": "蛇型",
+      "source": "bodyShape",
+      "base": {
+        "name": "コイルクラッシュ",
+        "element": "self",
+        "kind": "physical",
+        "category": "normal",
+        "traits": "",
+        "sound": "coil-crush",
+        "soundRequest": "",
+        "note": ""
+      },
+      "current": {
+        "name": "コイルクラッシュ",
+        "element": "self",
+        "kind": "physical",
+        "category": "normal",
+        "traits": "",
+        "sound": "coil-crush",
+        "soundRequest": "",
+        "note": ""
+      },
+      "changes": {
+        "traits": "相手がバインドだと２倍\n相手のバインドを解除",
+        "soundRequest": "バチンとロープがはじける音",
+        "note": "絡みついたロープがはじける"
+      }
+    },
+    {
+      "id": "giant-press",
+      "part": "巨大",
+      "source": "size",
+      "base": {
+        "name": "ジャイアントプレス",
+        "element": "neutral",
+        "kind": "physical",
+        "category": "finisher",
+        "traits": "",
+        "sound": "giant-press",
+        "soundRequest": "",
+        "note": ""
+      },
+      "current": {
+        "name": "ジャイアントプレス",
+        "element": "neutral",
+        "kind": "physical",
+        "category": "finisher",
+        "traits": "",
+        "sound": "giant-press",
+        "soundRequest": "",
+        "note": ""
+      },
+      "changes": {
+        "traits": "防御を貫通する。使用後1ターン動けない\n大ダメージ",
+        "soundRequest": "ドゴーン",
+        "note": "画面全体が揺れ、いろいろなものが落ちてくるランダム、パーツなど"
+      }
+    }
+  ],
+  "clarification": "2026-10-27 ユーザー補足：回復だけ・解除だけの技は攻撃しない。攻撃＋解除が書かれている技は攻撃する。"
+}
