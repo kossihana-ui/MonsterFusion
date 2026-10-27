@@ -1,3 +1,6 @@
+import { useState } from "react";
+import type { LearnableMove } from "@core/core/index.ts";
+import { highlightPart, partNames } from "../shared/moveHelp";
 import type { Monster } from "../shared/ui";
 import { Portrait, Stats } from "../components/MonsterView";
 import { FeatureTags } from "../components/FeatureTags";
@@ -12,6 +15,7 @@ export function Detail({
   monsters: Monster[];
   onBack: () => void;
 }) {
+  const [inspected, setInspected] = useState<LearnableMove | undefined>();
   return (
     <>
       <button className="text-button" onClick={onBack}>
@@ -27,8 +31,9 @@ export function Detail({
         </div>
       </div>
       <div className="detail-grid move-detail-grid">
-        <MoveLoadoutEditor key={monster.id} monsterId={monster.id}>
-          <Portrait monster={monster} large />
+        <MoveLoadoutEditor key={monster.id} monsterId={monster.id} onInspect={setInspected}>
+          <Portrait monster={monster} large highlight={highlightPart(inspected)} />
+          {inspected && <p className="part-focus-label">{inspected.skill.name} ← {inspected.source ? partNames[inspected.source] : "共通技"}</p>}
           <Stats monster={monster} />
         </MoveLoadoutEditor>
         <section className="panel details">

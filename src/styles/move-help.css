@@ -1,0 +1,12 @@
+.move-help {padding:14px;border:1px solid #cfbb70;border-radius:8px;background:#182622;color:#edf4e9;text-align:left;line-height:1.7;}
+.move-help ul {margin:10px 0;padding-left:1.4em;}
+.move-source {color:#ffe69a;border-top:1px solid #596247;padding-top:8px;margin-bottom:0;}
+.move-source small {display:block;color:#c2d4c8;}
+.move-source img {width:64px;height:64px;object-fit:contain;image-rendering:pixelated;float:left;margin-right:12px;background:#101c18;border:2px solid #ffe69a;border-radius:6px;}
+.move-source {display:flow-root;}
+.battle-move-option {display:flex;flex-direction:column;gap:6px;min-width:0;}
+.battle-move-option>button:first-child {flex:1;}
+.battle-move-option.is-inspected,.profile-move.is-inspected,.move-slot.is-inspected {outline:2px solid #ffe69a;outline-offset:3px;box-shadow:0 0 16px #ffe69a38;border-radius:8px;}
+.battle-move-option .move-info {width:auto;min-height:38px;font-size:13px;}
+.part-focus-label {color:#ffe69a;background:#142720;padding:6px 10px;border:1px solid #cfbb70;border-radius:6px;text-align:center;}
+.battle-move-help {margin-top:16px;}

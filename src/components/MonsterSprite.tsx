@@ -15,6 +15,7 @@ export function MonsterSprite({
   id,
   facingRight = false,
   motion,
+  highlight,
   image,
 }: {
   phenotype: MonsterPhenotype;
@@ -22,6 +23,7 @@ export function MonsterSprite({
   id: string;
   facingRight?: boolean;
   motion?: SpriteMotion;
+  highlight?: string;
   image?: string;
 }) {
   const ref = useRef<HTMLCanvasElement>(null);
@@ -70,8 +72,8 @@ export function MonsterSprite({
                 facingRight,
               });
             if (illustration) drawIllustration(ctx, pose, illustration, facingRight,
-              reduced.matches ? null : now - started + phase);
-            else drawPose(ctx, pose, assets, facingRight);
+              reduced.matches ? null : now - started + phase, highlight);
+            else drawPose(ctx, pose, assets, facingRight, highlight);
           }
           frame = requestAnimationFrame(tick);
         };
@@ -85,7 +87,7 @@ export function MonsterSprite({
       cancelAnimationFrame(frame);
       observer.disconnect();
     };
-  }, [phenotype, id, facingRight, animation, sequence, image]);
+  }, [phenotype, id, facingRight, animation, sequence, image, highlight]);
   return (
     <>
       <canvas

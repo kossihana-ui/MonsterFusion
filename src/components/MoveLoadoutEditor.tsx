@@ -1,3 +1,6 @@
+import type { LearnableMove } from "@core/core/index.ts";
+import { MoveHelp } from "./MoveHelp";
+import { moveHelp } from "../shared/moveHelp";
 import { useState } from "react";
 import type { ReactNode } from "react";
 import { defaultLoadout, getLearnableMoves, MAX_MOVE_SLOTS } from "@core/core/index.ts";
@@ -6,11 +9,13 @@ import { skillLabel } from "../shared/battlePresentation";
 import { MoveBadges } from "./MoveBadges";
 import { playUiSound } from "./uiSound";
 
-export function MoveLoadoutEditor({ monsterId, children }: { monsterId: string; children: ReactNode }) {
+export function MoveLoadoutEditor({ monsterId, children, onInspect }: { monsterId: string; children: ReactNode; onInspect?: (move: LearnableMove | undefined) => void }) {
   const monster = getCoreMonster(monsterId);
   const moves = getLearnableMoves(monster);
   const pad = (ids: readonly string[]) => Array.from({ length: MAX_MOVE_SLOTS }, (_, i) => ids[i] ?? "");
   const [slots, setSlots] = useState(() => pad(getMoveLoadout(monsterId).skillIds));
+  const [inspected, setInspected] = useState("");
+  function inspect(id: string) { setInspected(id); onInspect?.(moves.find(m => m.skill.id === id)); }
   const [picked, setPicked] = useState("");
   const [expanded, setExpanded] = useState<string[]>([]);
   const [message, setMessage] = useState("");
@@ -43,7 +48,7 @@ export function MoveLoadoutEditor({ monsterId, children }: { monsterId: string; 
       <div className="move-slot-grid" aria-label="セットする技">
         {slots.map((id, index) => {
           const move = moves.find(m => m.skill.id === id);
-          return <div className="move-slot" data-element={move?.skill.element} key={index}
+          return <div className={`move-slot ${inspected === id && id ? "is-inspected" : ""}`} onMouseEnter={() => inspect(id)} onFocus={() => inspect(id)} data-element={move?.skill.element} key={index}
             onDragOver={e => { e.preventDefault(); e.dataTransfer.dropEffect = "move"; }}
             onDrop={e => { e.preventDefault(); equip(e.dataTransfer.getData("text/plain"), index); }}>
             <button className="slot-target" type="button" aria-label={`技枠${index + 1}：${move ? skillLabel(move.skill) : "空き枠"}`} onClick={() => {
@@ -70,9 +75,10 @@ export function MoveLoadoutEditor({ monsterId, children }: { monsterId: string; 
       <h2>覚えられる技</h2>
       <p className="battle-help">ⓘで説明を開けます。セット済みの技を別の枠に置くと、位置を交換します。</p>
       <div className="profile-moves">
-        {moves.map(({ skill, category, reason }) => {
+        {moves.map(move => {
+          const { skill, category } = move;
           const open = expanded.includes(skill.id);
-          return <div className="profile-move" data-element={skill.element} key={skill.id}>
+          return <div className={`profile-move ${inspected === skill.id ? "is-inspected" : ""}`} onMouseEnter={() => inspect(skill.id)} onFocus={() => inspect(skill.id)} data-element={skill.element} key={skill.id}>
             <div className="move-list-row">
               <button type="button" className="move-pick" draggable aria-pressed={picked === skill.id}
                 onDragStart={e => { e.dataTransfer.setData("text/plain", skill.id); e.dataTransfer.effectAllowed = "move"; setPicked(skill.id); playUiSound(); }}
@@ -80,13 +86,14 @@ export function MoveLoadoutEditor({ monsterId, children }: { monsterId: string; 
                 onClick={() => { setPicked(picked === skill.id ? "" : skill.id); playUiSound(); setMessage("入れたい技枠を押してください。"); }}>
                 <strong>{skillLabel(skill)}</strong>{category === "finisher" && <span className="finisher-badge">大技</span>}
                 <MoveBadges element={skill.element} scaling={skill.scaling} />
+                <span>{moveHelp(skill).summary}</span>
                 <span>MP {skill.cost}{slots.includes(skill.id) ? " · セット済み" : ""}</span>
               </button>
               <button type="button" className="move-info" aria-label={`${skillLabel(skill)}の説明`} aria-expanded={open} aria-controls={`move-info-${skill.id}`} onClick={() => {
-                setExpanded(open ? expanded.filter(id => id !== skill.id) : [...expanded, skill.id]); playUiSound();
+                inspect(skill.id); setExpanded(open ? expanded.filter(id => id !== skill.id) : [...expanded, skill.id]); playUiSound();
               }}>ⓘ</button>
             </div>
-            {open && <div id={`move-info-${skill.id}`} className="move-description"><p>{reason}</p><p>{skill.scaling === "magic" ? "魔法で相手を攻撃します。" : "体の力で相手を攻撃します。"}{category === "finisher" ? "MPをためて放つ、強力な大技です。" : ""}</p></div>}
+            {open && <div id={`move-info-${skill.id}`}><MoveHelp skill={skill} move={move} phenotype={monster.phenotype} /></div>}
           </div>;
         })}
       </div>

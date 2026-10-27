@@ -1,3 +1,5 @@
+import { MoveHelp } from "../components/MoveHelp";
+import { moveHelp, highlightPart, partNames } from "../shared/moveHelp";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { ArenaEntrance } from "../components/ArenaEntrance";
 import { animationDuration, DEFAULT_ARENA_CONFIG, DEFAULT_BATTLE_CONFIG, elementMultiplier, getLearnableMoves } from "@core/core/index.ts";
@@ -47,6 +49,8 @@ function BattleSession({
   const rewardPanel = useRef<HTMLElement>(null);
   const run = state.arenaRun;
   const claimed = !!run?.claimed.includes(run.encounter.index);
+  const [inspectedSkill, setInspectedSkill] = useState<string | null>(null);
+  const [helpSkill, setHelpSkill] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
   const [multiplier, setMultiplier] = useState<MultiplierPresentation | null>(null);
@@ -62,6 +66,10 @@ function BattleSession({
   const player = state.coreState?.combatants.find((c) => c.side === 0);
   const enemy = state.coreState?.combatants.find((c) => c.side === 1);
   const availableMp = Math.min(99, (player?.mp ?? 0) + DEFAULT_BATTLE_CONFIG.mpRegenPerTurn);
+  const learnable = getLearnableMoves(getCoreMonster(state.player.id));
+  const inspectedMove = learnable.find(m => m.skill.id === inspectedSkill);
+  const helpMove = learnable.find(m => m.skill.id === helpSkill);
+  const describedSkill = player?.skills.find(s => s.id === helpSkill);
   const locked = busy || state.status !== "active";
   const finishers = new Set(getLearnableMoves(getCoreMonster(state.player.id)).filter(m => m.category === "finisher").map(m => m.skill.id));
   useEffect(() => () => { active.current?.abort(); stopSound.current(); }, []);
@@ -241,10 +249,12 @@ function BattleSession({
               large
               facingRight={i === 0}
               motion={motions[i]}
+              highlight={i === 0 && !busy ? highlightPart(inspectedMove) : undefined}
             />
             {damageNumber?.target === i && <span key={damageNumber.sequence} className="battle-damage-number" aria-hidden="true">−{damageNumber.amount}</span>}
             </div>
             <h2>{side.monster.name}</h2>
+            {i === 0 && inspectedMove && !busy && <p className="part-focus-label">{skillLabel(inspectedMove.skill)} ← {inspectedMove.source ? partNames[inspectedMove.source] : "共通技"}</p>}
             <p className="battle-resources">
               {side.monster.genes.element}属性
             </p>
@@ -299,13 +309,18 @@ function BattleSession({
             <span>MP回復 +{DEFAULT_BATTLE_CONFIG.defendMpBonus}</span>
           </button>
           {player?.skills.map((skill) => (
+            <div key={skill.id} className={`battle-move-option ${inspectedSkill === skill.id ? "is-inspected" : ""}`} onMouseEnter={() => setInspectedSkill(skill.id)} onFocus={() => setInspectedSkill(skill.id)}>
             <button data-element={skill.element} key={skill.id} disabled={locked || availableMp < skill.cost} onClick={() => act({ kind: "skill", skillId: skill.id })}>
               <strong>{skillLabel(skill)} {finishers.has(skill.id) && <span className="finisher-badge">大技</span>}</strong>
               <MoveBadges element={skill.element} scaling={skill.scaling} />
-              <span>MP {skill.cost} · {enemy ? matchupLabel(elementMultiplier(skill.element, enemy.element)) : ""}{availableMp < skill.cost ? " · MP不足" : ""}</span>
+              <span>{moveHelp(skill).summary}</span>
+              <span>MP {skill.cost} · {moveHelp(skill).attacks && enemy ? matchupLabel(elementMultiplier(skill.element, enemy.element)) : "補助"}{availableMp < skill.cost ? " · MP不足" : ""}</span>
             </button>
+            <button className="move-info" aria-label={`${skillLabel(skill)}の効果を確認`} aria-expanded={helpSkill === skill.id} aria-controls="battle-move-help" onClick={() => { setInspectedSkill(skill.id); setHelpSkill(helpSkill === skill.id ? null : skill.id); }}>ⓘ 効果・使う部位</button>
+            </div>
           ))}
         </div>
+        {describedSkill && <div id="battle-move-help" className="battle-move-help"><MoveHelp skill={describedSkill} move={helpMove} phenotype={getCoreMonster(state.player.id).phenotype} /><button className="text-button" onClick={() => { setHelpSkill(null); setInspectedSkill(null); }}>説明を閉じる</button></div>}
         <p className="battle-help">MPは毎ターン +{DEFAULT_BATTLE_CONFIG.mpRegenPerTurn}。守ると、さらに回復します。</p>
       </section>
       }

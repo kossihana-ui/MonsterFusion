@@ -8,11 +8,13 @@ export function Portrait({
   large = false,
   facingRight = false,
   motion,
+  highlight,
 }: {
   monster: Monster;
   large?: boolean;
   facingRight?: boolean;
   motion?: SpriteMotion;
+  highlight?: string;
 }) {
   return (
     <div className={`portrait ${large ? "large" : ""}`}>
@@ -24,6 +26,7 @@ export function Portrait({
           id={monster.id}
           facingRight={facingRight}
           motion={motion}
+          highlight={highlight}
           image={monster.image || undefined}
         />
       ) : (

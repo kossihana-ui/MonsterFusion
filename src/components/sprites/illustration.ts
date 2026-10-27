@@ -117,6 +117,7 @@ export function drawIllustration(
   ctx: CanvasRenderingContext2D, pose: Pose,
   parts: IllustrationPart[], facingRight: boolean,
   idleTimeMs: number | null = null,
+  highlight?: string,
 ) {
   ctx.clearRect(0, 0, ctx.canvas.width, ctx.canvas.height);
   ctx.imageSmoothingEnabled = false;
@@ -147,6 +148,10 @@ export function drawIllustration(
       ctx.rotate(illustrationIdleAngle(part.parent.kind, idleTimeMs) * Math.PI / 180);
       ctx.translate(-px, -py);
     }
+    // Only highlight actual isolated artwork; never pretend an entire head is an eye.
+    const selected = highlight === part.kind || (highlight === 'tail' && part.kind === 'tail-tip') || (highlight === 'crest' && part.kind === 'dorsal') || (highlight === 'body' && part.kind === 'belly');
+    const canHighlight = parts.some(p => p.kind === highlight || (highlight === 'crest' && p.kind === 'dorsal'));
+    if (canHighlight) { ctx.globalAlpha = selected ? 1 : .45; if (selected) { ctx.shadowColor='#ffe680'; ctx.shadowBlur=8; } }
     const [x, y] = part.anchor;
     ctx.translate(x, y);
     if (independentIdle && idleTimeMs !== null) {

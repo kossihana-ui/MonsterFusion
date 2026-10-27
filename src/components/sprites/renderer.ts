@@ -118,6 +118,7 @@ export function drawPose(
   pose: Pose,
   assets: Map<string, HTMLCanvasElement>,
   facingRight = false,
+  highlight?: string,
 ) {
   ctx.clearRect(0, 0, ctx.canvas.width, ctx.canvas.height);
   ctx.imageSmoothingEnabled = false;
@@ -131,7 +132,9 @@ export function drawPose(
       spec = partManifest[key];
     if (!part || !spec) continue;
     ctx.save();
-    ctx.globalAlpha = t.opacity;
+    const selected = highlight && layer.part.startsWith(`${highlight}/`);
+    ctx.globalAlpha = t.opacity * (highlight && !selected ? .45 : 1);
+    if (selected) { ctx.shadowColor = "#ffe680"; ctx.shadowBlur = 4; }
     ctx.translate(
       (facingRight ? ctx.canvas.width - layer.anchor.x : layer.anchor.x) +
         t.offsetX,
