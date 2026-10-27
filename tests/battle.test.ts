@@ -8,6 +8,7 @@ import {
   createBattle,
   createCombatant,
   createDuel,
+  createDuelWithLoadouts,
   createScriptedPolicy,
   declareActions,
   deriveSkills,
@@ -22,7 +23,7 @@ import {
 import { getMoveBehavior } from '../src/core/effects.ts';
 import { createRootMonster, fuse } from '../src/core/fusion.ts';
 import { createStarterMonsters } from '../src/core/starters.ts';
-import { MAX_MOVE_SLOTS } from '../src/core/moves.ts';
+import { defaultLoadout, MAX_MOVE_SLOTS } from '../src/core/moves.ts';
 import { createSeededRandom } from '../src/core/random.ts';
 import type { BattlePolicy } from '../src/shared/types.ts';
 import { testContext } from './helpers.ts';
@@ -398,6 +399,55 @@ test('speed leans a fight without deciding it', () => {
   const rate = wins / runs;
   assert.ok(rate > 0.5, `a 40 point speed edge won ${(rate * 100).toFixed(0)}%, so speed is worthless`);
   assert.ok(rate < 0.9, `a 40 point speed edge won ${(rate * 100).toFixed(0)}%, so speed is the whole game`);
+});
+
+test('no starter runs away with the match-up table', () => {
+  // This is the test that would have caught マジックアイ. At blindEvasion 0.75
+  // one 7-MP move put Aqua on 84% and Ignis on 12%, and nothing failed. The
+  // bounds are loose on purpose - the three are not meant to be equal, only
+  // playable - but a single move deciding the table breaks them.
+  const starters = createStarterMonsters(testContext(1));
+  const RUNS = 100;
+
+  const overall = new Map<string, { won: number; of: number }>();
+  for (const monster of starters) overall.set(monster.name, { won: 0, of: 0 });
+
+  for (const a of starters) {
+    for (const b of starters) {
+      if (a.id === b.id) continue;
+      let wins = 0;
+      for (let seed = 0; seed < RUNS; seed++) {
+        const rng = createSeededRandom(5000 + seed);
+        const final = runBattle(
+          createDuelWithLoadouts(a, b, [
+            { monsterId: a.id, skillIds: defaultLoadout(a).skillIds },
+            { monsterId: b.id, skillIds: defaultLoadout(b).skillIds },
+          ]),
+          createBasicPolicy(rng),
+          rng,
+        );
+        if (final.outcome.status === 'win' && final.outcome.winningSide === 0) wins++;
+      }
+      const tally = overall.get(a.name);
+      assert.ok(tally);
+      tally.won += wins / RUNS;
+      tally.of += 1;
+    }
+  }
+
+  const rates = [...overall].map(([name, t]) => [name, t.won / t.of] as const);
+  for (const [name, rate] of rates) {
+    assert.ok(rate > 0.15, `${name} wins ${(rate * 100).toFixed(1)}% of its fights`);
+    assert.ok(rate < 0.9, `${name} wins ${(rate * 100).toFixed(1)}% of its fights`);
+  }
+  const values = rates.map(([, rate]) => rate);
+  const spread = Math.max(...values) - Math.min(...values);
+  assert.ok(
+    spread < 0.55,
+    `the starters are ${(spread * 100).toFixed(1)} points apart: ${rates
+      .map(([n, r]) => `${n} ${(r * 100).toFixed(1)}%`)
+      .join(', ')}`,
+  );
 });
 
 test('guarding every turn survives far longer than attacking every turn', () => {

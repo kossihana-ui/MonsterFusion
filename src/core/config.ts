@@ -363,7 +363,12 @@ export interface BattleConfig {
   /**
    * Chance a blinded monster's physical attack misses.
    *
-   * From the move spec: 「目をくらませると物理を75パーで回避」.
+   * The move spec asked for 「目をくらませると物理を75パーで回避」. At 0.75 a
+   * single 7-MP move decided the starter table: blindness is on 96% of an
+   * all-physical opponent's turns whatever its duration is, because it can
+   * always be re-cast before it lapses, so what a blind turn costs is the
+   * only thing that moves. Halved by the player on 2026-10-28, which brings
+   * the starter spread from 63.4 points to 42.0.
    */
   readonly blindEvasion: number;
   /** Damage a poisoned monster loses each turn, inclusive range. */
@@ -435,7 +440,7 @@ export const DEFAULT_BATTLE_CONFIG: BattleConfig = {
   // nearly twice the strength of its counter, which made one starter beat
   // another 98 times in 100. These are deliberately milder than they look -
   // 1.25 and 0.8 still read clearly in play and still decide close fights.
-  blindEvasion: 0.75,
+  blindEvasion: 0.5,
   poisonDamage: [5, 10],
   statusTurns: { poison: 3, blind: 2, bind: 1, bindExtended: 2, seed: 1, flinch: 1 },
   powerSteps: { one: 70, two: 110, three: 160, heavy: 180 },
