@@ -1,3 +1,4 @@
+import { STATUS_LABELS } from "@core/core/index.ts";
 import type { BattleLogEntry, BattleState, Skill } from "@core/core/index.ts";
 
 export function matchupLabel(multiplier: number): string {
@@ -25,6 +26,22 @@ export function battleLogLabel(entry: BattleLogEntry, state: BattleState, names:
   if (entry.kind === "faint") return `${actorName}は倒れた。`;
   if (entry.kind === "defend") return `${actorName}は守りを固めた。${(entry.mpSpent ?? 0) < 0 ? ` MP回復 +${-entry.mpSpent!}（上限99）` : ""}`;
   const skill = actor?.skills.find(s => s.id === entry.skillId);
+  if (entry.effects?.length) {
+    const subject = (id: string) => { const c = state.combatants.find(c => c.id === id); return c ? names[c.monsterId] ?? c.name : 'モンスター'; };
+    const effects = entry.effects.map(e => {
+      switch (e.type) {
+        case 'damage': return `${subject(e.targetId)}に${e.amount}ダメージ。${e.critical ? ' 会心！' : ''}${e.mitigated > 0 ? ' 守りでダメージを軽減。' : ''}`;
+        case 'heal': return `${subject(e.targetId)}のHPが${e.amount}回復。`;
+        case 'cleanse': return `${subject(e.targetId)}の${e.removed.length ? e.removed.map(k => STATUS_LABELS[k]).join('・') : '解除できる効果'}を解除。`;
+        case 'status': return `${subject(e.targetId)}に${STATUS_LABELS[e.status]}。`;
+        case 'miss': return '攻撃は当たらなかった。';
+        case 'skip': return `${STATUS_LABELS[e.reason]}で動けない。`;
+        case 'blocked': return e.reason === 'mp' ? 'MPが足りない。' : '連続では使えない。';
+      }
+    }).join(' ');
+    return `${actorName}${skill ? 'の' + skillLabel(skill) + '！' : '：'} ${effects}` + ((entry.mpSpent ?? 0) > 0 ? ` MP消費 ${entry.mpSpent}` : '');
+  }
+
   return `${actorName}の${entry.kind === "skill" ? skill ? skillLabel(skill) : "技" : "攻撃"}！ ${targetName}に${entry.damage ?? 0}ダメージ。`
     + (entry.critical ? " 会心！" : "")
     + (entry.elementMultiplier !== undefined && entry.elementMultiplier !== 1 ? ` ${matchupLabel(entry.elementMultiplier)}！` : "")

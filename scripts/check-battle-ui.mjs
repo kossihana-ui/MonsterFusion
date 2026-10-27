@@ -39,10 +39,14 @@ try {
   assert.equal(setMoveLoadout(monster.id, [finisher.skill.id, finisher.skill.id]).ok, false);
   assert.deepEqual(getMoveLoadout(monster.id).skillIds, [finisher.skill.id], 'invalid saves preserve selection');
   assert.equal(JSON.stringify(canonical), snapshot);
-  let duel = createBattle(monster, initialMonsters[0]);
-  duel = await gameAdapter.calculateBattleTurn(duel, 'defend');
-  duel = await gameAdapter.calculateBattleTurn(duel, { kind: 'skill', skillId: finisher.skill.id });
-  assert.ok(duel.coreState.log.some(e => e.skillId === finisher.skill.id && e.actorId === duel.coreState.combatants[0].id));
+  // Fix enemy policy so bind/poison cannot invalidate the loadout test.
+  const { stepTurn, createScriptedPolicy, createSeededRandom } = await server.ssrLoadModule('@core/core/index.ts');
+  let duel = createBattle(monster, initialMonsters[0]).coreState;
+  const rng = createSeededRandom(42);
+  const enemy = createScriptedPolicy([{kind:'defend'}]);
+  duel = stepTurn(duel,[createScriptedPolicy([{kind:'defend'}]),enemy],rng);
+  duel = stepTurn(duel,[createScriptedPolicy([{kind:'skill',skillId:finisher.skill.id,targetId:duel.combatants[1].id}]),enemy],rng);
+  assert.ok(duel.log.some(e => e.skillId === finisher.skill.id && e.actorId === duel.combatants[0].id));
   assert.ok(setMoveLoadout(monster.id, saved).ok);
   console.log('Loadout: finisher equipped and used, invalid saves rejected, empty slots preserved, monster unchanged.');
   console.log('Battle UI adapter: both skills, MP cost, defend, invalid skill and immutability passed.');

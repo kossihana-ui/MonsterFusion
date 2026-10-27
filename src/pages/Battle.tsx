@@ -9,6 +9,8 @@ import type { BattleAction, BattleState, GameAdapter, Monster } from "../shared/
 import { createBattle, getCoreMonster, enterArena, resumeArena, receiveArenaReward, continueArena, leaveArena, getPartInventory } from "../mocks/game";
 import { Portrait } from "../components/MonsterView";
 import { BattleEffect } from "../components/BattleEffect";
+import { MultiplierEffect, multiplierPresentation, orchestraHit } from "../components/MultiplierEffect";
+import type { MultiplierPresentation } from "../components/MultiplierEffect";
 import { BattleResult } from "../components/BattleResult";
 import { BattleHpBar } from "../components/BattleHpBar";
 import { battleSound } from "../components/battleSound";
@@ -47,6 +49,10 @@ function BattleSession({
   const claimed = !!run?.claimed.includes(run.encounter.index);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
+  const [multiplier, setMultiplier] = useState<MultiplierPresentation | null>(null);
+  const [damageNumber, setDamageNumber] = useState<{ sequence: number; target: number; amount: number } | null>(null);
+  const skip = useRef(false);
+  const finishWait = useRef<() => void>(() => {});
   const [cue, setCue] = useState<BattleCue | null>(null);
   const [displayHp, setDisplayHp] = useState<Record<number, number> | null>(null);
   const [motions, setMotions] = useState<Record<number, SpriteMotion>>({});
@@ -59,6 +65,16 @@ function BattleSession({
   const locked = busy || state.status !== "active";
   const finishers = new Set(getLearnableMoves(getCoreMonster(state.player.id)).filter(m => m.category === "finisher").map(m => m.skill.id));
   useEffect(() => () => { active.current?.abort(); stopSound.current(); }, []);
+  async function wait(ms: number, signal: AbortSignal) {
+    if (signal.aborted || skip.current) return;
+    await new Promise<void>(resolve => {
+      const finish = () => { clearTimeout(timer); signal.removeEventListener('abort', finish); resolve(); };
+      const timer = window.setTimeout(finish, ms);
+      finishWait.current = finish;
+      signal.addEventListener('abort', finish, { once: true });
+    });
+  }
+  function skipReplay() { skip.current = true; finishWait.current(); stopSound.current(); setMultiplier(null); }
   async function play(
     side: number,
     animation: "attack" | "hurt",
@@ -74,20 +90,13 @@ function BattleSession({
       ...previous,
       [side]: { animation, sequence: ++serial.current },
     }));
-    await new Promise<void>((resolve) => {
-      const finish = () => {
-        clearTimeout(timer);
-        signal.removeEventListener("abort", finish);
-        resolve();
-      };
-      const timer = window.setTimeout(finish, duration ?? animationDuration(animation));
-      signal.addEventListener("abort", finish, { once: true });
-    });
+    await wait(duration ?? animationDuration(animation), signal);
   }
   async function act(action: BattleAction) {
     if (active.current || state.status !== "active") return;
     const controller = new AbortController();
     active.current = controller;
+    skip.current = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
     setBusy(true);
     setError("");
     arena.current?.scrollIntoView({ block: "center", behavior: "instant" });
@@ -102,23 +111,50 @@ function BattleSession({
         const actor = next.coreState?.combatants.find(
           (c) => c.id === entry.actorId,
         );
-        if (actor && (entry.kind === "attack" || entry.kind === "skill")) {
+        if (!actor) continue;
+        const skill = actor.skills.find(s => s.id === entry.skillId);
+        if ((entry.kind === "attack" || entry.kind === "skill" || entry.skillId) && !skip.current) {
           stopSound.current();
-          stopSound.current = battleSound(entry.skillId ?? 'attack', mutedRef.current, actor.skills.find(s => s.id === entry.skillId)?.element ?? actor.element);
-          await play(actor.side, "attack", controller.signal);
-          const target = next.coreState?.combatants.find(
-            (c) => c.id === entry.targetId,
-          );
-          if (target && (entry.damage ?? 0) > 0) {
-            if (controller.signal.aborted) break;
-            replayHp[target.side] = Math.max(0, replayHp[target.side] - (entry.damage ?? 0));
+          stopSound.current = battleSound(entry.skillId ?? 'attack', mutedRef.current, skill?.element ?? actor.element);
+          if (entry.kind === "attack" || entry.kind === "skill") await play(actor.side, "attack", controller.signal);
+        }
+        // Events identify the true target, including reflected damage and healing.
+        for (const event of entry.effects ?? []) {
+          if (controller.signal.aborted) break;
+          if (event.type !== 'damage' && event.type !== 'heal') continue;
+          const target = next.coreState?.combatants.find(c => c.id === event.targetId);
+          if (!target) continue;
+          if (event.type === 'heal') {
+            replayHp[target.side] += event.amount;
             setDisplayHp({ ...replayHp });
-            const skill = actor.skills.find(s => s.id === entry.skillId);
-            const major = getLearnableMoves(getCoreMonster(actor.monsterId)).some(m => m.skill.id === entry.skillId && m.category === "finisher");
-            if (!controller.signal.aborted) setCue({ sequence: ++serial.current, name: skill ? skillLabel(skill) : "攻撃", skillId: skill?.id ?? "attack", element: skill?.element ?? actor.element, target: target.side, finisher: major, damage: entry.damage ?? 0 });
-            await play(target.side, "hurt", controller.signal, major ? 1250 : 1100);
-            if (!controller.signal.aborted) setCue(null);
+            continue;
           }
+          const boost = multiplierPresentation(event);
+          if (!skip.current && event.amount > 0) {
+            const major = getLearnableMoves(getCoreMonster(actor.monsterId)).some(m => m.skill.id === entry.skillId && m.category === 'finisher');
+            setCue({ sequence: ++serial.current, name: skill ? skillLabel(skill) : '攻撃', skillId: skill?.id ?? 'attack', element: skill?.element ?? actor.element, target: target.side, finisher: major, damage: event.amount });
+            await play(target.side, 'hurt', controller.signal, event.hits > 1 ? 350 : major ? 1250 : 1100);
+            setCue(null);
+            if (boost && !skip.current && !controller.signal.aborted) {
+              stopSound.current();
+              await wait(120, controller.signal);
+              if (!skip.current && !controller.signal.aborted) {
+                setMultiplier(boost);
+                stopSound.current = orchestraHit(boost.factor, mutedRef.current);
+                await wait(500, controller.signal);
+              }
+            }
+          }
+          if (controller.signal.aborted) break;
+          replayHp[target.side] = Math.max(0, replayHp[target.side] - event.amount);
+          setDisplayHp({ ...replayHp });
+          if (!skip.current && event.amount > 0) {
+            setDamageNumber({ sequence: ++serial.current, target: target.side, amount: event.amount });
+            await wait(200, controller.signal);
+            setMultiplier(null);
+            await wait(650, controller.signal);
+          }
+          setDamageNumber(null);
         }
       }
       if (!controller.signal.aborted) {
@@ -137,6 +173,8 @@ function BattleSession({
         setBusy(false);
         setMotions({});
         setCue(null);
+        setMultiplier(null);
+        setDamageNumber(null);
         setDisplayHp(null);
       }
     }
@@ -188,7 +226,8 @@ function BattleSession({
         </select>
       </label>
       </>}
-      <div className={`battle-field ${run?.encounter.isBoss ? "arena-boss-field" : ""}`} ref={arena}>
+      <div className={`battle-field ${run?.encounter.isBoss ? "arena-boss-field" : ""}`} ref={arena} onClick={busy ? skipReplay : undefined}>
+        {multiplier && <MultiplierEffect value={multiplier} />}
         {cue && <BattleEffect key={cue.sequence} cue={cue} />}
         {[
           { monster: state.player, hp: displayHp?.[0] ?? state.playerHp, label: "PLAYER" },
@@ -203,7 +242,7 @@ function BattleSession({
               facingRight={i === 0}
               motion={motions[i]}
             />
-            {cue?.target === i && <span key={cue.sequence} className="battle-damage-number" aria-hidden="true">−{cue.damage}</span>}
+            {damageNumber?.target === i && <span key={damageNumber.sequence} className="battle-damage-number" aria-hidden="true">−{damageNumber.amount}</span>}
             </div>
             <h2>{side.monster.name}</h2>
             <p className="battle-resources">
@@ -227,6 +266,7 @@ function BattleSession({
         ))}
         <span className="versus">VS</span>
       </div>
+      {busy && <button data-custom-sound onClick={skipReplay}>演出をスキップ</button>}
       {state.status !== "active" && <BattleResult state={state} />}
       {state.status !== "active" && <section ref={rewardPanel} className="panel arena-reward" aria-label="アリーナ報酬">
         <h2>{run?.phase === "cleared" ? "アリーナ制覇！" : state.status === "won" ? "勝利報酬" : "挑戦終了"}</h2>

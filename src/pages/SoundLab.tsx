@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import "../styles/sound-lab.css";
 import battleSounds from '../mocks/battleSounds.json';
 import { LootPreview } from '../components/LootPreview';
+import { MultiplierPreview } from '../components/MultiplierPreview';
 import hummedVictory from '../mocks/hummedVictory.json';
 
 const sounds = [
@@ -65,6 +66,7 @@ export function SoundLab() {
       </button>
       <a download href={import.meta.env.BASE_URL+"audio/selection/"+sound.id+".wav"}>WAVを保存 ↓</a>
     </section>)}</div>
+    <MultiplierPreview />
     <LootPreview />
     <h2>技と宝箱の効果音 · {battleSounds.length}音</h2>
     <p>炎は燃焼、石は連続衝撃、光は澄んだ閃光。水・風・闇も音の質から作り分けています。使用者の属性で変わる技は、戦闘中に属性音が重なります。</p>
