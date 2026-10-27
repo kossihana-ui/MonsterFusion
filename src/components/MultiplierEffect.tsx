@@ -19,7 +19,7 @@ export function MultiplierEffect({ value }: { value: MultiplierPresentation }) {
 }
 export function orchestraHit(factor: number, muted = false) {
   if (muted) return () => {};
-  const audio = new Audio(`${import.meta.env.BASE_URL}sounds/orchestra-hit.wav`);
+  const audio = new Audio(`${import.meta.env.BASE_URL}sounds/orchestra-hit.wav?v=2`);
   audio.volume = factor >= 3 ? .48 : factor >= 2 ? .4 : .32;
   audio.playbackRate = factor >= 3 ? 1.12 : factor >= 2 ? 1.06 : 1;
   audio.preservesPitch = false;

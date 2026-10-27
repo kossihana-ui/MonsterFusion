@@ -7,7 +7,7 @@ export function MultiplierPreview() {
   useEffect(() => () => { stop.current(); clearTimeout(timer.current); }, []);
   return <section className="panel" data-custom-sound>
     <h2>倍率アップ · オーケストラ・ヒット</h2>
-    <p>金管と弦を重ねた0.65秒の一撃。倍率ごとに音の高さと音量が少し変わります。</p>
+    <p>低音と鋭い金管・弦を重ねた、厚い「ジャン！」。0.72秒。倍率ごとに音の高さと音量が少し変わります。</p>
     <div style={{position:'relative',height:180}}>
       {factor && <MultiplierEffect key={factor} value={{factor,critical:false,reason:factor === 3 ? '攻撃力上昇 ×2 / 種 ×1.5' : factor === 2 ? '攻撃力上昇' : '種'}} />}
     </div>
