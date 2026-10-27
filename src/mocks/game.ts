@@ -10,8 +10,7 @@ import {
   describeFusion,
   labelFor,
   createDuelWithLoadouts,
-  defaultLoadout,
-  reconcileLoadout,
+  getLearnableMoves,
   validateMoveLoadout,
   stepTurn,
   createBasicPolicy,
@@ -61,12 +60,24 @@ export function continueArena(): BattleState {
 export function leaveArena() { arenaRun = null; }
 // Session preferences, separate from canonical monsters, like the demo collection.
 const loadouts = new Map<string, MoveLoadout>();
+// UI selection policy; core still owns validation and battle execution.
+export const UI_MOVE_SLOTS = 3;
+export function getFeatureMoves(id: string) {
+  return getLearnableMoves(getCoreMonster(id)).filter(move => move.source !== null);
+}
+export function recommendedFeatureLoadout(id: string): MoveLoadout {
+  return { monsterId: id, skillIds: getFeatureMoves(id).slice(0, UI_MOVE_SLOTS).map(move => move.skill.id) };
+}
 export function getMoveLoadout(id: string): MoveLoadout {
-  const monster = getCoreMonster(id);
+  const allowed = new Set(getFeatureMoves(id).map(move => move.skill.id));
   const saved = loadouts.get(id);
-  return saved ? reconcileLoadout(monster, saved.skillIds) : defaultLoadout(monster);
+  const kept = saved?.skillIds.filter(skillId => allowed.has(skillId)).slice(0, UI_MOVE_SLOTS);
+  return kept?.length ? { monsterId: id, skillIds: kept } : recommendedFeatureLoadout(id);
 }
 export function setMoveLoadout(id: string, skillIds: readonly string[]) {
+  const allowed = new Set(getFeatureMoves(id).map(move => move.skill.id));
+  if (skillIds.length > UI_MOVE_SLOTS) return { ok: false as const, message: '技は3つまでセットできます。' };
+  if (skillIds.some(skillId => !allowed.has(skillId))) return { ok: false as const, message: '部位から覚える技だけを選んでください。' };
   const result = validateMoveLoadout(getCoreMonster(id), skillIds);
   if (result.ok) loadouts.set(id, result.loadout);
   return result;

@@ -17,9 +17,10 @@ export function MultiplierEffect({ value }: { value: MultiplierPresentation }) {
     <strong>×{value.factor}倍</strong><small>{value.reason}</small>
   </div>;
 }
-export function orchestraHit(factor: number, muted = false) {
+export function orchestraHit(factor: number, muted = false, variant: 'current' | 'previous' | 'sharp' = 'current') {
   if (muted) return () => {};
-  const audio = new Audio(`${import.meta.env.BASE_URL}sounds/orchestra-hit.wav?v=2`);
+  const file = variant === 'sharp' ? 'orchestra-hit-sharp' : variant === 'previous' ? 'orchestra-hit-v2' : 'orchestra-hit';
+  const audio = new Audio(`${import.meta.env.BASE_URL}sounds/${file}.wav?v=3`);
   audio.volume = factor >= 3 ? .48 : factor >= 2 ? .4 : .32;
   audio.playbackRate = factor >= 3 ? 1.12 : factor >= 2 ? 1.06 : 1;
   audio.preservesPitch = false;

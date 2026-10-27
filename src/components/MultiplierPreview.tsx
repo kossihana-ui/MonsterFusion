@@ -8,6 +8,9 @@ export function MultiplierPreview() {
   return <section className="panel" data-custom-sound>
     <h2>倍率アップ · オーケストラ・ヒット</h2>
     <p>低音と鋭い金管・弦を重ねた、厚い「ジャン！」。0.72秒。倍率ごとに音の高さと音量が少し変わります。</p>
+    <p>聴き比べ：同じ音量・倍率で再生します。Bは新しい候補で、バトルへの適用はまだです。</p>
+    <button onClick={() => { stop.current(); stop.current = orchestraHit(2,false,'previous'); }}>A：前回の音</button>
+    <button onClick={() => { stop.current(); stop.current = orchestraHit(2,false,'sharp'); }}>B：鋭いスタブ音（新候補）</button>
     <div style={{position:'relative',height:180}}>
       {factor && <MultiplierEffect key={factor} value={{factor,critical:false,reason:factor === 3 ? '攻撃力上昇 ×2 / 種 ×1.5' : factor === 2 ? '攻撃力上昇' : '種'}} />}
     </div>

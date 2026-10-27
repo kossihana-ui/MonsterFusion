@@ -308,7 +308,7 @@ function BattleSession({
             <strong>◇ 守る</strong><span>受けるダメージを減らす</span>
             <span>MP回復 +{DEFAULT_BATTLE_CONFIG.defendMpBonus}</span>
           </button>
-          {player?.skills.map((skill) => (
+          {player?.skills.filter(skill => learnable.some(move => move.source !== null && move.skill.id === skill.id)).slice(0, 3).map((skill) => (
             <div key={skill.id} className={`battle-move-option ${inspectedSkill === skill.id ? "is-inspected" : ""}`} onMouseEnter={() => setInspectedSkill(skill.id)} onFocus={() => setInspectedSkill(skill.id)}>
             <button data-element={skill.element} key={skill.id} disabled={locked || availableMp < skill.cost} onClick={() => act({ kind: "skill", skillId: skill.id })}>
               <strong>{skillLabel(skill)} {finishers.has(skill.id) && <span className="finisher-badge">大技</span>}</strong>

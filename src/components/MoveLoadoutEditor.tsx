@@ -3,7 +3,7 @@ import { MoveHelp } from "./MoveHelp";
 import { moveHelp } from "../shared/moveHelp";
 import { useState } from "react";
 import type { ReactNode } from "react";
-import { defaultLoadout, getLearnableMoves, MAX_MOVE_SLOTS } from "@core/core/index.ts";
+import { UI_MOVE_SLOTS, getFeatureMoves, recommendedFeatureLoadout } from "../mocks/game";
 import { getCoreMonster, getMoveLoadout, setMoveLoadout } from "../mocks/game";
 import { skillLabel } from "../shared/battlePresentation";
 import { MoveBadges } from "./MoveBadges";
@@ -11,8 +11,8 @@ import { playUiSound } from "./uiSound";
 
 export function MoveLoadoutEditor({ monsterId, children, onInspect }: { monsterId: string; children: ReactNode; onInspect?: (move: LearnableMove | undefined) => void }) {
   const monster = getCoreMonster(monsterId);
-  const moves = getLearnableMoves(monster);
-  const pad = (ids: readonly string[]) => Array.from({ length: MAX_MOVE_SLOTS }, (_, i) => ids[i] ?? "");
+  const moves = getFeatureMoves(monsterId);
+  const pad = (ids: readonly string[]) => Array.from({ length: UI_MOVE_SLOTS }, (_, i) => ids[i] ?? "");
   const [slots, setSlots] = useState(() => pad(getMoveLoadout(monsterId).skillIds));
   const [inspected, setInspected] = useState("");
   function inspect(id: string) { setInspected(id); onInspect?.(moves.find(m => m.skill.id === id)); }
@@ -43,7 +43,7 @@ export function MoveLoadoutEditor({ monsterId, children, onInspect }: { monsterI
   return <>
     <section className="panel" data-custom-sound>
       {children}
-      <h2>技セット <small>{slots.filter(Boolean).length} / {MAX_MOVE_SLOTS}</small></h2>
+      <h2>技セット <small>{slots.filter(Boolean).length} / {UI_MOVE_SLOTS}</small></h2>
       <p className="battle-help">技を枠へドラッグ。技を選んで枠を押してもセットできます。</p>
       <div className="move-slot-grid" aria-label="セットする技">
         {slots.map((id, index) => {
@@ -65,14 +65,15 @@ export function MoveLoadoutEditor({ monsterId, children, onInspect }: { monsterI
       </div>
       <div className="loadout-actions">
         <button type="button" onClick={save}>この技でセット</button>
-        <button type="button" className="text-button" onClick={() => { change(pad(defaultLoadout(monster).skillIds), "equip"); setPicked(""); }}>おすすめを選ぶ</button>
+        <button type="button" className="text-button" onClick={() => { change(pad(recommendedFeatureLoadout(monsterId).skillIds), "equip"); setPicked(""); }}>おすすめを選ぶ</button>
       </div>
       {error && <p role="alert">{error}</p>}
       <p role="status">{message}</p>
       <p className="battle-help">攻撃・守るはいつでも使えます。技セットはこのプレイ中のみ保持され、ページを再読み込みすると戻ります。</p>
     </section>
     <section className="panel" data-custom-sound aria-label="覚えられる技">
-      <h2>覚えられる技</h2>
+      <h2>部位から覚えられる技</h2>
+      {!moves.length && <p>この個体には部位技がありません。通常攻撃と「守る」で戦えます。</p>}
       <p className="battle-help">ⓘで説明を開けます。セット済みの技を別の枠に置くと、位置を交換します。</p>
       <div className="profile-moves">
         {moves.map(move => {
