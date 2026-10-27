@@ -197,6 +197,8 @@ export {
 export type {
   ActionMode,
   BattleEffectEvent,
+  ConditionalMultiplier,
+  DamageBoost,
   MoveBehavior,
   StatusApplication,
   StatusEffect,
@@ -206,6 +208,8 @@ export {
   applyStatus,
   blindMisses,
   blockingStatus,
+  BOOST_REASONS,
+  conditionMultiplier,
   getMoveBehavior,
   hasStatus,
   MOVE_BEHAVIOURS,

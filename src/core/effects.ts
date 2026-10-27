@@ -60,6 +60,17 @@ export const STATUS_POLARITY: Readonly<Record<StatusKind, 'buff' | 'debuff'>> = 
   evasion: 'buff',
 };
 
+/** Why a condition fired, in Japanese, for the multiplier the UI shows. */
+export const BOOST_REASONS: Readonly<Record<DamageBoost['source'], string>> = {
+  attackUp: '攻撃力上昇',
+  seed: '種',
+  targetDefending: '守りを突いた',
+  targetNotDefending: '守っていない',
+  targetBound: '拘束中',
+  selfPoisoned: '毒をおして',
+  element: '属性',
+};
+
 export const STATUS_LABELS: Readonly<Record<StatusKind, string>> = {
   bind: 'バインド',
   blind: '暗闇',
@@ -173,12 +184,38 @@ export function tickStatuses(
  * The UI must not recompute a heal, a removal or a status from the state it
  * had before: it plays these and then adopts the state core returned.
  */
+/**
+ * One reason a hit was bigger or smaller than usual.
+ *
+ * `reason` is Japanese and ready to show: the UI announces the multiplier
+ * rather than working out that there was one.
+ */
+export interface DamageBoost {
+  readonly source:
+    | 'attackUp'
+    | 'seed'
+    | 'targetDefending'
+    | 'targetNotDefending'
+    | 'targetBound'
+    | 'selfPoisoned'
+    | 'element';
+  readonly reason: string;
+  readonly factor: number;
+}
+
 export type BattleEffectEvent =
   | { readonly type: 'damage'; readonly actorId: string; readonly targetId: string;
       readonly skillId?: string; readonly amount: number; readonly critical: boolean;
       readonly elementMultiplier: number; readonly mitigated: number;
       /** 1-based, for a move that hits more than once. */
-      readonly hit: number; readonly hits: number; readonly pierced: boolean }
+      readonly hit: number; readonly hits: number; readonly pierced: boolean;
+      /**
+       * Every multiplier that applied, element included, in the order they
+       * were worked out. Empty for an ordinary hit.
+       */
+      readonly boosts?: readonly DamageBoost[];
+      /** The product of `boosts`. 1 when nothing applied. */
+      readonly boostTotal?: number }
   | { readonly type: 'heal'; readonly actorId: string; readonly targetId: string;
       readonly skillId?: string; /** What was actually restored, after the HP cap. */
       readonly amount: number }
@@ -578,21 +615,38 @@ export function conditionMultiplier(
     readonly selfStatuses: readonly StatusEffect[];
     readonly element?: string;
   },
+  /** Filled with a line per condition that fired, for the UI to announce. */
+  found?: DamageBoost[],
 ): number {
   let factor = 1;
+  const note = (source: DamageBoost['source'], value: number): void => {
+    found?.push({ source, reason: BOOST_REASONS[source], factor: value });
+  };
   for (const condition of conditions) {
     switch (condition.when) {
       case 'targetDefending':
-        if (context.targetDefending) factor *= condition.factor;
+        if (context.targetDefending) {
+          factor *= condition.factor;
+          note('targetDefending', condition.factor);
+        }
         break;
       case 'targetNotDefending':
-        if (!context.targetDefending) factor *= condition.factor;
+        if (!context.targetDefending) {
+          factor *= condition.factor;
+          note('targetNotDefending', condition.factor);
+        }
         break;
       case 'targetBound':
-        if (hasStatus(context.targetStatuses, 'bind')) factor *= condition.factor;
+        if (hasStatus(context.targetStatuses, 'bind')) {
+          factor *= condition.factor;
+          note('targetBound', condition.factor);
+        }
         break;
       case 'selfPoisoned':
-        if (hasStatus(context.selfStatuses, 'poison')) factor *= condition.factor;
+        if (hasStatus(context.selfStatuses, 'poison')) {
+          factor *= condition.factor;
+          note('selfPoisoned', condition.factor);
+        }
         break;
       case 'targetSeeded':
         if (
@@ -600,6 +654,7 @@ export function conditionMultiplier(
           (!condition.element || condition.element === context.element)
         ) {
           factor *= condition.factor;
+          note('seed', condition.factor);
         }
         break;
     }

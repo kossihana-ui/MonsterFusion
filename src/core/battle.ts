@@ -24,9 +24,11 @@ import type {
 } from '../shared/types.ts';
 import type { BattleConfig } from './config.ts';
 import type { BattleEffectEvent, MoveBehavior, StatusEffect, StatusKind } from './effects.ts';
+import type { DamageBoost } from './effects.ts';
 import {
   applyStatus,
   blindMisses,
+  BOOST_REASONS,
   statusOf,
   blockingStatus,
   conditionMultiplier,
@@ -651,12 +653,24 @@ export function stepTurn(
     // Conditions are read BEFORE anything is removed: coil-crush doubles
     // against a bound target and then frees it, so asking afterwards would
     // always find it unbound.
-    const factor = conditionMultiplier(resolved.conditions, {
-      targetDefending: target.defending,
-      targetStatuses: target.statuses ?? [],
-      selfStatuses: actor.statuses ?? [],
-      ...(skill ? { element: skill.element } : {}),
-    });
+    const boosts: DamageBoost[] = [];
+    const factor = conditionMultiplier(
+      resolved.conditions,
+      {
+        targetDefending: target.defending,
+        targetStatuses: target.statuses ?? [],
+        selfStatuses: actor.statuses ?? [],
+        ...(skill ? { element: skill.element } : {}),
+      },
+      boosts,
+    );
+
+    // A buff is a multiplier the player chose to set up, so it is the one
+    // they most want announced.
+    const buff = offenceMultiplier(actor.statuses);
+    if (buff !== 1) {
+      boosts.unshift({ source: 'attackUp', reason: BOOST_REASONS.attackUp, factor: buff });
+    }
 
     // The seed pays off only for whoever planted it, and only once. Read
     // before the hit, because the hit spends it.
@@ -668,6 +682,9 @@ export function stepTurn(
     const seedBinds =
       seedIsMine && attackElement === config.seedPayoff.bindElement;
     const seedFactor = seedBoosts ? config.seedPayoff.boostFactor : 1;
+    if (seedBoosts) {
+      boosts.push({ source: 'seed', reason: BOOST_REASONS.seed, factor: seedFactor });
+    }
 
     let dealt = 0;
     let anyCritical = false;
@@ -782,6 +799,17 @@ export function stepTurn(
         target.hp = clamp(target.hp - result.damage, 0, target.maxHp);
         dealt += result.damage;
         anyCritical = anyCritical || result.critical;
+        // Element goes on the end: the UI shows it beside the matchup line
+        // it already draws, and the rest are the ones worth announcing.
+        const allBoosts = result.elementMultiplier !== 1
+          ? [...boosts, {
+              source: 'element' as const,
+              reason: BOOST_REASONS.element,
+              factor: result.elementMultiplier,
+            }]
+          : boosts;
+        const boostTotal = allBoosts.reduce((product, b) => product * b.factor, 1);
+
         effects.push({
           type: 'damage',
           actorId: actor.id,
@@ -794,6 +822,9 @@ export function stepTurn(
           hit,
           hits: swings,
           pierced: resolved.piercesDefense || resolved.shattersDefense,
+          ...(allBoosts.length > 0
+            ? { boosts: allBoosts, boostTotal: Math.round(boostTotal * 100) / 100 }
+            : {}),
         });
       }
     }
