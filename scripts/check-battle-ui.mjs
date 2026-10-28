@@ -34,7 +34,10 @@ try {
   assert.ok(finisher, 'starter has a feature finisher');
   assert.ok(setMoveLoadout(monster.id, [finisher.skill.id]).ok);
   assert.deepEqual(createBattle(monster, initialMonsters[0]).coreState.combatants[0].skills.map(s => s.id), [finisher.skill.id], 'no unwanted slot filling');
-  assert.equal(setMoveLoadout(monster.id, []).ok, false);
+  assert.equal(setMoveLoadout(monster.id, []).ok, true);
+  assert.deepEqual(getMoveLoadout(monster.id).skillIds, []);
+  assert.deepEqual(createBattle(monster, initialMonsters[0]).coreState.combatants[0].skills, []);
+  assert.ok(setMoveLoadout(monster.id, [finisher.skill.id]).ok);
   assert.equal(setMoveLoadout(monster.id, ['missing']).ok, false);
   assert.equal(setMoveLoadout(monster.id, [finisher.skill.id, finisher.skill.id]).ok, false);
   assert.deepEqual(getMoveLoadout(monster.id).skillIds, [finisher.skill.id], 'invalid saves preserve selection');

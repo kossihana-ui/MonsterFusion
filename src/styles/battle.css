@@ -50,3 +50,5 @@
 .move-detail-grid > .details { grid-column: 1 / -1; }
 @media (max-width: 1000px) { .move-detail-grid { grid-template-columns: minmax(0, 1fr); } }
 @media (max-width: 560px) { .battle-command-grid { grid-template-columns: 1fr; } }
+
+.battle-effect-notice {position:absolute;left:5%;right:5%;top:40%;z-index:15;padding:16px;background:#182622f5;border:1px solid #dfcc86;border-radius:8px;color:#fff0b8;text-align:center;pointer-events:none;}

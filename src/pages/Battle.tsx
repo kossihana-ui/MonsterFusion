@@ -2,7 +2,7 @@ import { MoveHelp } from "../components/MoveHelp";
 import { moveHelp, highlightPart, partNames } from "../shared/moveHelp";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { ArenaEntrance } from "../components/ArenaEntrance";
-import { animationDuration, DEFAULT_ARENA_CONFIG, DEFAULT_BATTLE_CONFIG, elementMultiplier, getLearnableMoves } from "@core/core/index.ts";
+import { STATUS_LABELS, animationDuration, DEFAULT_ARENA_CONFIG, DEFAULT_BATTLE_CONFIG, elementMultiplier, getLearnableMoves } from "@core/core/index.ts";
 import { matchupLabel, skillLabel } from "../shared/battlePresentation";
 import { MoveBadges } from "../components/MoveBadges";
 import "../styles/battle.css";
@@ -53,6 +53,7 @@ function BattleSession({
   const [helpSkill, setHelpSkill] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
+  const [effectNotice, setEffectNotice] = useState("");
   const [multiplier, setMultiplier] = useState<MultiplierPresentation | null>(null);
   const [damageNumber, setDamageNumber] = useState<{ sequence: number; target: number; amount: number } | null>(null);
   const skip = useRef(false);
@@ -129,6 +130,16 @@ function BattleSession({
         // Events identify the true target, including reflected damage and healing.
         for (const event of entry.effects ?? []) {
           if (controller.signal.aborted) break;
+          if (event.type === 'noEffect') {
+            const affected = next.coreState?.combatants.find(c => c.id === event.targetId);
+            const name = affected?.side === 0 ? state.player.name : state.enemy.name;
+            if (!skip.current) {
+              setEffectNotice(name + 'はすでに' + STATUS_LABELS[event.status] + '。効果は延長されません。');
+              await wait(1000, controller.signal);
+              setEffectNotice('');
+            }
+            continue;
+          }
           if (event.type !== 'damage' && event.type !== 'heal') continue;
           const target = next.coreState?.combatants.find(c => c.id === event.targetId);
           if (!target) continue;
@@ -235,6 +246,7 @@ function BattleSession({
       </label>
       </>}
       <div className={`battle-field ${run?.encounter.isBoss ? "arena-boss-field" : ""}`} ref={arena} onClick={busy ? skipReplay : undefined}>
+        {effectNotice && <div className="battle-effect-notice" role="status">{effectNotice}</div>}
         {multiplier && <MultiplierEffect value={multiplier} />}
         {cue && <BattleEffect key={cue.sequence} cue={cue} />}
         {[
@@ -301,14 +313,14 @@ function BattleSession({
         <div className="battle-command-grid">
           <button data-element={player?.element} disabled={locked} onClick={() => act("attack")}>
             <strong>攻撃</strong>
-            {player && <MoveBadges element={player.element} scaling="attack" />}
+            <span>攻撃力・魔力の高い方を使う</span>
             <span>MP 0 {player && enemy ? ` · ${matchupLabel(elementMultiplier(player.element, enemy.element))}` : ""}</span>
           </button>
           <button disabled={locked} onClick={() => { stopSound.current(); stopSound.current = battleSound('defend',muted); void act("defend"); }}>
             <strong>◇ 守る</strong><span>受けるダメージを減らす</span>
             <span>MP回復 +{DEFAULT_BATTLE_CONFIG.defendMpBonus}</span>
           </button>
-          {player?.skills.filter(skill => learnable.some(move => move.source !== null && move.skill.id === skill.id)).slice(0, 3).map((skill) => (
+          {player?.skills.map((skill) => (
             <div key={skill.id} className={`battle-move-option ${inspectedSkill === skill.id ? "is-inspected" : ""}`} onMouseEnter={() => setInspectedSkill(skill.id)} onFocus={() => setInspectedSkill(skill.id)}>
             <button data-element={skill.element} key={skill.id} disabled={locked || availableMp < skill.cost} onClick={() => act({ kind: "skill", skillId: skill.id })}>
               <strong>{skillLabel(skill)} {finishers.has(skill.id) && <span className="finisher-badge">大技</span>}</strong>

@@ -34,6 +34,7 @@ export function battleLogLabel(entry: BattleLogEntry, state: BattleState, names:
         case 'heal': return `${subject(e.targetId)}のHPが${e.amount}回復。`;
         case 'cleanse': return `${subject(e.targetId)}の${e.removed.length ? e.removed.map(k => STATUS_LABELS[k]).join('・') : '解除できる効果'}を解除。`;
         case 'status': return `${subject(e.targetId)}に${STATUS_LABELS[e.status]}。`;
+        case 'noEffect': return `${subject(e.targetId)}はすでに${STATUS_LABELS[e.status]}。効果は延長されなかった。`;
         case 'miss': return '攻撃は当たらなかった。';
         case 'skip': return `${STATUS_LABELS[e.reason]}で動けない。`;
         case 'blocked': return e.reason === 'mp' ? 'MPが足りない。' : '連続では使えない。';

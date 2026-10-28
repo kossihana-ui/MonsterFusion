@@ -3,7 +3,8 @@ import { MoveHelp } from "./MoveHelp";
 import { moveHelp } from "../shared/moveHelp";
 import { useState } from "react";
 import type { ReactNode } from "react";
-import { UI_MOVE_SLOTS, getFeatureMoves, recommendedFeatureLoadout } from "../mocks/game";
+import { MAX_MOVE_SLOTS } from "@core/core/index.ts";
+import { getFeatureMoves, recommendedFeatureLoadout } from "../mocks/game";
 import { getCoreMonster, getMoveLoadout, setMoveLoadout } from "../mocks/game";
 import { skillLabel } from "../shared/battlePresentation";
 import { MoveBadges } from "./MoveBadges";
@@ -12,7 +13,7 @@ import { playUiSound } from "./uiSound";
 export function MoveLoadoutEditor({ monsterId, children, onInspect }: { monsterId: string; children: ReactNode; onInspect?: (move: LearnableMove | undefined) => void }) {
   const monster = getCoreMonster(monsterId);
   const moves = getFeatureMoves(monsterId);
-  const pad = (ids: readonly string[]) => Array.from({ length: UI_MOVE_SLOTS }, (_, i) => ids[i] ?? "");
+  const pad = (ids: readonly string[]) => Array.from({ length: MAX_MOVE_SLOTS }, (_, i) => ids[i] ?? "");
   const [slots, setSlots] = useState(() => pad(getMoveLoadout(monsterId).skillIds));
   const [inspected, setInspected] = useState("");
   function inspect(id: string) { setInspected(id); onInspect?.(moves.find(m => m.skill.id === id)); }
@@ -43,8 +44,8 @@ export function MoveLoadoutEditor({ monsterId, children, onInspect }: { monsterI
   return <>
     <section className="panel" data-custom-sound>
       {children}
-      <h2>技セット <small>{slots.filter(Boolean).length} / {UI_MOVE_SLOTS}</small></h2>
-      <p className="battle-help">技を枠へドラッグ。技を選んで枠を押してもセットできます。</p>
+      <h2>技セット <small>{slots.filter(Boolean).length} / {MAX_MOVE_SLOTS}</small></h2>
+      <p className="battle-help">技を枠へドラッグ。技を選んで枠を押してもセットできます。全枠を空にして、通常攻撃と守るだけで戦うこともできます。</p>
       <div className="move-slot-grid" aria-label="セットする技">
         {slots.map((id, index) => {
           const move = moves.find(m => m.skill.id === id);

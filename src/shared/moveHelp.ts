@@ -1,4 +1,4 @@
-import { getMoveBehavior, STATUS_LABELS } from '@core/core/index.ts';
+import { getMoveBehavior, STATUS_LABELS, STATUS_POLARITY, DEFAULT_BATTLE_CONFIG } from '@core/core/index.ts';
 import type { Skill, LearnableMove } from '@core/core/index.ts';
 
 export const partNames: Record<string, string> = { tail:'尻尾', horns:'角', wings:'翼', jaw:'口・顎', eyes:'目', crest:'頭飾り', bodyShape:'体型', size:'体の大きさ' };
@@ -16,13 +16,14 @@ export function moveHelp(skill: Skill) {
     const who = a.target === 'self' ? '自分' : '相手';
     const effect: Record<string,string> = {
       recoil:'反動で動けなくなる', bind:'拘束されて動けなくなる', flinch:'ひるんで動けなくなる',
-      blind:'暗闇になり、物理攻撃が当たりにくくなる', poison:'毒になり、毎ターンHPが減る',
+      blind:`暗闇になり、物理攻撃を${Math.round(DEFAULT_BATTLE_CONFIG.blindEvasion * 100)}%の確率でかわされる`, poison:'毒になり、毎ターンHPが減る',
       attackUp:`攻撃力が${a.magnitude ?? 2}倍になる`, doubleStrike:'2回行動できる',
       reflect:'受けた攻撃を跳ね返す', evasion:'攻撃をかわしやすくなる',
       seed:'種が付く。付けた本人が炎で追撃すると威力アップ、水で追撃すると拘束できる',
     };
     lines.push(`${who}：${effect[a.status] ?? STATUS_LABELS[a.status]}（${a.turns}ターン${a.chance < 1 ? '・確率で発動' : ''}）。`);
   }
+  if (b.applies.some(a => STATUS_POLARITY[a.status] === 'debuff')) lines.push('すでに同じ弱体効果が付いている間は、重ねがけや残りターンの延長はできない。');
   if (b.restoreMp) lines.push(`自分のMPを${b.restoreMp}回復する。`);
   if (b.transfersDebuffs) lines.push('自分に付いた弱体効果を相手に移す。');
   for (const c of b.cleanse) lines.push(`${c.target === 'self' ? '自分' : '相手'}の${c.polarity === 'buff' ? '強化' : '弱体'}効果を解除する。`);
