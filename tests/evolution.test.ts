@@ -93,7 +93,7 @@ test('the crest ladder can force a crest when a game wants one', () => {
 
 test('evolution climbs size, tier and strength together', () => {
   const context = testContext(3);
-  const [a, b] = twinPair(0, context);
+  const [a] = twinPair(0, context);
   const line = climb(context, 3);
 
   assert.deepEqual(line.map((m) => m.tier), [1, 2, 3]);

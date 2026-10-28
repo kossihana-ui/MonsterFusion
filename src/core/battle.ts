@@ -23,7 +23,7 @@ import type {
   Skill,
 } from '../shared/types.ts';
 import type { BattleConfig } from './config.ts';
-import type { BattleEffectEvent, MoveBehavior, StatusEffect, StatusKind } from './effects.ts';
+import type { BattleEffectEvent, MoveBehavior } from './effects.ts';
 import type { DamageBoost } from './effects.ts';
 import {
   applyStatus,
@@ -40,7 +40,6 @@ import {
   offenceMultiplier,
   removePolarity,
   removeStatuses,
-  STATUS_LABELS,
   tickStatuses,
 } from './effects.ts';
 import type { MoveLoadout } from './moves.ts';
