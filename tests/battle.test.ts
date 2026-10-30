@@ -401,6 +401,109 @@ test('speed leans a fight without deciding it', () => {
   assert.ok(rate < 0.9, `a 40 point speed edge won ${(rate * 100).toFixed(0)}%, so speed is the whole game`);
 });
 
+test('a hurt monster heals instead of dying with a heal in hand', () => {
+  const [, , aqua] = createStarterMonsters(testContext(3));
+  assert.ok(aqua);
+  const state = createDuelWithLoadouts(aqua, aqua, [
+    { monsterId: aqua.id, skillIds: ['hydro-ram', 'death-bite'] },
+  ]);
+  const actor = state.combatants[0];
+  assert.ok(actor);
+  const policy = createBasicPolicy(createSeededRandom(1), { defendChance: 0 });
+
+  actor.hp = Math.floor(actor.maxHp * 0.3);
+  const action = policy.chooseAction(actor, state);
+  assert.equal(action.kind, 'skill');
+  assert.equal(action.kind === 'skill' ? action.skillId : undefined, 'hydro-ram');
+});
+
+test('and attacks instead of wasting a heal on a scratch', () => {
+  const [, , aqua] = createStarterMonsters(testContext(3));
+  assert.ok(aqua);
+  const state = createDuelWithLoadouts(aqua, aqua, [
+    { monsterId: aqua.id, skillIds: ['hydro-ram', 'death-bite'] },
+  ]);
+  const actor = state.combatants[0];
+  assert.ok(actor);
+  const policy = createBasicPolicy(createSeededRandom(1), { defendChance: 0 });
+
+  // Untouched, and then barely touched: both are a turn thrown away.
+  for (const hp of [actor.maxHp, actor.maxHp - 2]) {
+    actor.hp = hp;
+    const action = policy.chooseAction(actor, state);
+    assert.notEqual(
+      action.kind === 'skill' ? action.skillId : undefined,
+      'hydro-ram',
+      `healed at ${hp} of ${actor.maxHp} HP`,
+    );
+  }
+});
+
+test('a heal it just used is not chosen again, because it would be refused', () => {
+  const [, , aqua] = createStarterMonsters(testContext(3));
+  assert.ok(aqua);
+  assert.equal(getMoveBehavior('hydro-ram').noConsecutiveUse, true);
+
+  const state = createDuelWithLoadouts(aqua, aqua, [
+    { monsterId: aqua.id, skillIds: ['hydro-ram', 'death-bite'] },
+  ]);
+  const actor = state.combatants[0];
+  assert.ok(actor);
+  actor.hp = Math.floor(actor.maxHp * 0.3);
+  actor.lastSkillId = 'hydro-ram';
+
+  const action = createBasicPolicy(createSeededRandom(1), { defendChance: 0 })
+    .chooseAction(actor, state);
+  assert.notEqual(
+    action.kind === 'skill' ? action.skillId : undefined,
+    'hydro-ram',
+    'it would have been blocked, so the turn would have been wasted',
+  );
+});
+
+test('a monster with no heal plays exactly as it did', () => {
+  const [, ignis] = createStarterMonsters(testContext(3));
+  assert.ok(ignis);
+  const set = defaultLoadout(ignis).skillIds;
+  assert.ok(
+    set.every((id) => getMoveBehavior(id).heal === 0),
+    'Ignis should not be carrying a heal for this test',
+  );
+
+  const state = createDuelWithLoadouts(ignis, ignis, [{ monsterId: ignis.id, skillIds: set }]);
+  const actor = state.combatants[0];
+  assert.ok(actor);
+  const policy = createBasicPolicy(createSeededRandom(1), { defendChance: 0 });
+
+  for (const ratio of [1, 0.5, 0.1]) {
+    actor.hp = Math.max(1, Math.floor(actor.maxHp * ratio));
+    const action = policy.chooseAction(actor, state);
+    assert.ok(action.kind === 'skill' || action.kind === 'attack', `${ratio} gave ${action.kind}`);
+  }
+});
+
+test('a healthier monster still attacks, so healing has not replaced fighting', () => {
+  // The threshold matters: a policy that heals whenever it can would never
+  // finish a fight, and the loadouts that carry a heal would get worse.
+  const [, , aqua] = createStarterMonsters(testContext(3));
+  assert.ok(aqua);
+  const state = createDuelWithLoadouts(aqua, aqua, [
+    { monsterId: aqua.id, skillIds: ['hydro-ram', 'death-bite'] },
+  ]);
+  const actor = state.combatants[0];
+  assert.ok(actor);
+  const policy = createBasicPolicy(createSeededRandom(1), { defendChance: 0 });
+
+  let healed = 0;
+  for (let hp = 1; hp <= actor.maxHp; hp++) {
+    actor.hp = hp;
+    const action = policy.chooseAction(actor, state);
+    if (action.kind === 'skill' && action.skillId === 'hydro-ram') healed++;
+  }
+  assert.ok(healed > 0, 'it should heal somewhere');
+  assert.ok(healed < actor.maxHp, 'but not at every HP it could have');
+});
+
 test('no starter runs away with the match-up table', () => {
   // This is the test that would have caught マジックアイ. At blindEvasion 0.75
   // one 7-MP move put Aqua on 84% and Ignis on 12%, and nothing failed. The

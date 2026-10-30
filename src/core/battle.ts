@@ -322,33 +322,51 @@ export function livingAllies(state: BattleState, actor: Combatant): Combatant[] 
  */
 export function createBasicPolicy(
   rng: Random,
-  options: { readonly defendBelowHpRatio?: number; readonly defendChance?: number } = {},
+  options: {
+    readonly defendBelowHpRatio?: number;
+    readonly defendChance?: number;
+    /** Heals are considered at or below this share of full HP. */
+    readonly healBelowHpRatio?: number;
+    /** And only when this much of the heal would actually land. */
+    readonly minHealUseRatio?: number;
+    readonly config?: BattleConfig;
+  } = {},
 ): BattlePolicy {
   const defendBelow = options.defendBelowHpRatio ?? 0.25;
   const defendChance = options.defendChance ?? 0.4;
+  const healBelow = options.healBelowHpRatio ?? 0.5;
+  const minHealUse = options.minHealUseRatio ?? 0.7;
+  const config = options.config ?? DEFAULT_BATTLE_CONFIG;
 
   return {
     chooseAction(actor: Combatant, state: BattleState): BattleAction {
       const targets = livingOpponents(state, actor);
       if (targets.length === 0) return { kind: 'defend' };
 
-      if (actor.hp / actor.maxHp <= defendBelow && chance(rng, defendChance)) {
-        return { kind: 'defend' };
-      }
-
       let target = targets[0] as Combatant;
       for (const candidate of targets) {
         if (candidate.hp < target.hp) target = candidate;
       }
 
+      const affordable = actor.skills.filter((s) => s.cost <= actor.mp);
+
+      // A heal is worth no damage, so the comparison below can never pick
+      // one, and without this a monster holding a heal would die with it in
+      // hand. Asked before guarding, because mending beats bracing.
+      const heal = chooseHeal(actor, affordable, { healBelow, minHealUse, config });
+      if (heal) return { kind: 'skill', skillId: heal.id, targetId: target.id };
+
+      if (actor.hp / actor.maxHp <= defendBelow && chance(rng, defendChance)) {
+        return { kind: 'defend' };
+      }
+
       // Pick by what the hit is actually worth against THIS target, so the
       // element chart is something the opponent uses too, not just a number
       // shown in the UI.
-      const affordable = actor.skills.filter((s) => s.cost <= actor.mp);
       let best: Skill | undefined;
-      let bestValue = expectedDamage(actor, target, undefined);
+      let bestValue = expectedDamage(actor, target, undefined, config);
       for (const skill of affordable) {
-        const value = expectedDamage(actor, target, skill);
+        const value = expectedDamage(actor, target, skill, config);
         if (value > bestValue) {
           best = skill;
           bestValue = value;
@@ -359,6 +377,38 @@ export function createBasicPolicy(
       return { kind: 'attack', targetId: target.id };
     },
   };
+}
+
+/**
+ * The heal worth using right now, if there is one.
+ *
+ * Two things have to hold: the monster is hurt enough to want it, and enough
+ * of the heal would land to be worth a turn. The second is what stops a
+ * 30-point heal being spent on 4 points of damage.
+ */
+function chooseHeal(
+  actor: Combatant,
+  affordable: readonly Skill[],
+  limits: { healBelow: number; minHealUse: number; config: BattleConfig },
+): Skill | undefined {
+  if (actor.hp / actor.maxHp > limits.healBelow) return undefined;
+  const missing = actor.maxHp - actor.hp;
+
+  let chosen: Skill | undefined;
+  let landed = 0;
+  for (const skill of affordable) {
+    const behavior = getMoveBehavior(skill.id);
+    if (behavior.heal <= 0 || behavior.target !== 'self') continue;
+    if (behavior.noConsecutiveUse && actor.lastSkillId === skill.id) continue;
+    const offered = scaleHeal(behavior.heal, actor.stats.magic, limits.config);
+    if (missing < offered * limits.minHealUse) continue;
+    const actual = Math.min(offered, missing);
+    if (actual > landed) {
+      chosen = skill;
+      landed = actual;
+    }
+  }
+  return chosen;
 }
 
 /**
