@@ -17,6 +17,7 @@
  *     It is not guessed at, and the UI can see which moves are still pending.
  */
 
+import type { Monster } from '../shared/types.ts';
 import type { BattleConfig } from './config.ts';
 import { DEFAULT_BATTLE_CONFIG } from './config.ts';
 
@@ -247,6 +248,13 @@ export type BattleEffectEvent =
       readonly boostTotal?: number }
   | { readonly type: 'heal'; readonly actorId: string; readonly targetId: string;
       readonly skillId?: string; /** What was actually restored, after the HP cap. */
+      readonly amount: number }
+  /**
+   * MP handed back. Separate from `heal` because a heal of zero means the
+   * target was already full, and an MP restore is not that.
+   */
+  | { readonly type: 'mp'; readonly actorId: string; readonly targetId: string;
+      readonly skillId?: string; /** What was actually restored, after the MP cap. */
       readonly amount: number }
   | { readonly type: 'cleanse'; readonly actorId: string; readonly targetId: string;
       readonly skillId?: string; readonly removed: readonly StatusKind[] }
@@ -625,6 +633,45 @@ export function getMoveBehavior(skillId: string): MoveBehavior {
   if (!known) return behaviour(skillId);
   if (!known.specified) return behaviour(skillId, { specified: false, ...(known.pending ? { pending: known.pending } : {}) });
   return known;
+}
+
+/**
+ * What a heal of `nominal` is worth in the hands of a given 魔力.
+ *
+ * The figure in the move's description is what an average healer manages;
+ * magic moves it from there, within bounds. Takes the stat rather than a
+ * monster so that the battle can ask about a combatant and a UI can ask
+ * about a monster, and both get the same answer.
+ *
+ * Returns the amount before the HP cap is applied - what the move offers,
+ * not what the target can take.
+ */
+export function scaleHeal(
+  nominal: number,
+  magic: number,
+  config: BattleConfig = DEFAULT_BATTLE_CONFIG,
+): number {
+  if (nominal <= 0) return 0;
+  const { referenceMagic, perMagic, minRatio, maxRatio } = config.healScaling;
+  const scaled = nominal + (magic - referenceMagic) * perMagic;
+  const floor = nominal * minRatio;
+  const ceiling = nominal * maxRatio;
+  return Math.round(Math.min(ceiling, Math.max(floor, scaled)));
+}
+
+/**
+ * How much `caster` would heal with `skillId`, for a description or a tooltip.
+ *
+ * Zero for every move that does not heal, so a caller can ask about any move
+ * without checking first. The figure is before the HP cap: what the battle
+ * reports afterwards is what actually went in, which is smaller near full HP.
+ */
+export function getMoveHealing(
+  skillId: string,
+  caster: Monster,
+  config: BattleConfig = DEFAULT_BATTLE_CONFIG,
+): number {
+  return scaleHeal(getMoveBehavior(skillId).heal, caster.stats.magic, config);
 }
 
 /**

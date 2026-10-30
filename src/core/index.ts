@@ -207,6 +207,8 @@ export type {
 export {
   applyStatus,
   canApplyStatus,
+  getMoveHealing,
+  scaleHeal,
   blindMisses,
   blockingStatus,
   BOOST_REASONS,

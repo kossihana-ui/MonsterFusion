@@ -360,6 +360,8 @@ export interface BattleConfig {
    */
   readonly startingMp: number;
   readonly mpRegenPerTurn: number;
+  /** The ceiling MP cannot be restored past. */
+  readonly maxMp: number;
   /**
    * Chance a blinded monster's physical attack misses.
    *
@@ -373,6 +375,27 @@ export interface BattleConfig {
   readonly blindEvasion: number;
   /** Damage a poisoned monster loses each turn, inclusive range. */
   readonly poisonDamage: readonly [number, number];
+  /**
+   * How a healer's 魔力 moves a heal off the figure its move names.
+   *
+   * 「回復量を魔力に応じて多少増減させる」, requested 2026-10-28. The point of
+   * the bounds is that a heal stays a heal: a monster bred for magic should
+   * mend better than one that was not, and should not be able to out-heal
+   * damage until the fight stops being a fight.
+   *
+   * The limits are ratios of whatever the move names, not flat HP, so a
+   * second healing move can be added without these numbers meaning
+   * something different for it.
+   */
+  readonly healScaling: {
+    /** The magic at which a move heals exactly what it says. */
+    readonly referenceMagic: number;
+    /** HP added per point of magic above that, and removed below it. */
+    readonly perMagic: number;
+    /** Floor and ceiling, as a share of the move's nominal heal. */
+    readonly minRatio: number;
+    readonly maxRatio: number;
+  };
   /**
    * How long each status lasts when a move applies it, in turns.
    *
@@ -436,12 +459,16 @@ export const DEFAULT_BATTLE_CONFIG: BattleConfig = {
   maxTurns: 200,
   startingMp: 10,
   mpRegenPerTurn: 3,
+  maxMp: 99,
   // Advantage compounds: a monster that deals 1.3x while taking 0.7x is at
   // nearly twice the strength of its counter, which made one starter beat
   // another 98 times in 100. These are deliberately milder than they look -
   // 1.25 and 0.8 still read clearly in play and still decide close fights.
   blindEvasion: 0.5,
   poisonDamage: [5, 10],
+  // The UI's proposal of 2026-10-28, which these restate as ratios: a heal of
+  // 30 is 30 at 70 magic, moves by 1 per 10 magic, and stops at 24 and 36.
+  healScaling: { referenceMagic: 70, perMagic: 0.1, minRatio: 0.8, maxRatio: 1.2 },
   statusTurns: { poison: 3, blind: 2, bind: 1, bindExtended: 2, seed: 1, flinch: 1 },
   powerSteps: { one: 70, two: 110, three: 160, heavy: 180 },
   flinchChance: 0.3,

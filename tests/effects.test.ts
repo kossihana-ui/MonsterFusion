@@ -8,6 +8,7 @@ import {
   blockingStatus,
   conditionMultiplier,
   getMoveBehavior,
+  getMoveHealing,
   hasStatus,
   MOVE_BEHAVIOURS,
   offenceMultiplier,
@@ -28,7 +29,7 @@ import {
 } from '../src/core/battle.ts';
 import { createStarterMonsters } from '../src/core/starters.ts';
 import { createMonsterFromAnalysis } from '../src/core/fusion.ts';
-import type { CrestType, Element, HornType, TailType, WingType, BodyShape } from '../src/shared/types.ts';
+import type { CrestType, Element, EyeType, HornType, TailType, WingType, BodyShape } from '../src/shared/types.ts';
 import { MOVE_CATALOGUE } from '../src/core/moves.ts';
 import { createSeededRandom } from '../src/core/random.ts';
 import { createBattleConfig, DEFAULT_BATTLE_CONFIG } from '../src/core/config.ts';
@@ -43,7 +44,7 @@ function pair(seed = 1) {
 
 /** A monster wearing the feature that teaches the move under test. */
 function wearing(
-  feature: { horns?: HornType; crest?: CrestType; tail?: TailType; wings?: WingType; bodyShape?: BodyShape },
+  feature: { horns?: HornType; crest?: CrestType; tail?: TailType; wings?: WingType; bodyShape?: BodyShape; eyes?: EyeType },
   seed: number,
   name: string,
 ) {
@@ -233,6 +234,142 @@ test('a heal restores HP, reports what it actually restored, and never attacks',
   const mine = heals.find((e) => e.type === 'heal' && e.targetId === hurt.id);
   assert.ok(mine && mine.type === 'heal');
   assert.equal(mine.amount, 30, 'the event reports the real amount');
+});
+
+test('a healer with more magic mends more, within bounds', () => {
+  const { aqua } = pair(3);
+  const { referenceMagic, minRatio, maxRatio } = DEFAULT_BATTLE_CONFIG.healScaling;
+  const nominal = getMoveBehavior('hydro-ram').heal;
+  const withMagic = (magic: number) =>
+    getMoveHealing('hydro-ram', { ...aqua, stats: { ...aqua.stats, magic } });
+
+  // At the reference it is exactly what the move says it is, so the figure in
+  // the description is not a lie for an average healer.
+  assert.equal(withMagic(referenceMagic), nominal);
+
+  assert.ok(withMagic(20) < nominal, 'a poor caster should heal less');
+  assert.ok(withMagic(120) > nominal, 'a strong caster should heal more');
+  assert.ok(
+    withMagic(20) < withMagic(70) && withMagic(70) < withMagic(120),
+    'and it should rise the whole way, not step once',
+  );
+
+  // The bounds are what stop a healer out-healing the fight.
+  for (const magic of [0, 1, 500, 9999]) {
+    const healed = withMagic(magic);
+    assert.ok(healed >= nominal * minRatio, `${magic} magic heals ${healed}, under the floor`);
+    assert.ok(healed <= nominal * maxRatio, `${magic} magic heals ${healed}, over the ceiling`);
+  }
+  assert.equal(withMagic(0), Math.round(nominal * minRatio), 'the floor is reachable');
+  assert.equal(withMagic(9999), Math.round(nominal * maxRatio), 'and so is the ceiling');
+
+  // Whole numbers, because the UI prints this next to a move.
+  for (let magic = 0; magic <= 200; magic += 7) {
+    assert.equal(withMagic(magic), Math.round(withMagic(magic)), 'a heal must be a whole number');
+  }
+});
+
+test('asking what a move heals is safe for every move', () => {
+  const { aqua } = pair(3);
+  for (const move of MOVE_CATALOGUE) {
+    const healing = getMoveHealing(move.id, aqua);
+    assert.equal(
+      healing > 0,
+      getMoveBehavior(move.id).heal > 0,
+      `${move.id} heals ${healing} but its behaviour says otherwise`,
+    );
+  }
+  assert.equal(getMoveHealing('attack', aqua), 0, 'the plain attack heals nothing');
+});
+
+test('the heal in a fight belongs to the caster, not to the move', () => {
+  const { aqua } = pair(3);
+  const healed = (magic: number) => {
+    const state = createDuelWithLoadouts(aqua, aqua, [
+      { monsterId: aqua.id, skillIds: ['hydro-ram'] },
+    ]);
+    const caster = state.combatants[1];
+    assert.ok(caster);
+    caster.hp = 40;
+    caster.stats.magic = magic;
+    const next = stepTurn(
+      state,
+      createScriptedPolicy([{ kind: 'skill', skillId: 'hydro-ram' }]),
+      createSeededRandom(1),
+    );
+    const event = effectsOf(next).find(
+      (e): e is Extract<BattleEffectEvent, { type: 'heal' }> =>
+        e.type === 'heal' && e.targetId === caster.id,
+    );
+    assert.ok(event, `no heal was reported at ${magic} magic`);
+    return event.amount;
+  };
+
+  const weak = healed(20);
+  const strong = healed(120);
+  assert.ok(strong > weak, `${strong} magic healed no better than ${weak}`);
+  assert.equal(weak, getMoveHealing('hydro-ram', { ...aqua, stats: { ...aqua.stats, magic: 20 } }));
+  assert.equal(strong, getMoveHealing('hydro-ram', { ...aqua, stats: { ...aqua.stats, magic: 120 } }));
+});
+
+test('healing at full health reports nothing restored', () => {
+  const { aqua } = pair(5);
+  const state = createDuelWithLoadouts(aqua, aqua, [
+    { monsterId: aqua.id, skillIds: ['hydro-ram'] },
+  ]);
+  const full = state.combatants[0];
+  assert.ok(full);
+  assert.equal(full.hp, full.maxHp, 'this one starts untouched');
+
+  const next = stepTurn(
+    state,
+    createScriptedPolicy([{ kind: 'skill', skillId: 'hydro-ram' }]),
+    createSeededRandom(2),
+  );
+  const event = effectsOf(next).find(
+    (e): e is Extract<BattleEffectEvent, { type: 'heal' }> =>
+      e.type === 'heal' && e.targetId === full.id,
+  );
+  assert.ok(event, 'the move was still used, so it is still reported');
+  assert.equal(event.amount, 0, 'nothing went in');
+});
+
+test('restored MP is not reported as a heal of zero', () => {
+  // A heal of zero means "already full", so MP has an event of its own.
+  const gazer = wearing({ eyes: 'multi' }, 31, 'gazer');
+  const restores = getMoveBehavior('multi-gaze').restoreMp;
+  assert.ok(restores > 0, 'multi-gaze is the move that hands MP back');
+
+  const state = createDuelWithLoadouts(gazer, gazer, [
+    { monsterId: gazer.id, skillIds: ['multi-gaze'] },
+  ]);
+  const caster = state.combatants[1];
+  assert.ok(caster);
+  const cost = caster.skills.find((skill) => skill.id === 'multi-gaze')?.cost ?? 0;
+  // Enough to pay for the move, and far enough from the cap to see the refund.
+  caster.mp = cost;
+  const before = caster.mp;
+
+  const next = stepTurn(
+    state,
+    createScriptedPolicy([{ kind: 'skill', skillId: 'multi-gaze' }]),
+    createSeededRandom(4),
+  );
+  const events = effectsOf(next);
+  assert.ok(
+    !events.some((e) => e.type === 'heal' && e.actorId === caster.id),
+    'an MP restore must not look like a heal',
+  );
+  const mp = events.find(
+    (e): e is Extract<BattleEffectEvent, { type: 'mp' }> =>
+      e.type === 'mp' && e.targetId === caster.id,
+  );
+  assert.ok(mp, 'and it must still be reported');
+  assert.equal(mp.amount, restores, 'with what actually went in');
+  assert.ok(
+    (next.combatants.find((c) => c.id === caster.id)?.mp ?? 0) > before - cost,
+    'the MP really came back',
+  );
 });
 
 test('a heal is capped at full health and says so', () => {

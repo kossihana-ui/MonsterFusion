@@ -40,6 +40,7 @@ import {
   offenceMultiplier,
   removePolarity,
   removeStatuses,
+  scaleHeal,
   tickStatuses,
 } from './effects.ts';
 import type { MoveLoadout } from './moves.ts';
@@ -566,7 +567,7 @@ export function stepTurn(
   // before anyone declares a new one.
   for (const combatant of combatants) {
     combatant.defending = false;
-    combatant.mp = Math.min(99, combatant.mp + config.mpRegenPerTurn);
+    combatant.mp = Math.min(config.maxMp, combatant.mp + config.mpRegenPerTurn);
   }
 
   const atTurnStart: BattleState = {
@@ -585,7 +586,7 @@ export function stepTurn(
     const actor = byId.get(actorId);
     if (!actor) continue;
     actor.defending = true;
-    actor.mp = Math.min(99, actor.mp + config.defendMpBonus);
+    actor.mp = Math.min(config.maxMp, actor.mp + config.defendMpBonus);
     log.push({
       turn,
       actorId: actor.id,
@@ -893,7 +894,10 @@ export function stepTurn(
     if (resolved.heal > 0) {
       const receiver = resolved.target === 'enemy' ? target : actor;
       const before = receiver.hp;
-      receiver.hp = clamp(receiver.hp + resolved.heal, 0, receiver.maxHp);
+      // The caster's magic decides the offer; the receiver's HP cap decides
+      // how much of it lands, and the event reports the second one.
+      const offered = scaleHeal(resolved.heal, actor.stats.magic, config);
+      receiver.hp = clamp(receiver.hp + offered, 0, receiver.maxHp);
       effects.push({
         type: 'heal',
         actorId: actor.id,
@@ -931,13 +935,14 @@ export function stepTurn(
 
     // --- MP ---------------------------------------------------------------
     if (resolved.restoreMp > 0) {
-      actor.mp = Math.min(99, actor.mp + resolved.restoreMp);
+      const before = actor.mp;
+      actor.mp = Math.min(config.maxMp, actor.mp + resolved.restoreMp);
       effects.push({
-        type: 'heal',
+        type: 'mp',
         actorId: actor.id,
         targetId: actor.id,
         ...(logSkillId ? { skillId: logSkillId } : {}),
-        amount: 0,
+        amount: actor.mp - before,
       });
     }
 
