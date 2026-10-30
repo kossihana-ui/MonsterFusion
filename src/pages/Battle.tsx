@@ -1,3 +1,4 @@
+import { HealEffect } from "../components/HealEffect";
 import { MoveHelp } from "../components/MoveHelp";
 import { moveHelp, highlightPart, partNames } from "../shared/moveHelp";
 import { useCallback, useEffect, useRef, useState } from "react";
@@ -55,6 +56,7 @@ function BattleSession({
   const [error, setError] = useState("");
   const [effectNotice, setEffectNotice] = useState("");
   const [multiplier, setMultiplier] = useState<MultiplierPresentation | null>(null);
+  const [healing, setHealing] = useState<{ sequence: number; target: number; amount: number } | null>(null);
   const [damageNumber, setDamageNumber] = useState<{ sequence: number; target: number; amount: number } | null>(null);
   const skip = useRef(false);
   const finishWait = useRef<() => void>(() => {});
@@ -122,7 +124,8 @@ function BattleSession({
         );
         if (!actor) continue;
         const skill = actor.skills.find(s => s.id === entry.skillId);
-        if ((entry.kind === "attack" || entry.kind === "skill" || entry.skillId) && !skip.current) {
+        const blocked = entry.effects?.some(event => event.type === "blocked" || event.type === "skip");
+        if ((entry.kind === "attack" || entry.kind === "skill" || entry.skillId) && !blocked && !skip.current) {
           stopSound.current();
           stopSound.current = battleSound(entry.skillId ?? 'attack', mutedRef.current, skill?.element ?? actor.element);
           if (entry.kind === "attack" || entry.kind === "skill") await play(actor.side, "attack", controller.signal);
@@ -130,6 +133,14 @@ function BattleSession({
         // Events identify the true target, including reflected damage and healing.
         for (const event of entry.effects ?? []) {
           if (controller.signal.aborted) break;
+          if (event.type === 'blocked' || event.type === 'skip') {
+            if (!skip.current) {
+              setEffectNotice(event.type === 'skip' ? STATUS_LABELS[event.reason] + 'で動けません。' : event.reason === 'consecutive' ? 'この技は連続で使えません。' : 'MPが足りません。');
+              await wait(1000, controller.signal);
+              setEffectNotice('');
+            }
+            continue;
+          }
           if (event.type === 'noEffect') {
             const affected = next.coreState?.combatants.find(c => c.id === event.targetId);
             const name = affected?.side === 0 ? state.player.name : state.enemy.name;
@@ -144,8 +155,14 @@ function BattleSession({
           const target = next.coreState?.combatants.find(c => c.id === event.targetId);
           if (!target) continue;
           if (event.type === 'heal') {
+            // amount is the actual recovery after the core's HP cap. Do not recalculate it.
             replayHp[target.side] += event.amount;
             setDisplayHp({ ...replayHp });
+            if (!skip.current) {
+              setHealing({ sequence: ++serial.current, target: target.side, amount: event.amount });
+              await wait(1250, controller.signal);
+              setHealing(null);
+            }
             continue;
           }
           const boost = multiplierPresentation(event);
@@ -191,6 +208,8 @@ function BattleSession({
       if (!controller.signal.aborted) {
         setBusy(false);
         setMotions({});
+        setHealing(null);
+        setEffectNotice("");
         setCue(null);
         setMultiplier(null);
         setDamageNumber(null);
@@ -255,7 +274,7 @@ function BattleSession({
         ].map((side, i) => (
           <section key={i}>
             <div className="eyebrow">{side.label}</div>
-            <div className="battle-portrait-stage" ref={i === 1 ? enemyStage : undefined}>
+            <div className={`battle-portrait-stage ${healing?.target === i ? "is-healing" : ""}`} ref={i === 1 ? enemyStage : undefined}>
             <Portrait
               monster={side.monster}
               large
@@ -263,6 +282,7 @@ function BattleSession({
               motion={motions[i]}
               highlight={i === 0 && !busy ? highlightPart(inspectedMove) : undefined}
             />
+            {healing?.target === i && <HealEffect key={healing.sequence} amount={healing.amount} />}
             {damageNumber?.target === i && <span key={damageNumber.sequence} className="battle-damage-number" aria-hidden="true">−{damageNumber.amount}</span>}
             </div>
             <h2>{side.monster.name}</h2>

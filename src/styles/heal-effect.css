@@ -1,0 +1,10 @@
+.heal-effect {position:absolute;inset:0;pointer-events:none;z-index:8;display:grid;place-items:center;color:#b4ffe6;}
+.heal-number {font-size:clamp(1.8rem,5vw,3rem);text-shadow:0 2px 4px #102e2c,0 0 12px #51e5bc;animation:heal-rise 1.25s both;}
+.heal-ring {position:absolute;width:72%;height:25%;bottom:14%;border:3px solid #84f5e1;border-radius:50%;box-shadow:0 0 18px #45d4b7,inset 0 0 16px #45d4b7;animation:heal-ring 1.25s both;}
+.heal-spark {position:absolute;font-size:1.8rem;animation:heal-rise 1.25s both;}
+.heal-spark-a {left:22%;top:45%;}.heal-spark-b {right:22%;top:35%;}
+.battle-portrait-stage.is-healing>.portrait {animation:heal-lift 1.25s ease-in-out both;}
+@keyframes heal-rise {0%{opacity:0;transform:translateY(16px)}20%,75%{opacity:1}100%{opacity:0;transform:translateY(-42px)}}
+@keyframes heal-ring {0%{opacity:0;transform:scale(.5)}25%,65%{opacity:.9}100%{opacity:0;transform:scale(1.2) translateY(-65px)}}
+@keyframes heal-lift {0%,100%{transform:translateY(0);filter:none}40%,65%{transform:translateY(-8px);filter:drop-shadow(0 0 10px #70f8cf)}}
+@media(prefers-reduced-motion:reduce){.heal-number,.heal-ring,.heal-spark,.battle-portrait-stage.is-healing>.portrait {animation:none;}.heal-ring,.heal-spark{display:none;}}
