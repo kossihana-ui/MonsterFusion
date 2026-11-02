@@ -5,7 +5,7 @@ try {
   const {moveHelp,highlightPart}=await server.ssrLoadModule('/src/shared/moveHelp.ts');
   const describe=id=>moveHelp({id});
   assert.equal(describe('hydro-ram').attacks,false);
-  assert.match(describe('hydro-ram').lines.join(' '),/HPを30回復/);
+  assert.match(describe('hydro-ram').lines.join(' '),/HPを魔力に応じて回復/);
   assert.equal(describe('crystal-ray').attacks,false);
   assert.match(describe('crystal-ray').lines.join(' '),/強化.*解除/);
   assert.match(describe('final-tail').summary,/反動で動けなくなる/);

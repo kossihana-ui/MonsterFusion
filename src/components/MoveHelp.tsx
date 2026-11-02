@@ -1,10 +1,10 @@
-import type { LearnableMove, Skill, MonsterPhenotype } from '@core/core/index.ts';
+import type { LearnableMove, Skill, MonsterPhenotype, Monster } from '@core/core/index.ts';
 import { partUrls } from '../mocks/assets/parts-detailed/manifest';
 import { moveHelp, partNames } from '../shared/moveHelp';
 import { skillLabel } from '../shared/battlePresentation';
 import '../styles/move-help.css';
-export function MoveHelp({skill,move,phenotype}: {skill:Skill;move?:LearnableMove;phenotype?:MonsterPhenotype}) {
-  const help=moveHelp(skill);
+export function MoveHelp({skill,move,phenotype,caster}: {skill:Skill;move?:LearnableMove;phenotype?:MonsterPhenotype;caster?:Monster}) {
+  const help=moveHelp(skill,caster);
   const source=move?.source;
   const key = source && phenotype ? source === 'size' || source === 'bodyShape' ? `body/${phenotype.bodyShape}` : `${source}/${phenotype[source]}` : '';
   const icon=partUrls[key];

@@ -141,6 +141,16 @@ function BattleSession({
             }
             continue;
           }
+          if (event.type === 'mp') {
+            const recipient = next.coreState?.combatants.find(c => c.id === event.targetId);
+            const name = recipient?.side === 0 ? state.player.name : state.enemy.name;
+            if (!skip.current) {
+              setEffectNotice(name + (event.amount > 0 ? '：MP ＋' + event.amount : '：MP満タン'));
+              await wait(900, controller.signal);
+              setEffectNotice('');
+            }
+            continue;
+          }
           if (event.type === 'noEffect') {
             const affected = next.coreState?.combatants.find(c => c.id === event.targetId);
             const name = affected?.side === 0 ? state.player.name : state.enemy.name;
@@ -345,14 +355,14 @@ function BattleSession({
             <button data-element={skill.element} key={skill.id} disabled={locked || availableMp < skill.cost} onClick={() => act({ kind: "skill", skillId: skill.id })}>
               <strong>{skillLabel(skill)} {finishers.has(skill.id) && <span className="finisher-badge">大技</span>}</strong>
               <MoveBadges element={skill.element} scaling={skill.scaling} />
-              <span>{moveHelp(skill).summary}</span>
-              <span>MP {skill.cost} · {moveHelp(skill).attacks && enemy ? matchupLabel(elementMultiplier(skill.element, enemy.element)) : "補助"}{availableMp < skill.cost ? " · MP不足" : ""}</span>
+              <span>{moveHelp(skill,getCoreMonster(state.player.id)).summary}</span>
+              <span>MP {skill.cost} · {moveHelp(skill,getCoreMonster(state.player.id)).attacks && enemy ? matchupLabel(elementMultiplier(skill.element, enemy.element)) : "補助"}{availableMp < skill.cost ? " · MP不足" : ""}</span>
             </button>
             <button className="move-info" aria-label={`${skillLabel(skill)}の効果を確認`} aria-expanded={helpSkill === skill.id} aria-controls="battle-move-help" onClick={() => { setInspectedSkill(skill.id); setHelpSkill(helpSkill === skill.id ? null : skill.id); }}>ⓘ 効果・使う部位</button>
             </div>
           ))}
         </div>
-        {describedSkill && <div id="battle-move-help" className="battle-move-help"><MoveHelp skill={describedSkill} move={helpMove} phenotype={getCoreMonster(state.player.id).phenotype} /><button className="text-button" onClick={() => { setHelpSkill(null); setInspectedSkill(null); }}>説明を閉じる</button></div>}
+        {describedSkill && <div id="battle-move-help" className="battle-move-help"><MoveHelp caster={getCoreMonster(state.player.id)} skill={describedSkill} move={helpMove} phenotype={getCoreMonster(state.player.id).phenotype} /><button className="text-button" onClick={() => { setHelpSkill(null); setInspectedSkill(null); }}>説明を閉じる</button></div>}
         <p className="battle-help">MPは毎ターン +{DEFAULT_BATTLE_CONFIG.mpRegenPerTurn}。守ると、さらに回復します。</p>
       </section>
       }

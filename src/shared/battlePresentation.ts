@@ -31,6 +31,7 @@ export function battleLogLabel(entry: BattleLogEntry, state: BattleState, names:
     const effects = entry.effects.map(e => {
       switch (e.type) {
         case 'damage': return `${subject(e.targetId)}に${e.amount}ダメージ。${e.critical ? ' 会心！' : ''}${e.mitigated > 0 ? ' 守りでダメージを軽減。' : ''}`;
+        case 'mp': return `${subject(e.targetId)}のMPが${e.amount}回復。`;
         case 'heal': return `${subject(e.targetId)}のHPが${e.amount}回復。`;
         case 'cleanse': return `${subject(e.targetId)}の${e.removed.length ? e.removed.map(k => STATUS_LABELS[k]).join('・') : '解除できる効果'}を解除。`;
         case 'status': return `${subject(e.targetId)}に${STATUS_LABELS[e.status]}。`;

@@ -1,13 +1,13 @@
-import { getMoveBehavior, STATUS_LABELS, STATUS_POLARITY, DEFAULT_BATTLE_CONFIG } from '@core/core/index.ts';
-import type { Skill, LearnableMove } from '@core/core/index.ts';
+import { getMoveHealing, getMoveBehavior, STATUS_LABELS, STATUS_POLARITY, DEFAULT_BATTLE_CONFIG } from '@core/core/index.ts';
+import type { Skill, LearnableMove, Monster } from '@core/core/index.ts';
 
 export const partNames: Record<string, string> = { tail:'尻尾', horns:'角', wings:'翼', jaw:'口・顎', eyes:'目', crest:'頭飾り', bodyShape:'体型', size:'体の大きさ' };
-export function moveHelp(skill: Skill) {
+export function moveHelp(skill: Skill, caster?: Monster) {
   const b = getMoveBehavior(skill.id);
   const lines: string[] = [];
   if (b.attacks) lines.push(b.hits > 1 ? `相手を${b.hits}回攻撃する。` : '相手にダメージを与える。');
   else lines.push('攻撃しない補助技。');
-  if (b.heal) lines.push(`${b.target === 'self' ? '自分' : b.target === 'both' ? '双方' : '相手'}のHPを${b.heal}回復する。`);
+  if (b.heal) lines.push(`${b.target === 'self' ? '自分' : b.target === 'both' ? '双方' : '相手'}のHPを${caster ? getMoveHealing(skill.id, caster) : "魔力に応じて"}回復する。${caster ? "（この個体の魔力での回復量・最大HPまで）" : ""}`);
   if (b.piercesDefense) lines.push('相手の「守る」を無視して攻撃する。');
   if (b.shattersDefense) lines.push('相手の防御力を無視する。「守る」の効果は受ける。');
   const conditions = {targetDefending:'相手が守っているとき',targetNotDefending:'相手が守っていないとき',targetBound:'相手が拘束されているとき',selfPoisoned:'自分が毒のとき',targetSeeded:'相手に種が付いているとき'};

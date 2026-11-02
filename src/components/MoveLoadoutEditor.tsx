@@ -88,14 +88,14 @@ export function MoveLoadoutEditor({ monsterId, children, onInspect }: { monsterI
                 onClick={() => { setPicked(picked === skill.id ? "" : skill.id); playUiSound(); setMessage("入れたい技枠を押してください。"); }}>
                 <strong>{skillLabel(skill)}</strong>{category === "finisher" && <span className="finisher-badge">大技</span>}
                 <MoveBadges element={skill.element} scaling={skill.scaling} />
-                <span>{moveHelp(skill).summary}</span>
+                <span>{moveHelp(skill,monster).summary}</span>
                 <span>MP {skill.cost}{slots.includes(skill.id) ? " · セット済み" : ""}</span>
               </button>
               <button type="button" className="move-info" aria-label={`${skillLabel(skill)}の説明`} aria-expanded={open} aria-controls={`move-info-${skill.id}`} onClick={() => {
                 inspect(skill.id); setExpanded(open ? expanded.filter(id => id !== skill.id) : [...expanded, skill.id]); playUiSound();
               }}>ⓘ</button>
             </div>
-            {open && <div id={`move-info-${skill.id}`}><MoveHelp skill={skill} move={move} phenotype={monster.phenotype} /></div>}
+            {open && <div id={`move-info-${skill.id}`}><MoveHelp caster={monster} skill={skill} move={move} phenotype={monster.phenotype} /></div>}
           </div>;
         })}
       </div>
