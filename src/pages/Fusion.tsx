@@ -2,7 +2,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import type { FusionResult, GameAdapter, Monster } from "../shared/ui";
 import { Portrait } from "../components/MonsterView";
 import { FusionReveal } from "../components/FusionReveal";
-import { getPartInventory, previewMaterial } from "../mocks/game";
+import { getPartInventory, previewMaterial, resumeArena } from "../mocks/game";
 export function Fusion({
   monsters,
   adapter,
@@ -26,9 +26,15 @@ export function Fusion({
   const [error, setError] = useState("");
   const parentA = monsters.find((m) => m.id === a);
   const parentB = monsters.find((m) => m.id === b);
+  const arenaState = resumeArena();
+  const arenaLocked = arenaState?.status === 'active' || arenaState?.status === 'won';
+  useEffect(() => {
+    if (!monsters.some(m => m.id === a)) setA(monsters[0]?.id ?? '');
+    if (!monsters.some(m => m.id === b)) setB(monsters[1]?.id ?? '');
+  }, [monsters, a, b]);
   const preview = partId && parentA && parentB ? previewMaterial(parentA, parentB, partId) : null;
   async function fuse() {
-    if (!parentA || !parentB || a === b || pending.current || animating) return;
+    if (!parentA || !parentB || a === b || pending.current || animating || arenaLocked) return;
     pending.current = true;
     // Unlock audio inside the user's click, before asynchronous core work.
     if (!matchMedia("(prefers-reduced-motion: reduce)").matches) {
@@ -113,17 +119,17 @@ export function Fusion({
         <span>✧</span>
         <button
           className="primary"
-          disabled={!parentA || !parentB || a === b || busy || animating || (!!preview && !preview.ok)}
+          disabled={!parentA || !parentB || a === b || busy || animating || arenaLocked || (!!preview && !preview.ok)}
           onClick={fuse}
         >
           {busy ? "融合中…" : "✦ 融合する"}
         </button>
         <p>
-          {monsters.length < 2
-            ? "融合には2体必要です。32×32のPNGを登録してください。"
+          {arenaLocked ? "アリーナの挑戦を終えてから融合してください。" : monsters.length < 2
+            ? "融合には2体必要です。今いる仲間を大切にしましょう。"
             : a === b
               ? "異なる2体を選んでください。"
-              : "デモでは親を残したまま、新しい個体が図鑑に加わります。"}
+              : "親2体は所持一覧からいなくなり、子1体を迎えます。親の記録は系譜に残ります。"}
         </p>
       </div>
       {error && <p role="alert">{error}</p>}

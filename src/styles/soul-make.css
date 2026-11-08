@@ -1,0 +1,14 @@
+.soul-layout { display: grid; grid-template-columns: 1.2fr 1fr; gap: 20px; }
+.soul-slots { display: grid; grid-template-columns: repeat(3,minmax(0,1fr)); gap: 12px; margin-top: 20px; }
+.soul-slot > button:first-child { width: 100%; min-height: 150px; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 12px; border: 1px dashed #698b80; border-radius: 10px; padding: 12px; background: #17282a; color: #dce9de; }
+.soul-slot small { display: block; color: #a5bcb3; font-size: 11px; }
+.soul-slot strong { font-size: 13px; }
+.soul-slot > button.is-selected { border: 2px solid #e3cc8d; background: #303a2e; }
+.soul-empty { font-size: 32px; color: #7f9e93; }
+.soul-parts { display: flex; flex-direction: column; gap: 10px; }
+.soul-parts button { display: flex; align-items: center; gap: 12px; padding: 10px; border: 1px solid #586c63; border-radius: 8px; background: #20302d; text-align: left; }
+.soul-parts button[aria-pressed=true] { border-color: #e3cc8d; }
+.soul-parts small { display: block; margin-top: 4px; color: #adc3ba; }
+.game-over { max-width: 660px; margin: 40px auto; text-align: center; border-color: #c98888; }
+.game-over h1 { font-size: clamp(24px,5vw,36px); }
+@media (max-width: 760px) { .soul-layout { grid-template-columns: 1fr; } .soul-slots { grid-template-columns: repeat(2,minmax(0,1fr)); } }

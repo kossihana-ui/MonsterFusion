@@ -1,16 +1,17 @@
-import { useState } from "react";
+import { useState, useRef } from "react";
+import { createSessionAdapter } from "./mocks/session";
+import { SoulMake } from "./pages/SoulMake";
 import { Collection } from "./pages/Collection";
 import { Detail } from "./pages/Detail";
 import { Fusion } from "./pages/Fusion";
 import { Battle } from "./pages/Battle";
-import { Register } from "./pages/Register";
 import { SoundLab } from "./pages/SoundLab";
 import { MoveWorkshop } from "./pages/MoveWorkshop";
 import { initialMonsters, gameAdapter } from "./mocks/game";
 import { playUiSound } from "./components/uiSound";
 import { GameGuide } from "./components/GameGuide";
 import type { GameAdapter, Monster } from "./shared/ui";
-type Page = "collection" | "fusion" | "battle" | "register" | "detail" | "sound" | "moves";
+type Page = "collection" | "fusion" | "battle" | "register" | "detail" | "sound" | "moves" | "soul";
 const tabs: { id: Page; label: string; icon: string; english: string }[] = [
   {
     id: "collection",
@@ -20,6 +21,7 @@ const tabs: { id: Page; label: string; icon: string; english: string }[] = [
   },
   { id: "fusion", label: "融合のアトリエ", icon: "✧", english: "FUSION" },
   { id: "battle", label: "バトルアリーナ", icon: "⚔", english: "BATTLE" },
+  { id: "soul", label: "ソウルメイク", icon: "◇", english: "SOUL MAKE" },
   { id: "register", label: "モンスター登録", icon: "＋", english: "REGISTER" },
   { id: "sound", label: "音の試聴室", icon: "♪", english: "SOUND WORKSHOP" },
   { id: "moves", label: "技の編集室", icon: "✎", english: "MOVE WORKSHOP" },
@@ -32,7 +34,13 @@ export default function App({
   const [page, setPage] = useState<Page>("collection");
   const [monsters, setMonsters] = useState(initialMonsters);
   const [selected, setSelected] = useState<Monster | null>(null);
-  const add = (m: Monster) => setMonsters((prev) => [...prev, m]);
+  const history = useRef([...initialMonsters]);
+  const session = useRef<GameAdapter | null>(null);
+  if (!session.current) session.current = createSessionAdapter(adapter, initialMonsters, owned => {
+    for (const monster of owned) if (!history.current.some(m => m.id === monster.id)) history.current.push(monster);
+    setMonsters(owned);
+  });
+  const gameOver = monsters.length === 0;
   return (
     <div className="app" onClickCapture={(event) => {
       const target = event.target as HTMLElement;
@@ -63,6 +71,7 @@ export default function App({
           {tabs.map((tab) => (
             <button
               key={tab.id}
+              disabled={gameOver}
               aria-current={
                 page === tab.id ||
                 (page === "detail" && tab.id === "collection")
@@ -100,6 +109,13 @@ export default function App({
           </span>
         </header>
         <main>
+          {gameOver ? <section className="panel game-over" role="alert">
+            <div className="eyebrow">GAME OVER</div><h1>仲間がいなくなりました</h1>
+            <p>所有モンスターが0体になり、今回の冒険は終了です。</p>
+            <p>融合は親2体を使って子1体を生みます。敗北すると出場した仲間を失います。</p>
+            <button className="primary" onClick={() => window.location.reload()}>最初の3体からやり直す</button>
+            <p>最初から始めると、今回集めたパーツもリセットされます。</p>
+          </section> : <>
           {page === "collection" && (
             <Collection
               monsters={monsters}
@@ -113,19 +129,21 @@ export default function App({
           {page === "detail" && selected && (
             <Detail
               monster={selected}
-              monsters={monsters}
+              monsters={history.current}
               onBack={() => setPage("collection")}
             />
           )}
           {page === "fusion" && (
-            <Fusion monsters={monsters} adapter={adapter} onCreated={add} />
+            <Fusion monsters={monsters} adapter={session.current} onCreated={() => {}} />
           )}
           {page === "battle" && (
-            <Battle monsters={monsters} adapter={adapter} />
+            <Battle monsters={monsters} adapter={session.current} />
           )}
-          {page === "register" && <Register onRegister={add} />}
+          {page === "register" && <section className="panel"><h1>モンスター登録</h1><p>仲間の数を管理するルールに合わせ、画像からの無料追加は休止しています。</p><button onClick={() => setPage("soul")}>ソウルメイクへ</button></section>}
+          {page === "soul" && <SoulMake />}
           {page === "sound" && <SoundLab />}
           {page === "moves" && <MoveWorkshop />}
+          </>}
           <footer>
             <span>MONSTERFUSION</span>
             <span>ひとつの融合から、無限の物語へ。</span>

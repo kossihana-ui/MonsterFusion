@@ -19,6 +19,7 @@ export function BattleResult({ state, onRetry, children }: { state: BattleState;
       <div className="result-eyebrow">{won ? "VICTORY" : draw ? "DRAW" : "DEFEAT"}</div>
       <h2 id="battle-result-title">{won ? "勝利！" : draw ? "引き分け！" : "敗北…"}</h2>
       <p className="result-message">{won ? `${state.player.name}、よくやった！` : draw ? "互いに一歩も譲らない戦いだった。" : "技の組み合わせを変えて、もう一度挑もう。"}</p>
+      {state.status === 'lost' && <p>{state.player.name}を失いました。ほかの仲間で次の挑戦に備えましょう。</p>}
       {draw ? <div className="result-pair"><Portrait monster={state.player} facingRight /><Portrait monster={state.enemy} /></div> : <><div className="result-winner"><Portrait monster={winner} large /></div><p>{won ? "WINNER" : "相手の勝者"} · {winner.name}</p></>}
       <p className="result-turns">{state.coreState?.turn ?? Math.max(0, state.turn - 1)}ターンの戦い</p>
       {children}

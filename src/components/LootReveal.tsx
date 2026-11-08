@@ -7,7 +7,7 @@ import '../styles/loot.css';
 export function TreasureChestIcon() { return <svg viewBox="0 0 32 32" shapeRendering="crispEdges"><g className="chest-lid"><path fill="#6c4035" stroke="#edc36e" strokeWidth="2" d="M3 15V8h3V5h20v3h3v7Z"/><path fill="#dba75e" d="M8 6h3v9H8zm13 0h3v9h-3z"/></g><path fill="#6c4035" stroke="#edc36e" strokeWidth="2" d="M3 16h26v13H3z"/><path fill="#dba75e" d="M8 17h3v11H8zm13 0h3v11h-3z"/><path fill="#fff0a5" d="M14 14h5v7h-5z"/></svg>; }
 
 export function PartIcon({ part }: { part: GenePart }) {
-  const key = `${part.locus}/${part.value}${part.locus === 'wings' ? '-near' : ''}`;
+  const key = `${part.locus === 'bodyShape' ? 'body' : part.locus}/${part.value}${part.locus === 'wings' ? '-near' : ''}`;
   return partUrls[key] ? <img className="part-icon" src={partUrls[key]} alt={part.name} /> : <span aria-label={part.name}>✦</span>;
 }
 
