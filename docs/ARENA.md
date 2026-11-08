@@ -90,7 +90,9 @@ BOSS_TEMPLATE
 
 **倒した相手が実際に身に着けていた特徴からのみ抽選されます。** 持っていないパーツは絶対に落ちません。
 
-- 対象部位: 角・翼・尻尾・口・頭飾り（`dropLoci` で設定）
+- 対象部位: 体型・目・角・翼・尻尾・口・頭飾り（`dropLoci` で設定）
+  - 体型と目は2026-11-08に追加しました。ソウルメイクの必須素材で、落ちないと画面が永久に開かないためです（[SESSION_AND_SOULMAKE.md](SESSION_AND_SOULMAKE.md) の7章に測定値）
+  - 代わりに既存5部位の割合が20%→約14%に下がっています。狙い撃ちは約1.3倍かかります
 - 「なし」の部位（角なし等）は落ちません
 - 落ちなかった場合も**結果として返ります**（`empty: true`、メッセージ付き）
 - **二重取得は防止されます**。2回目は `duplicate: true` で在庫が増えません
@@ -155,7 +157,7 @@ DEFAULT_ARENA_CONFIG
 // firstStrength: 0.85, lastStrength: 1.1, bossStrength: 1.35,
 // dropChance: 0.35, bossDropChance: 0.75,
 // dropCount: 1, bossDropCount: 2,
-// dropLoci: ['horns','wings','tail','jaw','crest'],
+// dropLoci: ['bodyShape','eyes','horns','wings','tail','jaw','crest'],
 // partsPerFusion: 1
 ```
 

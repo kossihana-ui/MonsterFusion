@@ -574,7 +574,11 @@ export const DEFAULT_ARENA_CONFIG: ArenaConfig = {
   bossDropChance: 0.75,
   dropCount: 1,
   bossDropCount: 2,
-  dropLoci: ['horns', 'wings', 'tail', 'jaw', 'crest'],
+  // bodyShape and eyes were added on 2026-11-08: ソウルメイク requires both,
+  // and a recipe whose ingredients cannot drop is a screen that never opens.
+  // Both are cosmetic, and neither has a value meaning "none", so both always
+  // drop rather than being skipped.
+  dropLoci: ['bodyShape', 'eyes', 'horns', 'wings', 'tail', 'jaw', 'crest'],
   skipAbsentFeatures: true,
   partsPerFusion: 1,
 };
@@ -588,6 +592,33 @@ export function createArenaConfig(overrides: Partial<ArenaConfig> = {}): ArenaCo
 // ---------------------------------------------------------------------------
 
 /** Everything the core needs, in one object a UI can hold and tweak. */
+/**
+ * ソウルメイク: which slots a hand-built monster has, and which it must fill.
+ *
+ * Only the loci a player can actually hold as parts belong here. Colour, size
+ * and element are not slots: nobody carries a colour, and a monster with no
+ * colour is not a monster, so those are decided when it is made.
+ */
+export interface SoulMakeConfig {
+  /** Without all of these there is nothing to build. */
+  readonly requiredLoci: readonly CategoricalLocus[];
+  /** Fitted if the player has them, decided by the game if not. */
+  readonly optionalLoci: readonly CategoricalLocus[];
+}
+
+export const DEFAULT_SOUL_MAKE_CONFIG: SoulMakeConfig = {
+  // The UI's proposal of 2026-11-08: a body and a pair of eyes are the
+  // monster, and everything else is what it happens to be wearing.
+  requiredLoci: ['bodyShape', 'eyes'],
+  optionalLoci: ['jaw', 'crest', 'horns', 'wings', 'tail'],
+};
+
+export function createSoulMakeConfig(
+  overrides: Partial<SoulMakeConfig> = {},
+): SoulMakeConfig {
+  return { ...DEFAULT_SOUL_MAKE_CONFIG, ...overrides };
+}
+
 export interface GameConfig {
   readonly arena: ArenaConfig;
   readonly genetics: GeneticsConfig;
@@ -595,6 +626,7 @@ export interface GameConfig {
   readonly fusion: FusionConfig;
   readonly battle: BattleConfig;
   readonly graft: GraftConfig;
+  readonly soulMake: SoulMakeConfig;
 }
 
 export const DEFAULT_GAME_CONFIG: GameConfig = {
@@ -604,6 +636,7 @@ export const DEFAULT_GAME_CONFIG: GameConfig = {
   fusion: DEFAULT_FUSION_CONFIG,
   battle: DEFAULT_BATTLE_CONFIG,
   graft: DEFAULT_GRAFT_CONFIG,
+  soulMake: DEFAULT_SOUL_MAKE_CONFIG,
 };
 
 /** Partial overrides, nested one level deep. */
@@ -614,6 +647,7 @@ export interface GameConfigOverrides {
   readonly fusion?: Partial<FusionConfig>;
   readonly battle?: Partial<BattleConfig>;
   readonly graft?: Partial<GraftConfig>;
+  readonly soulMake?: Partial<SoulMakeConfig>;
 }
 
 export function createGameConfig(overrides: GameConfigOverrides = {}): GameConfig {
@@ -624,5 +658,6 @@ export function createGameConfig(overrides: GameConfigOverrides = {}): GameConfi
     fusion: createFusionConfig(overrides.fusion ?? {}),
     battle: createBattleConfig(overrides.battle ?? {}),
     graft: createGraftConfig(overrides.graft ?? {}),
+    soulMake: createSoulMakeConfig(overrides.soulMake ?? {}),
   };
 }

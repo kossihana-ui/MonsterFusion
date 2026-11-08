@@ -23,6 +23,8 @@ import { reconcileLoadout } from './moves.ts';
 import type { PartInventory, PartStack } from './parts.ts';
 import { createPartInventory, REQUEST_LEDGER_LIMIT } from './parts.ts';
 import type { ArenaRun } from './arena.ts';
+import type { GameSession, SessionStatus } from './session.ts';
+import { createGameSession } from './session.ts';
 import {
   CATEGORICAL_LOCI,
   NUMERIC_LOCI,
@@ -50,6 +52,27 @@ export interface MonsterSaveFile {
   readonly inventory: PartInventory;
   /** An arena run in progress, so a streak survives closing the game. */
   readonly arena: ArenaRun | null;
+  /**
+   * The run: which monsters are still the player's, and whether it is over.
+   *
+   * Ids rather than monsters, because `monsters` above already holds every
+   * creature that has existed. A consumed parent and a monster lost in the
+   * ring both stay in that list - their names are part of their descendants'
+   * lineage - and this is what says they are no longer playable.
+   *
+   * Null in a save written before runs existed. Such a save is restored as a
+   * run in which everything saved is still owned, which is what it was.
+   */
+  readonly session: SessionSave | null;
+}
+
+/** The ownership half of a session. The monsters themselves are in `monsters`. */
+export interface SessionSave {
+  readonly ownedIds: readonly MonsterId[];
+  readonly deployedIds: readonly MonsterId[];
+  readonly status: SessionStatus;
+  readonly settledBattles: readonly string[];
+  readonly completedRequests: readonly string[];
 }
 
 export interface SerializeOptions {
@@ -61,6 +84,13 @@ export interface SerializeOptions {
   readonly inventory?: PartInventory;
   /** An arena run in progress. */
   readonly arena?: ArenaRun | null;
+  /**
+   * The run to save.
+   *
+   * Given one, its history is saved as the monster list and its inventory is
+   * used, so a caller does not have to take a session apart to save it.
+   */
+  readonly session?: GameSession;
 }
 
 export function createSaveFile(
@@ -68,7 +98,12 @@ export function createSaveFile(
   options: SerializeOptions = {},
 ): MonsterSaveFile {
   const now = options.now ?? (() => Date.now());
-  const index = indexById(monsters);
+  const session = options.session;
+  // A session's history is every monster it has ever held, owned ones
+  // included, so saving it means saving that - plus anything else the caller
+  // passed, which is how a collection kept outside the session still lands.
+  const all = session ? mergeById(session.history, monsters) : monsters;
+  const index = indexById(all);
   // A loadout is only meaningful next to the monster it belongs to, so one
   // naming a monster that is not being saved is dropped rather than kept as a
   // dangling reference.
@@ -82,11 +117,58 @@ export function createSaveFile(
   return {
     schemaVersion: SCHEMA_VERSION,
     savedAt: now(),
-    monsters: monsters.map(normalizeMonster),
+    monsters: all.map(normalizeMonster),
     loadouts,
-    inventory: options.inventory ?? createPartInventory(),
+    inventory: options.inventory ?? session?.inventory ?? createPartInventory(),
     arena: options.arena ?? null,
+    session: session ? sessionSaveOf(session) : null,
   };
+}
+
+/** The ownership record for a session, without copying its monsters. */
+export function sessionSaveOf(session: GameSession): SessionSave {
+  return {
+    ownedIds: session.owned.map((monster) => monster.id),
+    deployedIds: [...session.deployed],
+    status: session.status,
+    settledBattles: [...session.settledBattles],
+    completedRequests: [...session.completedRequests],
+  };
+}
+
+/**
+ * Rebuilds the run from a loaded save.
+ *
+ * A save with no run in it - written before runs existed - comes back as a
+ * run where everything in it is owned and playing, because that is what the
+ * file described. A run that had ended stays ended.
+ */
+export function restoreSession(save: MonsterSaveFile): GameSession {
+  const record = save.session;
+  if (!record) {
+    return createGameSession(save.monsters, { inventory: save.inventory });
+  }
+  const owned = new Set(record.ownedIds);
+  return createGameSession(
+    save.monsters.filter((monster) => owned.has(monster.id)),
+    {
+      history: save.monsters,
+      inventory: save.inventory,
+      deployed: record.deployedIds,
+      settledBattles: record.settledBattles,
+      completedRequests: record.completedRequests,
+      status: record.status,
+    },
+  );
+}
+
+function mergeById(
+  first: readonly Monster[],
+  second: readonly Monster[],
+): readonly Monster[] {
+  const byId = new Map<MonsterId, Monster>();
+  for (const monster of [...first, ...second]) byId.set(monster.id, monster);
+  return [...byId.values()];
 }
 
 export function serializeSaveFile(
@@ -454,7 +536,41 @@ export function deserializeSaveFile(json: string): ValidationResult<MonsterSaveF
       loadouts,
       inventory: readInventory(migrated.inventory),
       arena: readArena(migrated.arena),
+      session: readSession(migrated.session, monsters),
     },
+  };
+}
+
+/**
+ * Reads the ownership record, keeping only ids that are actually in the file.
+ *
+ * An id with no monster behind it is dropped rather than rejected: the rest
+ * of the collection is worth more than a strict read of one stale id.
+ */
+function readSession(
+  value: unknown,
+  monsters: readonly Monster[],
+): SessionSave | null {
+  if (!isRecord(value)) return null;
+  const known = new Set(monsters.map((monster) => monster.id));
+  const ids = (input: unknown): string[] =>
+    Array.isArray(input)
+      ? input.filter((id): id is string => typeof id === 'string' && known.has(id))
+      : [];
+  const strings = (input: unknown): string[] =>
+    Array.isArray(input)
+      ? input.filter((id): id is string => typeof id === 'string').slice(-REQUEST_LEDGER_LIMIT)
+      : [];
+
+  const ownedIds = ids(value.ownedIds);
+  return {
+    ownedIds,
+    deployedIds: ids(value.deployedIds).filter((id) => ownedIds.includes(id)),
+    // A file claiming a run is still going with nothing left to play is a
+    // file that cannot be played, so the derived answer wins.
+    status: value.status === 'gameOver' || ownedIds.length === 0 ? 'gameOver' : 'playing',
+    settledBattles: strings(value.settledBattles),
+    completedRequests: strings(value.completedRequests),
   };
 }
 

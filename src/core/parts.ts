@@ -122,7 +122,8 @@ export function removePart(
   return { ...inventory, stacks };
 }
 
-function rememberRequest(inventory: PartInventory, requestId: string): PartInventory {
+/** Records a request as applied, keeping the ledger bounded. */
+export function rememberRequest(inventory: PartInventory, requestId: string): PartInventory {
   const completed = [...inventory.completedRequests, requestId];
   return {
     ...inventory,

@@ -466,6 +466,42 @@ getMoveHealing('hydro-ram', monster)   // その個体の回復量（HP上限で
 
 **敵AIも回復を使います。** 期待ダメージだけで選んでいたため当初は1165ターン中0回でしたが、HPが半分以下かつ回復量の7割以上が入るときに使うようになりました（`createBasicPolicy` の `healBelowHpRatio` / `minHealUseRatio`、既定0.5と0.7）。無駄打ちは300戦で0回、アリーナの難易度は1ポイント以内で変わっていません。
 
+## 8.17 所持数・ゲームオーバー・ソウルメイク（2026-11-08）
+
+詳細・測定値・ご提案からの変更点は [SESSION_AND_SOULMAKE.md](SESSION_AND_SOULMAKE.md) です。
+
+```ts
+// 所持一覧
+createGameSession(owned, options?)
+fuseOwnedMonsters(session, aId, bId, context, requestId, partId?)  // => { session, result, refusal }
+settleBattleLoss(session, battle, battleId)                        // => { session, lost, duplicate }
+soulMakeInSession(session, selection, context, requestId)          // => { session, result, refusal }
+deployMonsters(session, ids)   // 戦闘開始時に呼ぶ
+isGameOver(session) / ownedMonster(session, id) / isDeployed(session, id)
+
+// ソウルメイク
+getSoulMakeRecipe(config?) / soulMakeLoci(config?)
+previewSoulMake(selection, inventory, config?)
+soulMake(selection, inventory, context, requestId)
+
+// 保存
+serializeSaveFile([], { session }) / restoreSession(save) / sessionSaveOf(session)
+```
+
+- `owned`（遊べる）と `history`（系譜用、減らない）を分けています
+- 融合は成功時だけ親2体と素材を消費します。失敗時は何も減りません
+- 敗北は負けた側の所持個体を消します。引き分けと勝利は何も失いません。**進行中の `BattleState` を渡しても何も記録しません**（決着後の本当の敗北を取りこぼさないため）
+- `status: 'gameOver'` は**終端**です。素材があっても融合・ソウルメイクはできません
+- 同じ `requestId` / `battleId` の再送は何もしません
+- `schemaVersion` は4のまま、マイグレーション不要です
+
+**UIにお願いしたいこと2点**
+
+1. **戦闘・アリーナ開始時に `deployMonsters(session, [出場個体のid])` を呼んでください。** どの個体がリングにいるかはcoreには見えないので、これがないと「出場中の個体の消費禁止」を判定できません
+2. `previewSoulMake` に `phenotype` は入れていません。体色・大きさ・属性は生成時に決まるため、プレビューで返すと実際には出ない色を表示することになります。確実な「置いたパーツ」は `placed` で返しています
+
+**報酬に体型と目を追加しました。** 変更前はソウルメイクの必須素材が永久に手に入りませんでした（300人中300人が到達不能）。変更後は中央値8勝です。代わりに既存5部位の割合が20%→約14%に下がっています。
+
 ## 9. コマンド
 
 ```bash

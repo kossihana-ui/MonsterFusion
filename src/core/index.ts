@@ -27,6 +27,7 @@ export type {
   GameConfig,
   GeneticsConfig,
   GraftConfig,
+  SoulMakeConfig,
   StatsConfig,
 } from './config.ts';
 export {
@@ -36,6 +37,7 @@ export {
   createGameConfig,
   createGeneticsConfig,
   createGraftConfig,
+  createSoulMakeConfig,
   createStatsConfig,
   DEFAULT_ALLELE_POOLS,
   DEFAULT_ARENA_CONFIG,
@@ -44,6 +46,7 @@ export {
   DEFAULT_GAME_CONFIG,
   DEFAULT_GENETICS_CONFIG,
   DEFAULT_GRAFT_CONFIG,
+  DEFAULT_SOUL_MAKE_CONFIG,
   DEFAULT_STATS_CONFIG,
 } from './config.ts';
 
@@ -265,6 +268,7 @@ export {
   partFromFeature,
   partIdFor,
   partsOf,
+  rememberRequest,
   pinnableLoci,
   previewPartFusion,
   removePart,
@@ -341,7 +345,7 @@ export {
 } from './analyzer.ts';
 
 // Storage.
-export type { Migration, MonsterSaveFile, ValidationResult } from './storage.ts';
+export type { Migration, MonsterSaveFile, SessionSave, ValidationResult } from './storage.ts';
 export {
   createSaveFile,
   danglingParentIds,
@@ -351,7 +355,46 @@ export {
   MIGRATIONS,
   migrateToCurrent,
   normalizeMonster,
+  restoreSession,
   serializeMonster,
   serializeSaveFile,
+  sessionSaveOf,
   validateMonster,
 } from './storage.ts';
+
+// ソウルメイク: building a monster from collected parts.
+export type {
+  PlacedPart,
+  SoulMakePreview,
+  SoulMakeRecipe,
+  SoulMakeResult,
+  SoulMakeSelection,
+} from './soulmake.ts';
+export {
+  getSoulMakeRecipe,
+  previewSoulMake,
+  soulMake,
+  soulMakeLoci,
+} from './soulmake.ts';
+
+// The run: what is owned, what was lost, and when it is over.
+export type {
+  CreateSessionOptions,
+  GameSession,
+  SessionFusion,
+  SessionRefusal,
+  SessionSoulMake,
+  SessionStatus,
+  SettledBattle,
+} from './session.ts';
+export {
+  createGameSession,
+  deployMonsters,
+  fuseOwnedMonsters,
+  isDeployed,
+  isGameOver,
+  ownedMonster,
+  SESSION_LEDGER_LIMIT,
+  settleBattleLoss,
+  soulMakeInSession,
+} from './session.ts';
