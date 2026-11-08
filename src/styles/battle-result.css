@@ -21,3 +21,19 @@
 @keyframes result-monster { from { opacity: 0; transform: translateY(18px); } to { opacity: 1; transform: none; } }
 @keyframes result-spark { 0% { opacity: 0; transform: rotate(var(--angle)) translateY(25px); } 20% { opacity: 1; } 100% { opacity: 0; transform: rotate(var(--angle)) translateY(280px) rotate(110deg); } }
 @media (prefers-reduced-motion: reduce) { .battle-result, .battle-result h2, .result-winner { animation: none; } .result-sparks { display: none; } }
+.victory-reward { max-width: 540px; margin: 20px auto; padding-top: 20px; border-top: 1px solid #827148; }
+.victory-chest-anchor { width: min(100%, 300px); margin: 0 auto 16px; }
+.battle-result .victory-chest { display: flex; flex-direction: column; align-items: center; gap: 10px; width: 100%; padding: 16px; color: #ffe6a1; background: radial-gradient(ellipse, #6b542d, #26302a 75%); border: 2px solid #e7c170; border-radius: 12px; cursor: pointer; }
+.victory-chest svg { width: 96px; height: 96px; filter: drop-shadow(0 4px 8px #0008); animation: reward-chest-arrive .45s ease-out both; }
+.victory-chest strong { font-size: 18px; }
+.victory-chest small { font-size: 12px; }
+.battle-result .victory-chest:hover:not(:disabled) { background: #54482e; box-shadow: 0 0 20px #d8b65e55; }
+.victory-chest:focus-visible { outline: 3px solid #fff0b7; outline-offset: 5px; }
+.battle-result .victory-chest:disabled { opacity: 1; cursor: default; }
+.victory-chest.is-open { border-color: #77846f; }
+.victory-chest.is-open .chest-lid { transform: translateY(-5px) rotate(-18deg); }
+.victory-chest.is-revealing svg { visibility: hidden; }
+.victory-reward > button { margin: 6px; }
+.victory-reward > button:disabled { opacity: .45; cursor: not-allowed; }
+@keyframes reward-chest-arrive { from { opacity: 0; transform: translateY(-24px); } to { opacity: 1; transform: none; } }
+@media (prefers-reduced-motion: reduce) { .victory-chest svg { animation: none; } }

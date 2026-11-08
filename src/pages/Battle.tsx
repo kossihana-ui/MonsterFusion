@@ -17,7 +17,7 @@ import type { MultiplierPresentation } from "../components/MultiplierEffect";
 import { BattleResult } from "../components/BattleResult";
 import { BattleHpBar } from "../components/BattleHpBar";
 import { battleSound } from "../components/battleSound";
-import { LootReveal, PartIcon } from "../components/LootReveal";
+import { LootReveal, PartIcon, TreasureChestIcon } from "../components/LootReveal";
 import type { GenePart } from "@core/core/index.ts";
 import type { BattleCue } from "../components/BattleEffect";
 export function Battle(props: { monsters: Monster[]; adapter: GameAdapter }) {
@@ -47,7 +47,7 @@ function BattleSession({
   const mutedRef = useRef(muted); mutedRef.current = muted;
   const enemyStage = useRef<HTMLDivElement>(null);
   const inventoryDock = useRef<HTMLButtonElement>(null);
-  const rewardPanel = useRef<HTMLElement>(null);
+  const rewardChest = useRef<HTMLDivElement>(null);
   const run = state.arenaRun;
   const claimed = !!run?.claimed.includes(run.encounter.index);
   const [inspectedSkill, setInspectedSkill] = useState<string | null>(null);
@@ -242,7 +242,7 @@ function BattleSession({
         <span aria-hidden="true">▣</span> アイテムボックス · {getPartInventory().stacks.reduce((n,s)=>n+s.count,0)}
       </button>
       {showInventory && <section className="inventory-popover panel" aria-label="所持パーツ一覧"><h2>アイテムボックス</h2><button onClick={() => setShowInventory(false)}>閉じる</button>{getPartInventory().stacks.length ? getPartInventory().stacks.map(s => <p key={s.part.id}><PartIcon part={s.part} /> {s.part.name} ×{s.count}</p>) : <p>まだ素材を持っていません。</p>}</section>}
-      {loot.length > 0 && <LootReveal parts={loot} source={enemyStage} destination={inventoryDock} muted={muted} onDone={() => setLoot([])} />}
+      {loot.length > 0 && <LootReveal parts={loot} source={rewardChest} destination={inventoryDock} muted={muted} onDone={() => setLoot([])} />}
       {!run && <><label className="battle-select">
         出場モンスター
         <select
@@ -319,24 +319,38 @@ function BattleSession({
         <span className="versus">VS</span>
       </div>
       {busy && <button data-custom-sound onClick={skipReplay}>演出をスキップ</button>}
-      {state.status !== "active" && <BattleResult state={state} />}
-      {state.status !== "active" && <section ref={rewardPanel} className="panel arena-reward" aria-label="アリーナ報酬">
-        <h2>{run?.phase === "cleared" ? "アリーナ制覇！" : state.status === "won" ? "勝利報酬" : "挑戦終了"}</h2>
-        {state.status === "won" && !claimed && <button onClick={() => {
-          try { const reward = receiveArenaReward(); stopSound.current(); setRewardMessage(reward.message + (reward.parts.length ? ` 獲得：${reward.parts.map(p => p.name).join("、")}` : "")); setState(resumeArena()!);
-            if (reward.parts.length) { arena.current?.scrollIntoView({block:'center',behavior:'instant'}); setLoot(reward.parts); }
-          }
-          catch { setError("報酬を受け取れませんでした。"); }
-        }}>戦利品を確認する</button>}
-        <p role="status">{rewardMessage || (claimed ? "この戦いの報酬は受取済みです。" : "")}</p>
-        {claimed && run?.phase === "reward" && <button disabled={loot.length > 0} onClick={() => { setRewardMessage(""); setError(""); setState(continueArena()); arena.current?.scrollIntoView({ block: "center" }); }}>
-          {run.wins === DEFAULT_ARENA_CONFIG.normalWins ? "ボスの待つ最終戦へ" : "全回復して次の戦いへ"}
-        </button>}
-        {(claimed || state.status !== "won") && <button className="text-button" onClick={onLeave}>入口へ戻る（今回の挑戦を終了）</button>}
-        <h3>所持パーツ</h3>
-        {getPartInventory().stacks.length ? getPartInventory().stacks.map(s => <p key={s.part.id}><PartIcon part={s.part} /> {s.part.name} ×{s.count}</p>) : <p>まだ素材を持っていません。</p>}
-        <p className="battle-help">獲得したパーツは融合画面で使えます。進行と素材はプレイ中のみ保持されます。</p>
-      </section>}
+      {state.status !== "active" && <BattleResult state={state}>
+        <div className="victory-reward" aria-label="アリーナ報酬">
+          {state.status === "won" && run && <>
+            {run.phase === "cleared" && <h3>アリーナ制覇！</h3>}
+            <div ref={rewardChest} className="victory-chest-anchor">
+              <button type="button" className={`victory-chest ${claimed ? 'is-open' : ''} ${loot.length ? 'is-revealing' : ''}`}
+                disabled={claimed || loot.length > 0} aria-label={claimed ? "宝箱は開封済みです" : "宝箱を開けて報酬を受け取る"}
+                onClick={() => {
+                  if (claimed || loot.length > 0) return;
+                  try {
+                    const reward = receiveArenaReward();
+                    stopSound.current(); setError("");
+                    setRewardMessage(reward.parts.length ? `獲得：${reward.parts.map(p => p.name).join("、")}` : reward.message);
+                    setState(resumeArena()!);
+                    if (reward.parts.length) setLoot(reward.parts);
+                    else stopSound.current = battleSound('chest', muted);
+                  } catch { setError("宝箱を開けませんでした。もう一度お試しください。"); }
+                }}>
+                <TreasureChestIcon />
+                <strong>{loot.length ? "報酬を受け取り中…" : claimed ? "開封済み" : "宝箱を開ける"}</strong>
+                {!claimed && <small>押して勝利報酬を受け取ろう！</small>}
+              </button>
+            </div>
+            <p role="status">{rewardMessage || (claimed ? "この戦いの報酬は確認済みです。" : "まだ宝箱を開けていません。")}</p>
+            {claimed && <p className="battle-help">獲得したパーツはアイテムボックスへ。融合画面で使えます。</p>}
+            {run.phase === "reward" && <button disabled={!claimed || loot.length > 0} onClick={() => {
+              setRewardMessage(""); setError(""); setState(continueArena()); arena.current?.scrollIntoView({ block: "center" });
+            }}>{run.wins === DEFAULT_ARENA_CONFIG.normalWins ? "ボスの待つ最終戦へ" : "全回復して次の戦いへ"}</button>}
+          </>}
+          {(claimed || state.status !== "won") && <button disabled={loot.length > 0} className="text-button" onClick={onLeave}>入口へ戻る（今回の挑戦を終了）</button>}
+        </div>
+      </BattleResult>}
       {state.status === "active" && <section className="panel battle-command-panel" aria-label="バトルコマンド">
         <h2>行動を選ぶ</h2>
         <p>技で攻める。MPが減ったら、守って回復。</p>
