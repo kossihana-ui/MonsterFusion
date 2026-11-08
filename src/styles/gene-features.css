@@ -1,0 +1,21 @@
+.gene-features { margin: 16px 0; text-align: left; }
+.gene-features h3, .gene-features h4 { margin: 0 0 8px; font-size: 15px; }
+.gene-features h3 small, .gene-features h4 small { color: #a5b8b0; font-size: 11px; font-weight: normal; margin-left: 6px; }
+.gene-explanation, .gene-footnote { font-size: 12px; line-height: 1.7; color: #a8bcb3; }
+.gene-feature-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; list-style: none; padding: 0; margin: 12px 0; }
+.gene-feature { display: flex; align-items: center; gap: 10px; min-width: 0; padding: 10px; border: 1px solid #3f544c; border-radius: 8px; background: #182823; }
+.gene-feature-art { flex: 0 0 48px; height: 48px; display: grid; place-items: center; border-radius: 6px; background: #101b19; color: #c8e1d7; font-size: 23px; }
+.gene-feature-art img { width: 44px; height: 44px; object-fit: contain; image-rendering: pixelated; }
+.gene-feature-copy { min-width: 0; display: flex; flex-direction: column; gap: 3px; }
+.gene-feature-copy > small { color: #99afa5; font-size: 11px; }
+.gene-feature-copy > strong { font-size: 13px; overflow-wrap: anywhere; }
+.gene-color { width: 26px; height: 26px; border: 2px solid #b4c6bf; border-radius: 4px; }
+.gene-mutation { align-self: flex-start; font-size: 10px; color: #e8c7ff; border: 1px solid #9267b1; border-radius: 4px; padding: 1px 4px; }
+.gene-hidden { margin-top: 18px; border: 1px solid #496075; border-radius: 8px; background: #17242e; padding: 12px; }
+.gene-hidden summary { cursor: pointer; font-size: 14px; color: #c5def4; line-height: 1.8; }
+.gene-hidden summary span { font-size: 12px; margin-left: 8px; color: #a4bdd2; }
+.gene-hidden summary:focus-visible { outline: 2px solid #c5def4; outline-offset: 4px; }
+.gene-hidden section { margin-top: 18px; }
+.gene-hidden .gene-feature { background: #1d2b38; border-color: #3f5367; }
+.gene-footnote { margin: 12px 0 0; font-size: 11px; }
+@media (max-width: 380px) { .gene-feature-grid { grid-template-columns: 1fr; } }

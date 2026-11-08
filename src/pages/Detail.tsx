@@ -47,18 +47,8 @@ export function Detail({
           ) : (
             <p>まだ特徴は登録されていません。</p>
           )}
-          <h2>遺伝情報</h2>
+          <h2>受け継ぐ特徴</h2>
           <FeatureTags monster={monster} />
-          <dl>
-            {Object.entries(monster.genes).map(([k, v]) => (
-              <div key={k}>
-                <dt>
-                  {{ element: "属性", body: "系統", potential: "潜在性" }[k]}
-                </dt>
-                <dd>{v}</dd>
-              </div>
-            ))}
-          </dl>
           <h2>親モンスター</h2>
           <p>
             {monster.parentIds
