@@ -2,7 +2,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import type { FusionResult, GameAdapter, Monster } from "../shared/ui";
 import { Portrait } from "../components/MonsterView";
 import { FusionReveal } from "../components/FusionReveal";
-import { getPartInventory, previewMaterial, resumeArena } from "../mocks/game";
+import { getPartInventory, previewMaterial, getGameSession } from "../mocks/game";
 export function Fusion({
   monsters,
   adapter,
@@ -26,8 +26,7 @@ export function Fusion({
   const [error, setError] = useState("");
   const parentA = monsters.find((m) => m.id === a);
   const parentB = monsters.find((m) => m.id === b);
-  const arenaState = resumeArena();
-  const arenaLocked = arenaState?.status === 'active' || arenaState?.status === 'won';
+  const arenaLocked = getGameSession().deployed.includes(a) || getGameSession().deployed.includes(b);
   useEffect(() => {
     if (!monsters.some(m => m.id === a)) setA(monsters[0]?.id ?? '');
     if (!monsters.some(m => m.id === b)) setB(monsters[1]?.id ?? '');
@@ -125,7 +124,7 @@ export function Fusion({
           {busy ? "融合中…" : "✦ 融合する"}
         </button>
         <p>
-          {arenaLocked ? "アリーナの挑戦を終えてから融合してください。" : monsters.length < 2
+          {arenaLocked ? "出場中の仲間は融合できません。ほかの2体を選んでください。" : monsters.length < 2
             ? "融合には2体必要です。今いる仲間を大切にしましょう。"
             : a === b
               ? "異なる2体を選んでください。"

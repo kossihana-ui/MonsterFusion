@@ -3,8 +3,6 @@ import {
   createSeededRandom,
   findStarterSpec,
   createMonsterFromAnalysis,
-  canFuse,
-  fuseDetailed,
   describeMonster,
   describeTraits,
   describeFusion,
@@ -15,13 +13,14 @@ import {
   stepTurn,
   createBasicPolicy,
   startArena, advanceArenaTurn, claimArenaReward, nextArenaEncounter,
-  createPartInventory, previewPartFusion, fuseWithPart,
+  previewPartFusion, createGameSession, deployMonsters, ownedMonster,
+  fuseOwnedMonsters, settleBattleLoss, soulMakeInSession, isGameOver,
 } from "@core/core/index.ts";
 import type {
   Monster as CoreMonster,
   BattleState as CoreBattleState,
   MoveLoadout,
-  ArenaRun,
+  ArenaRun, GameSession, SoulMakeSelection,
 } from "@core/core/index.ts";
 import type { Monster, BattleState, GameAdapter } from "../shared/ui";
 import { battleLogLabel } from "../shared/battlePresentation";
@@ -30,12 +29,33 @@ import { battleLogLabel } from "../shared/battlePresentation";
 const context = { rng: createSeededRandom(12345) };
 const records = new Map<string, CoreMonster>();
 let arenaRun: ArenaRun | null = null;
-let inventory = createPartInventory();
-export const getPartInventory = () => inventory;
+let session: GameSession;
+const listeners = new Set<() => void>();
+export const getGameSession = () => session;
+export const subscribeSession = (listener: () => void) => { listeners.add(listener); return () => { listeners.delete(listener); }; };
+function applySession(next: GameSession) { if (session === next) return; session = next; listeners.forEach(listener => listener()); }
+export const getPartInventory = () => session.inventory;
+export function presentSessionMonster(monster: CoreMonster) {
+  const spec = findStarterSpec(monster.id);
+  return present(monster, spec ? starterArt[spec.art] : '');
+}
+export function makeSoul(selection: SoulMakeSelection, requestId: string) {
+  const outcome = soulMakeInSession(session, selection, context, requestId);
+  applySession(outcome.session);
+  return { ...outcome.result, monster: outcome.result.monster ? presentSessionMonster(outcome.result.monster) : null };
+}
+let arenaId = '';
+const duelIds = new WeakMap<CoreBattleState, string>();
+function settle(battle: CoreBattleState, id: string, arena = false) {
+  if (battle.outcome.status === 'ongoing') return;
+  let next = settleBattleLoss(session, battle, id).session;
+  if (!isGameOver(next) && (!arena || battle.outcome.status !== 'win' || battle.outcome.winningSide !== 0)) next = deployMonsters(next);
+  applySession(next);
+}
 export function previewMaterial(a: Monster, b: Monster, partId: string) {
-  const part = inventory.stacks.find(s => s.part.id === partId)?.part;
+  const part = session.inventory.stacks.find(s => s.part.id === partId)?.part;
   if (!part) return { ok: false, message: "素材を所持していません。", guaranteedExpression: false };
-  return previewPartFusion(getCoreMonster(a.id), getCoreMonster(b.id), part, inventory);
+  return previewPartFusion(getCoreMonster(a.id), getCoreMonster(b.id), part, session.inventory);
 }
 function presentArena(run: ArenaRun): BattleState {
   const spec = findStarterSpec(run.player.id);
@@ -43,13 +63,19 @@ function presentArena(run: ArenaRun): BattleState {
 }
 export function resumeArena(): BattleState | null { return arenaRun ? presentArena(arenaRun) : null; }
 export function enterArena(id: string): BattleState {
-  arenaRun = startArena(getCoreMonster(id), getMoveLoadout(id), context);
+  const monster = ownedMonster(session, id);
+  if (isGameOver(session) || !monster) throw new Error('出場できる仲間がいません。');
+  if (arenaRun && arenaRun.phase !== 'failed' && arenaRun.phase !== 'cleared') throw new Error('現在の挑戦を終えてください。');
+  arenaRun = startArena(monster, getMoveLoadout(id), context);
+  arenaId = crypto.randomUUID();
+  applySession(deployMonsters(session, [id]));
   return presentArena(arenaRun);
 }
 export function receiveArenaReward() {
   if (!arenaRun) throw new Error("挑戦がありません。");
-  const result = claimArenaReward(arenaRun, inventory, context);
-  arenaRun = result.run; inventory = result.inventory;
+  const result = claimArenaReward(arenaRun, session.inventory, context);
+  arenaRun = result.run;
+  if (!isGameOver(session)) applySession(createGameSession(session.owned, { ...session, inventory: result.inventory }));
   return result;
 }
 export function continueArena(): BattleState {
@@ -57,7 +83,7 @@ export function continueArena(): BattleState {
   arenaRun = nextArenaEncounter(arenaRun, context);
   return presentArena(arenaRun);
 }
-export function leaveArena() { arenaRun = null; }
+export function leaveArena() { arenaRun = null; if (!isGameOver(session)) applySession(deployMonsters(session)); }
 // Session preferences, separate from canonical monsters, like the demo collection.
 const loadouts = new Map<string, MoveLoadout>();
 export function getFeatureMoves(id: string) {
@@ -125,6 +151,19 @@ export const initialMonsters = createStarterMonsters(context).map((monster) => {
   const spec = findStarterSpec(monster.id)!;
   return present(monster, starterArt[spec.art]);
 });
+session = createGameSession(initialMonsters.map(m => getCoreMonster(m.id)));
+
+export function restartGame(seed = 12345) {
+  arenaRun = null;
+  arenaId = '';
+  context.rng = createSeededRandom(seed);
+  records.clear();
+  loadouts.clear();
+  const starters = createStarterMonsters(context);
+  starters.forEach(presentSessionMonster);
+  applySession(createGameSession(starters));
+}
+
 export function registerUploadedMonster(name: string, image: string): Monster {
   // Uploaded art has not been analysed. Creation and stat consistency belong to core.
   return present(
@@ -162,29 +201,20 @@ function presentBattle(
   };
 }
 export function createBattle(player: Monster, enemy: Monster): BattleState {
-  return presentBattle(
-    createDuelWithLoadouts(getCoreMonster(player.id), getCoreMonster(enemy.id), [getMoveLoadout(player.id), getMoveLoadout(enemy.id)]),
-    player,
-    enemy,
-  );
+  if (isGameOver(session) || !ownedMonster(session, player.id)) throw new Error('出場できる仲間がいません。');
+  const battle = createDuelWithLoadouts(getCoreMonster(player.id), getCoreMonster(enemy.id), [getMoveLoadout(player.id), getMoveLoadout(enemy.id)]);
+  duelIds.set(battle, crypto.randomUUID());
+  applySession(deployMonsters(session, [player.id]));
+  return presentBattle(battle, player, enemy);
 }
 export const gameAdapter: GameAdapter = {
   async fuseMonsters(a, b, partId) {
-    const parentA = getCoreMonster(a.id),
-      parentB = getCoreMonster(b.id);
-    const check = canFuse(parentA, parentB);
-    if (!check.ok) throw new Error(check.message);
-    if (partId) {
-      const part = inventory.stacks.find(s => s.part.id === partId)?.part;
-      if (!part) throw new Error("素材を所持していません。");
-      const result = fuseWithPart(parentA, parentB, part, inventory, context, crypto.randomUUID());
-      if (!result.ok || !result.child || !result.fusion) throw new Error(result.message);
-      inventory = result.inventory;
-      return { child: present(result.child), parents: [a, b], spentPart: result.spent ?? undefined, summary: describeFusion(result.child, result.fusion.evolution.willEvolve) };
-    }
-    const result = fuseDetailed(parentA, parentB, context);
-    return { child: present(result.child), parents: [a, b],
-      summary: describeFusion(result.child, result.evolution.willEvolve) };
+    const outcome = fuseOwnedMonsters(session, a.id, b.id, context, crypto.randomUUID(), partId);
+    const result = outcome.result;
+    if (!result.ok || !result.child || !result.fusion) throw new Error(result.message);
+    applySession(outcome.session);
+    return { child: present(result.child), parents: [a, b], spentPart: result.spent ?? undefined,
+      summary: describeFusion(result.child, result.fusion.evolution.willEvolve) };
   },
   async calculateBattleTurn(state, action) {
     if (state.status !== "active") return state;
@@ -194,6 +224,7 @@ export const gameAdapter: GameAdapter = {
       if (arenaRun !== state.arenaRun) throw new Error("最新のアリーナ状態で操作してください。");
       const target = coreState.combatants.find(c => c.side === 1)!;
       arenaRun = advanceArenaTurn(state.arenaRun, typeof action === "object" ? { ...action, targetId: target.id } : action === "defend" ? { kind: "defend" } : { kind: "attack", targetId: target.id }, context);
+      settle(arenaRun.battle, arenaId + ":" + arenaRun.encounter.index, true);
       return presentArena(arenaRun);
     }
     const enemyPolicy = createBasicPolicy(context.rng);
@@ -224,6 +255,9 @@ export const gameAdapter: GameAdapter = {
           : enemyPolicy,
       context.rng,
     );
+    const battleId = duelIds.get(coreState) ?? crypto.randomUUID();
+    duelIds.set(next, battleId);
+    settle(next, battleId);
     return presentBattle(next, state.player, state.enemy);
   },
 };

@@ -1,5 +1,4 @@
-import { useState, useRef } from "react";
-import { createSessionAdapter } from "./mocks/session";
+import { useState, useSyncExternalStore } from "react";
 import { SoulMake } from "./pages/SoulMake";
 import { Collection } from "./pages/Collection";
 import { Detail } from "./pages/Detail";
@@ -7,7 +6,7 @@ import { Fusion } from "./pages/Fusion";
 import { Battle } from "./pages/Battle";
 import { SoundLab } from "./pages/SoundLab";
 import { MoveWorkshop } from "./pages/MoveWorkshop";
-import { initialMonsters, gameAdapter } from "./mocks/game";
+import { gameAdapter, getGameSession, subscribeSession, presentSessionMonster, restartGame } from "./mocks/game";
 import { playUiSound } from "./components/uiSound";
 import { GameGuide } from "./components/GameGuide";
 import type { GameAdapter, Monster } from "./shared/ui";
@@ -32,15 +31,10 @@ export default function App({
   adapter?: GameAdapter;
 }) {
   const [page, setPage] = useState<Page>("collection");
-  const [monsters, setMonsters] = useState(initialMonsters);
+  const session = useSyncExternalStore(subscribeSession, getGameSession);
+  const monsters = session.owned.map(presentSessionMonster);
   const [selected, setSelected] = useState<Monster | null>(null);
-  const history = useRef([...initialMonsters]);
-  const session = useRef<GameAdapter | null>(null);
-  if (!session.current) session.current = createSessionAdapter(adapter, initialMonsters, owned => {
-    for (const monster of owned) if (!history.current.some(m => m.id === monster.id)) history.current.push(monster);
-    setMonsters(owned);
-  });
-  const gameOver = monsters.length === 0;
+  const gameOver = session.status === 'gameOver';
   return (
     <div className="app" onClickCapture={(event) => {
       const target = event.target as HTMLElement;
@@ -113,7 +107,7 @@ export default function App({
             <div className="eyebrow">GAME OVER</div><h1>仲間がいなくなりました</h1>
             <p>所有モンスターが0体になり、今回の冒険は終了です。</p>
             <p>融合は親2体を使って子1体を生みます。敗北すると出場した仲間を失います。</p>
-            <button className="primary" onClick={() => window.location.reload()}>最初の3体からやり直す</button>
+            <button className="primary" onClick={() => { restartGame(); setSelected(null); setPage('collection'); }}>最初の3体からやり直す</button>
             <p>最初から始めると、今回集めたパーツもリセットされます。</p>
           </section> : <>
           {page === "collection" && (
@@ -129,15 +123,15 @@ export default function App({
           {page === "detail" && selected && (
             <Detail
               monster={selected}
-              monsters={history.current}
+              monsters={session.history.map(presentSessionMonster)}
               onBack={() => setPage("collection")}
             />
           )}
           {page === "fusion" && (
-            <Fusion monsters={monsters} adapter={session.current} onCreated={() => {}} />
+            <Fusion monsters={monsters} adapter={adapter} onCreated={() => {}} />
           )}
           {page === "battle" && (
-            <Battle monsters={monsters} adapter={session.current} />
+            <Battle monsters={monsters} adapter={adapter} />
           )}
           {page === "register" && <section className="panel"><h1>モンスター登録</h1><p>仲間の数を管理するルールに合わせ、画像からの無料追加は休止しています。</p><button onClick={() => setPage("soul")}>ソウルメイクへ</button></section>}
           {page === "soul" && <SoulMake />}
