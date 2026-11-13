@@ -1,4 +1,5 @@
-import { useState, useSyncExternalStore } from "react";
+import { useCallback, useState, useSyncExternalStore } from "react";
+import { GameOverScreen } from "./components/GameOverScreen";
 import { SoulMake } from "./pages/SoulMake";
 import { Collection } from "./pages/Collection";
 import { Detail } from "./pages/Detail";
@@ -35,6 +36,12 @@ export default function App({
   const monsters = session.owned.map(presentSessionMonster);
   const [selected, setSelected] = useState<Monster | null>(null);
   const gameOver = session.status === 'gameOver';
+  const [battleReplaying, setBattleReplaying] = useState(false);
+  const [gameOverMuted, setGameOverMuted] = useState(false);
+  const onReplay = useCallback((playing: boolean, muted?: boolean) => {
+    setBattleReplaying(playing);
+    if (muted !== undefined) setGameOverMuted(muted);
+  }, []);
   return (
     <div className="app" onClickCapture={(event) => {
       const target = event.target as HTMLElement;
@@ -50,7 +57,7 @@ export default function App({
           href="#"
           onClick={(e) => {
             e.preventDefault();
-            setPage("collection");
+            if (!gameOver) setPage("collection");
           }}
         >
           <span className="brand-mark">
@@ -103,13 +110,6 @@ export default function App({
           </span>
         </header>
         <main>
-          {gameOver ? <section className="panel game-over" role="alert">
-            <div className="eyebrow">GAME OVER</div><h1>仲間がいなくなりました</h1>
-            <p>所有モンスターが0体になり、今回の冒険は終了です。</p>
-            <p>融合は親2体を使って子1体を生みます。敗北すると出場した仲間を失います。</p>
-            <button className="primary" onClick={() => { restartGame(); setSelected(null); setPage('collection'); }}>最初の3体からやり直す</button>
-            <p>最初から始めると、今回集めたパーツもリセットされます。</p>
-          </section> : <>
           {page === "collection" && (
             <Collection
               monsters={monsters}
@@ -131,13 +131,14 @@ export default function App({
             <Fusion monsters={monsters} adapter={adapter} onCreated={() => {}} />
           )}
           {page === "battle" && (
-            <Battle monsters={monsters} adapter={adapter} />
+            <Battle monsters={monsters} adapter={adapter} onReplay={onReplay} />
           )}
           {page === "register" && <section className="panel"><h1>モンスター登録</h1><p>仲間の数を管理するルールに合わせ、画像からの無料追加は休止しています。</p><button onClick={() => setPage("soul")}>ソウルメイクへ</button></section>}
           {page === "soul" && <SoulMake />}
           {page === "sound" && <SoundLab />}
           {page === "moves" && <MoveWorkshop />}
-          </>}
+
+          {gameOver && !battleReplaying && <GameOverScreen muted={gameOverMuted} onRestart={() => { restartGame(); setSelected(null); setPage('collection'); }} />}
           <footer>
             <span>MONSTERFUSION</span>
             <span>ひとつの融合から、無限の物語へ。</span>

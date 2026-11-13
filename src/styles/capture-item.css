@@ -1,0 +1,5 @@
+.capture-item { border-top: 1px solid #526156; margin-top: 16px; padding-top: 16px; display: flex; gap: 12px; align-items: flex-start; }
+.capture-item img { width: 80px; height: 80px; object-fit: contain; image-rendering: pixelated; flex: 0 0 auto; }
+.capture-item h3 { margin: 0 0 8px; color: #f4b0a2; }
+.capture-item p, .capture-item small { font-size: 12px; line-height: 1.6; }
+.capture-item button { padding: 8px; opacity: .6; }

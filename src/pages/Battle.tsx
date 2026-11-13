@@ -1,3 +1,4 @@
+import { CaptureItemCard } from "../components/CaptureItemCard";
 import { HealEffect } from "../components/HealEffect";
 import { MoveHelp } from "../components/MoveHelp";
 import { moveHelp, highlightPart, partNames } from "../shared/moveHelp";
@@ -9,7 +10,7 @@ import { MoveBadges } from "../components/MoveBadges";
 import "../styles/battle.css";
 import type { SpriteMotion } from "../components/MonsterSprite";
 import type { BattleAction, BattleState, GameAdapter, Monster } from "../shared/ui";
-import { createBattle, getCoreMonster, enterArena, resumeArena, receiveArenaReward, continueArena, leaveArena, getPartInventory } from "../mocks/game";
+import { createBattle, getCoreMonster, enterArena, resumeArena, receiveArenaReward, continueArena, leaveArena, getPartInventory, getGameSession } from "../mocks/game";
 import { Portrait } from "../components/MonsterView";
 import { BattleEffect } from "../components/BattleEffect";
 import { MultiplierEffect, multiplierPresentation, orchestraHit } from "../components/MultiplierEffect";
@@ -20,23 +21,25 @@ import { battleSound } from "../components/battleSound";
 import { LootReveal, PartIcon, TreasureChestIcon } from "../components/LootReveal";
 import type { GenePart } from "@core/core/index.ts";
 import type { BattleCue } from "../components/BattleEffect";
-export function Battle(props: { monsters: Monster[]; adapter: GameAdapter }) {
+type ReplayListener = (playing: boolean, muted?: boolean) => void;
+export function Battle(props: { monsters: Monster[]; adapter: GameAdapter; onReplay?: ReplayListener }) {
   const [initial, setInitial] = useState<BattleState | null>(() => resumeArena());
   const [session, setSession] = useState(0);
   const enter = useCallback((id: string) => { setInitial(enterArena(id)); setSession(n => n + 1); }, []);
-  if (!props.monsters.length) return <section className="panel"><h1>バトルアリーナ</h1><p>まずモンスターを登録してください。</p></section>;
+  if (!props.monsters.length && !initial) return <section className="panel"><h1>バトルアリーナ</h1><p>まずモンスターを登録してください。</p></section>;
   if (!initial) return <ArenaEntrance monsters={props.monsters} onEnter={enter} />;
   return <BattleSession key={session} {...props} initial={initial} onLeave={() => { leaveArena(); setInitial(null); }} />;
 }
 
 function BattleSession({
   monsters,
-  adapter, initial, onLeave,
+  adapter, initial, onLeave, onReplay,
 }: {
   monsters: Monster[];
   adapter: GameAdapter;
   initial: BattleState;
   onLeave: () => void;
+  onReplay?: ReplayListener;
 }) {
   const [state, setState] = useState(initial);
   const [rewardMessage, setRewardMessage] = useState("");
@@ -75,7 +78,7 @@ function BattleSession({
   const describedSkill = player?.skills.find(s => s.id === helpSkill);
   const locked = busy || state.status !== "active";
   const finishers = new Set(getLearnableMoves(getCoreMonster(state.player.id)).filter(m => m.category === "finisher").map(m => m.skill.id));
-  useEffect(() => () => { active.current?.abort(); stopSound.current(); }, []);
+  useEffect(() => () => { active.current?.abort(); stopSound.current(); onReplay?.(false); }, [onReplay]);
   async function wait(ms: number, signal: AbortSignal) {
     if (signal.aborted || skip.current) return;
     await new Promise<void>(resolve => {
@@ -108,6 +111,7 @@ function BattleSession({
     const controller = new AbortController();
     active.current = controller;
     skip.current = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    onReplay?.(true, mutedRef.current);
     setBusy(true);
     setError("");
     arena.current?.scrollIntoView({ block: "center", behavior: "instant" });
@@ -205,6 +209,14 @@ function BattleSession({
       }
       if (!controller.signal.aborted) {
         setState(next);
+        if (next.status === 'lost' && getGameSession().status === 'gameOver') {
+          // Let zero HP and the delayed red trail paint before beginning the fade.
+          await new Promise<void>(resolve => {
+            const finish = () => { clearTimeout(timer); controller.signal.removeEventListener('abort', finish); resolve(); };
+            const timer = window.setTimeout(finish, 1100);
+            controller.signal.addEventListener('abort', finish, { once: true });
+          });
+        }
         if (next.status === 'won') {
           stopSound.current();
           stopSound.current = battleSound('victory', mutedRef.current);
@@ -214,6 +226,7 @@ function BattleSession({
       if (!controller.signal.aborted)
         setError("行動を処理できませんでした。もう一度お試しください。");
     } finally {
+      onReplay?.(false, mutedRef.current);
       active.current = null;
       if (!controller.signal.aborted) {
         setBusy(false);
@@ -241,7 +254,7 @@ function BattleSession({
       <button ref={inventoryDock} className={`inventory-dock ${loot.length ? 'is-receiving' : ''}`} onClick={() => setShowInventory(v => !v)} aria-expanded={showInventory} aria-label="アイテムボックス">
         <span aria-hidden="true">▣</span> アイテムボックス · {getPartInventory().stacks.reduce((n,s)=>n+s.count,0)}
       </button>
-      {showInventory && <section className="inventory-popover panel" aria-label="所持パーツ一覧"><h2>アイテムボックス</h2><button onClick={() => setShowInventory(false)}>閉じる</button>{getPartInventory().stacks.length ? getPartInventory().stacks.map(s => <p key={s.part.id}><PartIcon part={s.part} /> {s.part.name} ×{s.count}</p>) : <p>まだ素材を持っていません。</p>}</section>}
+      {showInventory && <section className="inventory-popover panel" aria-label="所持パーツ一覧"><h2>アイテムボックス</h2><button onClick={() => setShowInventory(false)}>閉じる</button>{getPartInventory().stacks.length ? getPartInventory().stacks.map(s => <p key={s.part.id}><PartIcon part={s.part} /> {s.part.name} ×{s.count}</p>) : <p>まだ素材を持っていません。</p>}<CaptureItemCard /></section>}
       {loot.length > 0 && <LootReveal parts={loot} source={rewardChest} destination={inventoryDock} muted={muted} onDone={() => setLoot([])} />}
       {!run && <><label className="battle-select">
         出場モンスター
@@ -319,7 +332,7 @@ function BattleSession({
         <span className="versus">VS</span>
       </div>
       {busy && <button data-custom-sound onClick={skipReplay}>演出をスキップ</button>}
-      {state.status !== "active" && <BattleResult state={state}>
+      {state.status !== "active" && getGameSession().status !== "gameOver" && <BattleResult state={state}>
         <div className="victory-reward" aria-label="アリーナ報酬">
           {state.status === "won" && run && <>
             {run.phase === "cleared" && <h3>アリーナ制覇！</h3>}

@@ -43,6 +43,7 @@ export function SoundLab() {
       <button className="text-button" onClick={() => { player.current?.pause(); setPlaying(""); }}>停止</button>
       <p>初期音量は50%。再生ボタンを押すまで音は鳴りません。</p>
     </section>
+    <section className="panel sound-card"><h2>ゲームオーバー</h2><p>柔らかい電子音が静かに下がる、7秒の短い曲です。</p><button onClick={() => void play("game-over", "music")}>▶ ゲームオーバー曲を聴く</button></section>
     <section className="panel sound-card">
       <h2>あなたの鼻歌から · 勝利メロディ試作</h2>
       <p>録音の間隔をもとにした単旋律の確認版です。音程は推定のため、まず原案との違いを確認してください。</p>
