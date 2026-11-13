@@ -20,6 +20,8 @@ import { BattleHpBar } from "../components/BattleHpBar";
 import { battleSound } from "../components/battleSound";
 import { LootReveal, PartIcon, TreasureChestIcon } from "../components/LootReveal";
 import type { GenePart } from "@core/core/index.ts";
+import { blockingStatus, getMoveBehavior } from "@core/core/index.ts";
+import { StatusChips } from "../components/StatusChips";
 import type { BattleCue } from "../components/BattleEffect";
 type ReplayListener = (playing: boolean, muted?: boolean) => void;
 export function Battle(props: { monsters: Monster[]; adapter: GameAdapter; onReplay?: ReplayListener }) {
@@ -78,6 +80,12 @@ function BattleSession({
   const helpMove = learnable.find(m => m.skill.id === helpSkill);
   const describedSkill = player?.skills.find(s => s.id === helpSkill);
   const locked = busy || state.status !== "active";
+  // Core decides what stops a monster acting, and which moves get through
+  // anyway, so the screen asks it rather than keeping its own list.
+  const blocked = blockingStatus(player?.statuses);
+  const stillUsable = blocked
+    ? (player?.skills ?? []).filter(s => getMoveBehavior(s.id).usableWhileBound).map(s => skillLabel(s))
+    : [];
   const finishers = new Set(getLearnableMoves(getCoreMonster(state.player.id)).filter(m => m.category === "finisher").map(m => m.skill.id));
   useEffect(() => () => { active.current?.abort(); stopSound.current(); onReplay?.(false); }, [onReplay]);
   async function wait(ms: number, signal: AbortSignal) {
@@ -342,6 +350,7 @@ function BattleSession({
             />
             <div className="hp-label mp-label"><span>MP</span><span>{state.coreState?.combatants.find(c => c.side === i)?.mp ?? 0} / 99</span></div>
             <progress className="mp-bar" aria-label={`${side.label} MP`} max={99} value={state.coreState?.combatants.find(c => c.side === i)?.mp ?? 0} />
+            <StatusChips statuses={state.coreState?.combatants.find(c => c.side === i)?.statuses} label={side.label} />
           </section>
         ))}
         <span className="versus">VS</span>
@@ -387,24 +396,31 @@ function BattleSession({
       </section>}
       {state.status === "active" && !captured && <section className="panel battle-command-panel" aria-label="バトルコマンド">
         <h2>行動を選ぶ</h2>
-        <p>技で攻める。MPが減ったら、守って回復。</p>
+        {blocked
+          ? <p className="status-blocked" role="status">
+              ⚠ {STATUS_LABELS[blocked]}で行動できません。
+              <small>{stillUsable.length
+                ? `${stillUsable.join('、')}だけは使えます。ほかを選ぶとこのターンは何も起きません。`
+                : 'どれを選んでもこのターンは何も起きません。相手の番は進みます。'}</small>
+            </p>
+          : <p>技で攻める。MPが減ったら、守って回復。</p>}
         <div className="battle-command-grid">
-          <button data-element={player?.element} disabled={locked} onClick={() => act("attack")}>
+          <button data-element={player?.element} className={blocked ? "is-unusable" : ""} disabled={locked} onClick={() => act("attack")}>
             <strong>攻撃</strong>
-            <span>攻撃力・魔力の高い方を使う</span>
+            <span className={blocked ? "unusable-note" : ""}>{blocked ? `${STATUS_LABELS[blocked]}中は出せない` : "攻撃力・魔力の高い方を使う"}</span>
             <span>MP 0 {player && enemy ? ` · ${matchupLabel(elementMultiplier(player.element, enemy.element))}` : ""}</span>
           </button>
-          <button disabled={locked} onClick={() => { stopSound.current(); stopSound.current = battleSound('defend',muted); void act("defend"); }}>
-            <strong>◇ 守る</strong><span>受けるダメージを減らす</span>
+          <button className={blocked ? "is-unusable" : ""} disabled={locked} onClick={() => { stopSound.current(); stopSound.current = battleSound('defend',muted); void act("defend"); }}>
+            <strong>◇ 守る</strong><span className={blocked ? "unusable-note" : ""}>{blocked ? `${STATUS_LABELS[blocked]}中は守れない` : "受けるダメージを減らす"}</span>
             <span>MP回復 +{DEFAULT_BATTLE_CONFIG.defendMpBonus}</span>
           </button>
           {player?.skills.map((skill) => (
             <div key={skill.id} className={`battle-move-option ${inspectedSkill === skill.id ? "is-inspected" : ""}`} onMouseEnter={() => setInspectedSkill(skill.id)} onFocus={() => setInspectedSkill(skill.id)}>
-            <button data-element={skill.element} key={skill.id} disabled={locked || availableMp < skill.cost} onClick={() => act({ kind: "skill", skillId: skill.id })}>
+            <button data-element={skill.element} key={skill.id} className={blocked && !getMoveBehavior(skill.id).usableWhileBound ? "is-unusable" : ""} disabled={locked || availableMp < skill.cost} onClick={() => act({ kind: "skill", skillId: skill.id })}>
               <strong>{skillLabel(skill)} {finishers.has(skill.id) && <span className="finisher-badge">大技</span>}</strong>
               <MoveBadges element={skill.element} scaling={skill.scaling} />
               <span>{moveHelp(skill,getCoreMonster(state.player.id)).summary}</span>
-              <span>MP {skill.cost} · {moveHelp(skill,getCoreMonster(state.player.id)).attacks && enemy ? matchupLabel(elementMultiplier(skill.element, enemy.element)) : "補助"}{availableMp < skill.cost ? " · MP不足" : ""}</span>
+              <span className={blocked && !getMoveBehavior(skill.id).usableWhileBound ? "unusable-note" : ""}>MP {skill.cost} · {moveHelp(skill,getCoreMonster(state.player.id)).attacks && enemy ? matchupLabel(elementMultiplier(skill.element, enemy.element)) : "補助"}{availableMp < skill.cost ? " · MP不足" : ""}{blocked ? (getMoveBehavior(skill.id).usableWhileBound ? ` · ${STATUS_LABELS[blocked]}中でも使える` : ` · ${STATUS_LABELS[blocked]}中は出せない`) : ""}</span>
             </button>
             <button className="move-info" aria-label={`${skillLabel(skill)}の効果を確認`} aria-expanded={helpSkill === skill.id} aria-controls="battle-move-help" onClick={() => { setInspectedSkill(skill.id); setHelpSkill(helpSkill === skill.id ? null : skill.id); }}>ⓘ 効果・使う部位</button>
             </div>
