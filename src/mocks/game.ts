@@ -59,9 +59,14 @@ export function previewMaterial(a: Monster, b: Monster, partId: string) {
   if (!part) return { ok: false, message: "素材を所持していません。", guaranteedExpression: false };
   return previewPartFusion(getCoreMonster(a.id), getCoreMonster(b.id), part, session.inventory);
 }
+/** The dragon at the end has its own portrait, not a composed sprite. */
+export const FINAL_BOSS_ART = `${import.meta.env.BASE_URL}monsters/bosses/arena-100-dragon-concept.png`;
 function presentArena(run: ArenaRun): BattleState {
   const spec = findStarterSpec(run.player.id);
-  return { ...presentBattle(run.battle, present(run.player, spec ? starterArt[spec.art] : ""), present(run.encounter.enemy)), arenaRun: run };
+  const enemy = run.encounter.isFinalBoss
+    ? present(run.encounter.enemy, FINAL_BOSS_ART, false)
+    : present(run.encounter.enemy);
+  return { ...presentBattle(run.battle, present(run.player, spec ? starterArt[spec.art] : ""), enemy), arenaRun: run };
 }
 export function resumeArena(): BattleState | null { return arenaRun ? presentArena(arenaRun) : null; }
 export function enterArena(id: string): BattleState {
@@ -221,7 +226,9 @@ export function createBattle(player: Monster, enemy: Monster): BattleState {
   if (isGameOver(session) || !ownedMonster(session, player.id)) throw new Error('出場できる仲間がいません。');
   const battle = createDuelWithLoadouts(getCoreMonster(player.id), getCoreMonster(enemy.id), [getMoveLoadout(player.id), getMoveLoadout(enemy.id)]);
   duelIds.set(battle, crypto.randomUUID());
-  applySession(deployMonsters(session, [player.id]));
+  // Both sides, because in a practice duel the opponent is the player's own
+  // monster too and was being left fusable while it fought.
+  applySession(deployMonsters(session, [player.id, enemy.id]));
   return presentBattle(battle, player, enemy);
 }
 export const gameAdapter: GameAdapter = {

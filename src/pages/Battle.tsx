@@ -269,7 +269,11 @@ function BattleSession({
         <div>
           <div className="eyebrow">TRAINING GROUNDS</div>
           <h1>バトルアリーナ</h1>
-          <p>{run?.encounter.isBoss ? "大型ボス出現！ 最後の戦いです。" : `第${(run?.encounter.index ?? 0) + 1}戦 · ${run?.wins ?? 0}勝`}</p>
+          <p>{run?.encounter.isFinalBoss
+            ? `${DEFAULT_ARENA_CONFIG.finalBossFight}戦目 — 冥蒼竜ヴェルグラント。ここが頂上です。`
+            : run?.encounter.isBoss
+              ? "大型ボス出現！ この先も戦いは続きます。"
+              : `第${(run?.encounter.index ?? 0) + 1}戦 / ${DEFAULT_ARENA_CONFIG.finalBossFight} · ${run?.wins ?? 0}勝`}</p>
         </div>
         <span className="badge">{run?.encounter.isBoss ? "BOSS" : "勝ち抜きアリーナ"}</span>
       </div>
@@ -384,7 +388,11 @@ function BattleSession({
             {claimed && <p className="battle-help">獲得したパーツはアイテムボックスへ。融合画面で使えます。</p>}
             {run.phase === "reward" && <button disabled={!claimed || loot.length > 0} onClick={() => {
               setRewardMessage(""); setError(""); setState(continueArena()); arena.current?.scrollIntoView({ block: "center" });
-            }}>{run.wins === DEFAULT_ARENA_CONFIG.normalWins ? "ボスの待つ最終戦へ" : "全回復して次の戦いへ"}</button>}
+            }}>{run.wins === DEFAULT_ARENA_CONFIG.normalWins
+              ? "ボスの待つ第6戦へ"
+              : run.wins === DEFAULT_ARENA_CONFIG.finalBossFight - 1
+                ? "頂上へ — 冥蒼竜が待つ100戦目"
+                : "全回復して次の戦いへ"}</button>}
           </>}
           {(claimed || state.status !== "won") && <button disabled={loot.length > 0} className="text-button" onClick={onLeave}>入口へ戻る（今回の挑戦を終了）</button>}
         </div>

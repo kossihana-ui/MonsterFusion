@@ -26,3 +26,8 @@
 .battle-command-grid button.is-unusable { opacity: .55; }
 .battle-command-grid button.is-unusable .unusable-note { color: #f0a79d; }
 @media (prefers-reduced-motion: reduce) { .status-chip.is-blocking { box-shadow: none; } }
+.sidebar-locked {
+  margin: 12px 14px; padding: 8px 10px; border-radius: 8px;
+  background: #3a1d1b; color: #ffc5bc; font-size: 12px; font-weight: 700;
+}
+.sidebar-locked small { display: block; margin-top: 3px; font-weight: 400; color: #e8b3ab; line-height: 1.5; }

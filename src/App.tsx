@@ -36,6 +36,10 @@ export default function App({
   const monsters = session.owned.map(presentSessionMonster);
   const [selected, setSelected] = useState<Monster | null>(null);
   const gameOver = session.status === 'gameOver';
+  // Someone is standing in the ring. Core keeps this list, and it is the same
+  // thing that stops a fighting monster being fused, so the screen and the
+  // rule cannot disagree.
+  const inBattle = session.deployed.length > 0;
   const [battleReplaying, setBattleReplaying] = useState(false);
   const [gameOverMuted, setGameOverMuted] = useState(false);
   const onReplay = useCallback((playing: boolean, muted?: boolean) => {
@@ -57,7 +61,7 @@ export default function App({
           href="#"
           onClick={(e) => {
             e.preventDefault();
-            if (!gameOver) setPage("collection");
+            if (!gameOver && !inBattle) setPage("collection");
           }}
         >
           <span className="brand-mark">
@@ -72,7 +76,8 @@ export default function App({
           {tabs.map((tab) => (
             <button
               key={tab.id}
-              disabled={gameOver}
+              disabled={gameOver || (inBattle && tab.id !== "battle")}
+              title={inBattle && tab.id !== "battle" ? "戦闘中は移動できません" : undefined}
               aria-current={
                 page === tab.id ||
                 (page === "detail" && tab.id === "collection")
@@ -90,6 +95,9 @@ export default function App({
             </button>
           ))}
         </nav>
+        {inBattle && !gameOver && <p className="sidebar-locked" role="status">
+          ⚔ 戦闘中<small>決着がつくまで、ほかの画面には移動できません。</small>
+        </p>}
         <div className="sidebar-bottom">
           <span className="live-dot" /> LOCAL DEMO
           <div>小さな出会い。無限の系譜。</div>
