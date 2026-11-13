@@ -362,6 +362,38 @@ export {
   validateMonster,
 } from './storage.ts';
 
+// Consumables, and ドクロゲソ: taking the opponent home.
+export type {
+  Consumable,
+  ConsumableId,
+  ItemInventory,
+  ItemStack,
+} from './items.ts';
+export {
+  addItem,
+  CONSUMABLES,
+  consumableById,
+  createItemInventory,
+  DOKURO_GESO,
+  itemCount,
+  listItems,
+  removeItem,
+} from './items.ts';
+export type {
+  CapturePreview,
+  CaptureRefusal,
+  CaptureResult,
+  SessionReward,
+} from './capture.ts';
+export {
+  CAPTURE_ITEM_ID,
+  captureArenaMonster,
+  claimArenaRewardInSession,
+  giveSessionItem,
+  giveSessionPart,
+  previewCapture,
+} from './capture.ts';
+
 // ソウルメイク: building a monster from collected parts.
 export type {
   PlacedPart,
@@ -392,6 +424,7 @@ export {
   deployMonsters,
   fuseOwnedMonsters,
   isDeployed,
+  getConsumables,
   isGameOver,
   ownedMonster,
   SESSION_LEDGER_LIMIT,

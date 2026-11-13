@@ -562,6 +562,14 @@ export interface ArenaConfig {
   readonly skipAbsentFeatures: boolean;
   /** Parts that can go into a single fusion. */
   readonly partsPerFusion: number;
+  /**
+   * Chance the boss leaves a ドクロゲソ behind. The player's 10%.
+   *
+   * Only the boss. A capture item from every third ordinary win would make
+   * capturing the ordinary way to win a fight, and it is meant to be the
+   * thing you were saving.
+   */
+  readonly bossCaptureItemChance: number;
 }
 
 export const DEFAULT_ARENA_CONFIG: ArenaConfig = {
@@ -581,6 +589,7 @@ export const DEFAULT_ARENA_CONFIG: ArenaConfig = {
   dropLoci: ['bodyShape', 'eyes', 'horns', 'wings', 'tail', 'jaw', 'crest'],
   skipAbsentFeatures: true,
   partsPerFusion: 1,
+  bossCaptureItemChance: 0.1,
 };
 
 export function createArenaConfig(overrides: Partial<ArenaConfig> = {}): ArenaConfig {

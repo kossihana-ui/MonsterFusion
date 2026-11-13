@@ -20,6 +20,8 @@
 
 import type { BattleState, Monster, MonsterId } from '../shared/types.ts';
 import type { MonsterContext } from './fusion.ts';
+import type { ConsumableId, ItemInventory } from './items.ts';
+import { createItemInventory, listItems } from './items.ts';
 import type { GenePart, PartFusionResult, PartInventory } from './parts.ts';
 import { createPartInventory, fuseWithPart } from './parts.ts';
 import type { SoulMakeResult, SoulMakeSelection } from './soulmake.ts';
@@ -33,6 +35,13 @@ export interface GameSession {
   /** Everything that has ever been owned, for lineage. Never shrinks. */
   readonly history: readonly Monster[];
   readonly inventory: PartInventory;
+  /**
+   * Consumables, counted apart from the parts.
+   *
+   * A part is an ingredient and an item is used; they are spent in different
+   * places, so they are held in different places.
+   */
+  readonly items: ItemInventory;
   readonly status: SessionStatus;
   /**
    * Monsters committed to a battle or an arena run.
@@ -55,6 +64,7 @@ export interface CreateSessionOptions {
   /** Past monsters, when restoring a run. Owned monsters are added to it. */
   readonly history?: readonly Monster[];
   readonly inventory?: PartInventory;
+  readonly items?: ItemInventory;
   readonly deployed?: readonly MonsterId[];
   readonly settledBattles?: readonly string[];
   readonly completedRequests?: readonly string[];
@@ -84,6 +94,7 @@ export function createGameSession(
     owned: kept,
     history: dedupe([...(options.history ?? []), ...kept]),
     inventory: options.inventory ?? createPartInventory(),
+    items: options.items ?? createItemInventory(),
     status: options.status ?? (kept.length > 0 ? 'playing' : 'gameOver'),
     deployed: [...(options.deployed ?? [])],
     settledBattles: [...(options.settledBattles ?? [])],
@@ -100,6 +111,13 @@ export function ownedMonster(
   id: MonsterId,
 ): Monster | undefined {
   return session.owned.find((monster) => monster.id === id);
+}
+
+/** What the player is holding, for an item list. */
+export function getConsumables(
+  session: GameSession,
+): readonly { id: ConsumableId; name: string; description: string; count: number }[] {
+  return listItems(session.items);
 }
 
 /** True while this monster is in a fight and must not be spent. */

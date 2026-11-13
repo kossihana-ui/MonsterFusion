@@ -26,6 +26,8 @@ import type { MonsterContext } from './fusion.ts';
 import { createMonsterFromAnalysis, createRootMonster } from './fusion.ts';
 import type { MoveLoadout } from './moves.ts';
 import { defaultLoadout, reconcileLoadout } from './moves.ts';
+import type { Consumable } from './items.ts';
+import { DOKURO_GESO } from './items.ts';
 import type { GenePart, PartInventory } from './parts.ts';
 import { addPart, partFromFeature } from './parts.ts';
 import { createBasicPolicy, createDuelWithLoadouts, stepTurn } from './battle.ts';
@@ -66,6 +68,14 @@ export interface ArenaRewardResult {
   readonly run: ArenaRun;
   readonly inventory: PartInventory;
   readonly parts: readonly GenePart[];
+  /**
+   * Consumables the fight left behind, if any. Only the boss drops these.
+   *
+   * Reported rather than applied: parts and consumables are counted in
+   * different inventories, and this function only holds one of them.
+   * `claimArenaRewardInSession` puts them away.
+   */
+  readonly items: readonly Consumable[];
   /** True when the fight was won but nothing dropped. Still a result. */
   readonly empty: boolean;
   /** True when this encounter had already been claimed and nothing was added. */
@@ -370,6 +380,7 @@ export function claimArenaReward(
       run,
       inventory,
       parts: [],
+      items: [],
       empty: true,
       duplicate: false,
       canContinue: run.phase === 'battle',
@@ -382,6 +393,7 @@ export function claimArenaReward(
       run,
       inventory,
       parts: [],
+      items: [],
       empty: true,
       duplicate: true,
       canContinue: true,
@@ -414,6 +426,15 @@ export function claimArenaReward(
   let nextInventory = inventory;
   for (const part of parts) nextInventory = addPart(nextInventory, part, 1);
 
+  // Its own stream, so adding this did not move a single existing part drop.
+  const items: Consumable[] = [];
+  if (
+    run.encounter.isBoss
+    && chance(runRandom(run, `item:${run.encounter.index}`), arena.bossCaptureItemChance)
+  ) {
+    items.push(DOKURO_GESO);
+  }
+
   const cleared = run.wins > arena.normalWins;
   const nextRun: ArenaRun = {
     ...run,
@@ -421,15 +442,17 @@ export function claimArenaReward(
     phase: cleared ? 'cleared' : 'reward',
   };
 
+  const spoils = [...parts.map((p) => p.name), ...items.map((i) => i.name)];
   return {
     run: nextRun,
     inventory: nextInventory,
     parts,
-    empty: parts.length === 0,
+    items,
+    empty: spoils.length === 0,
     duplicate: false,
     canContinue: !cleared,
-    message: parts.length
-      ? `${parts.map((p) => p.name).join('、')}を手に入れた。`
+    message: spoils.length
+      ? `${spoils.join('、')}を手に入れた。`
       : '今回は何も落とさなかった。',
   };
 }

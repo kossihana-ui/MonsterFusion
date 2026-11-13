@@ -20,6 +20,8 @@ import type {
 } from '../shared/types.ts';
 import type { MoveLoadout } from './moves.ts';
 import { reconcileLoadout } from './moves.ts';
+import type { ItemInventory, ItemStack } from './items.ts';
+import { consumableById, createItemInventory } from './items.ts';
 import type { PartInventory, PartStack } from './parts.ts';
 import { createPartInventory, REQUEST_LEDGER_LIMIT } from './parts.ts';
 import type { ArenaRun } from './arena.ts';
@@ -50,6 +52,8 @@ export interface MonsterSaveFile {
   readonly loadouts: readonly MoveLoadout[];
   /** Gene parts the player is holding. */
   readonly inventory: PartInventory;
+  /** Consumables the player is holding. Counted apart from the parts. */
+  readonly items: ItemInventory;
   /** An arena run in progress, so a streak survives closing the game. */
   readonly arena: ArenaRun | null;
   /**
@@ -82,6 +86,8 @@ export interface SerializeOptions {
   readonly loadouts?: readonly MoveLoadout[];
   /** Gene parts in hand. */
   readonly inventory?: PartInventory;
+  /** Consumables in hand. */
+  readonly items?: ItemInventory;
   /** An arena run in progress. */
   readonly arena?: ArenaRun | null;
   /**
@@ -120,6 +126,7 @@ export function createSaveFile(
     monsters: all.map(normalizeMonster),
     loadouts,
     inventory: options.inventory ?? session?.inventory ?? createPartInventory(),
+    items: options.items ?? session?.items ?? createItemInventory(),
     arena: options.arena ?? null,
     session: session ? sessionSaveOf(session) : null,
   };
@@ -146,7 +153,10 @@ export function sessionSaveOf(session: GameSession): SessionSave {
 export function restoreSession(save: MonsterSaveFile): GameSession {
   const record = save.session;
   if (!record) {
-    return createGameSession(save.monsters, { inventory: save.inventory });
+    return createGameSession(save.monsters, {
+      inventory: save.inventory,
+      items: save.items,
+    });
   }
   const owned = new Set(record.ownedIds);
   return createGameSession(
@@ -154,6 +164,7 @@ export function restoreSession(save: MonsterSaveFile): GameSession {
     {
       history: save.monsters,
       inventory: save.inventory,
+      items: save.items,
       deployed: record.deployedIds,
       settledBattles: record.settledBattles,
       completedRequests: record.completedRequests,
@@ -535,6 +546,7 @@ export function deserializeSaveFile(json: string): ValidationResult<MonsterSaveF
       monsters,
       loadouts,
       inventory: readInventory(migrated.inventory),
+      items: readItems(migrated.items),
       arena: readArena(migrated.arena),
       session: readSession(migrated.session, monsters),
     },
@@ -580,6 +592,26 @@ function readSession(
  * A corrupt or hand-edited entry is dropped rather than failing the load: the
  * collection is worth more than one stack of parts.
  */
+/**
+ * Reads the consumables, keeping only ids this build knows.
+ *
+ * An item from a newer build is dropped rather than carried as a name with
+ * no behaviour behind it, and the rest of the save still loads.
+ */
+function readItems(value: unknown): ItemInventory {
+  if (!isRecord(value) || !Array.isArray(value.stacks)) return createItemInventory();
+  const stacks: ItemStack[] = [];
+  for (const entry of value.stacks) {
+    if (!isRecord(entry) || !isRecord(entry.item)) continue;
+    const count = typeof entry.count === 'number' ? Math.floor(entry.count) : 0;
+    if (count <= 0) continue;
+    const item = consumableById(String(entry.item.id));
+    if (!item) continue;
+    stacks.push({ item, count });
+  }
+  return createItemInventory(stacks);
+}
+
 function readInventory(value: unknown): PartInventory {
   if (!isRecord(value)) return createPartInventory();
 
