@@ -109,6 +109,25 @@ test('fusing spends both parents and keeps the child', () => {
   assert.equal(before.owned.length, 2);
 });
 
+test('a child can be named by whoever made it', () => {
+  const { context, a, b } = pair(26);
+  const named = fuseOwnedMonsters(createGameSession([a, b]), a.id, b.id, context, 'named', undefined, 'ココノエ');
+  assert.equal(named.result.ok, true, named.result.message);
+  assert.equal(named.result.child?.name, 'ココノエ');
+  assert.equal(named.session.owned[0]?.name, 'ココノエ', 'and that is the name it is kept under');
+});
+
+test('a child with no name given still gets one', () => {
+  const { context, a, b } = pair(27);
+  for (const name of [undefined, '']) {
+    const made = fuseOwnedMonsters(
+      createGameSession([a, b]), a.id, b.id, context, `unnamed-${String(name)}`, undefined, name,
+    );
+    assert.equal(made.result.ok, true, made.result.message);
+    assert.ok(made.result.child?.name, `a child was left nameless for ${JSON.stringify(name)}`);
+  }
+});
+
 test('a consumed parent cannot be fused again', () => {
   const { context, a, b } = pair(3);
   const first = fuseOwnedMonsters(createGameSession([a, b]), a.id, b.id, context, 'f1');

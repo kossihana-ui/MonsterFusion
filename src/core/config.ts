@@ -570,6 +570,20 @@ export interface ArenaConfig {
    * thing you were saving.
    */
   readonly bossCaptureItemChance: number;
+  /**
+   * Which fight the arena's last boss stands at. 100 means the 100th.
+   *
+   * The ladder used to stop at the first boss. It now keeps going, because a
+   * streak you can max out is not a streak - 「どこまで勝ち抜けたか」 only means
+   * something while there is further to go.
+   */
+  readonly finalBossFight: number;
+  /** How strong the last ordinary fight before the dragon is. */
+  readonly finalStrength: number;
+  readonly finalBossStrength: number;
+  readonly finalBossTier: number;
+  /** 「パーツドロップなし」, confirmed by the player: the dragon leaves no parts. */
+  readonly finalBossDropsParts: boolean;
 }
 
 export const DEFAULT_ARENA_CONFIG: ArenaConfig = {
@@ -590,6 +604,15 @@ export const DEFAULT_ARENA_CONFIG: ArenaConfig = {
   skipAbsentFeatures: true,
   partsPerFusion: 1,
   bossCaptureItemChance: 0.1,
+  // The 100th fight, by the player's design note of 2026-11-13. The strengths
+  // are mine - the note leaves them open - and are set so the climb past the
+  // first boss stays gentle enough that a well-bred monster can get deep,
+  // while nobody walks to 100.
+  finalBossFight: 100,
+  finalStrength: 1.8,
+  finalBossStrength: 2.2,
+  finalBossTier: 3,
+  finalBossDropsParts: false,
 };
 
 export function createArenaConfig(overrides: Partial<ArenaConfig> = {}): ArenaConfig {

@@ -194,6 +194,8 @@ export function fuseOwnedMonsters(
   context: MonsterContext,
   requestId: string,
   partId?: string,
+  /** The child's name. Left out, the game names it. */
+  name?: string,
 ): SessionFusion {
   if (isGameOver(session)) {
     return refusedFusion(session, 'この冒険は終わっています。', 'gameOver');
@@ -229,7 +231,7 @@ export function fuseOwnedMonsters(
     part = stack.part;
   }
 
-  const result = fuseWithPart(a, b, part, session.inventory, context, requestId);
+  const result = fuseWithPart(a, b, part, session.inventory, context, requestId, name);
   if (!result.ok || !result.child) {
     // fuseWithPart hands back the inventory it was given on a refusal, so
     // there is nothing to undo here.

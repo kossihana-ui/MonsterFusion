@@ -43,9 +43,12 @@ import { statTotal } from './stats.ts';
 export type ArenaPhase = 'battle' | 'reward' | 'cleared' | 'failed';
 
 export interface ArenaEncounter {
-  /** 0-based. The last one is the boss. */
+  /** 0-based. */
   readonly index: number;
+  /** Either of the two: the one after five wins, or the dragon at the end. */
   readonly isBoss: boolean;
+  /** 冥蒼竜ヴェルグラント, at `finalBossFight`. Leaves no parts. */
+  readonly isFinalBoss: boolean;
   readonly enemy: Monster;
   readonly enemyLoadout: MoveLoadout;
 }
@@ -108,10 +111,28 @@ function encounterRandom(runId: string, index: number): Random {
  * so a run reads as a climb rather than a flat wall.
  */
 function strengthFor(index: number, config: ArenaConfig): number {
-  if (index >= config.normalWins) return config.bossStrength;
+  if (index === finalBossIndex(config)) return config.finalBossStrength;
+  if (index === config.normalWins) return config.bossStrength;
+  if (index > config.normalWins) {
+    // The long climb from the first boss to the dragon. Deliberately gentler
+    // than the opening five: this stretch is 93 fights, not four.
+    const span = config.finalStrength - config.lastStrength;
+    const steps = Math.max(1, finalBossIndex(config) - config.normalWins - 1);
+    return config.lastStrength + (span * (index - config.normalWins)) / steps;
+  }
   const span = config.lastStrength - config.firstStrength;
   const steps = Math.max(1, config.normalWins - 1);
   return config.firstStrength + (span * index) / steps;
+}
+
+/** 0-based index of the last fight. `finalBossFight` counts from 1. */
+export function finalBossIndex(config: ArenaConfig): number {
+  return Math.max(config.normalWins + 1, config.finalBossFight - 1);
+}
+
+/** True for the fight the dragon stands at. */
+export function isFinalBossIndex(index: number, config: ArenaConfig): boolean {
+  return index === finalBossIndex(config);
 }
 
 /**
@@ -149,6 +170,28 @@ export const BOSS_TEMPLATE: Omit<MonsterVisualAnalysis, 'confidence'> = {
   crest: 'crown',
 };
 
+/**
+ * 冥蒼竜ヴェルグラント, the thing at the end of the ladder.
+ *
+ * Fixed rather than rolled, because it is one named creature rather than a
+ * kind: obsidian plate, curled horns, a pale blue burn behind the eyes, and
+ * the soul core at its chest.
+ */
+export const FINAL_BOSS_TEMPLATE: Omit<MonsterVisualAnalysis, 'confidence'> = {
+  bodyShape: 'muscular',
+  bodyColor: 'black',
+  size: 'giant',
+  horns: 'spiral',
+  wings: 'membrane',
+  tail: 'long',
+  jaw: 'maw',
+  eyes: 'glowing',
+  crest: 'crystal',
+  element: 'dark',
+};
+
+export const FINAL_BOSS_NAME = '冥蒼竜ヴェルグラント';
+
 function applyTendencies(monster: Monster, tendencies: Record<string, number>): Monster {
   // Written through the genes so phenotype and stats stay derived rather than
   // patched: a monster whose stats disagree with its genes is a bug waiting.
@@ -179,7 +222,8 @@ export function createArenaEnemy(
 ): ArenaEncounter {
   const config = context.config ?? DEFAULT_GAME_CONFIG;
   const arena = config.arena;
-  const isBoss = index >= arena.normalWins;
+  const isFinalBoss = isFinalBossIndex(index, arena);
+  const isBoss = isFinalBoss || index === arena.normalWins;
   const rng = encounterRandom(runId, index);
   const strength = strengthFor(index, arena);
 
@@ -193,7 +237,13 @@ export function createArenaEnemy(
   const tendencies = scaledTendencies(player, strength, rng);
 
   let enemy: Monster;
-  if (isBoss) {
+  if (isFinalBoss) {
+    enemy = createMonsterFromAnalysis(
+      { ...FINAL_BOSS_TEMPLATE, confidence: 1 },
+      enemyContext,
+      { name: FINAL_BOSS_NAME, tier: arena.finalBossTier },
+    );
+  } else if (isBoss) {
     // A fixed silhouette, a random element, and a tier so its caps rise with
     // the rest of it.
     enemy = createMonsterFromAnalysis(
@@ -231,6 +281,7 @@ export function createArenaEnemy(
   return {
     index,
     isBoss,
+    isFinalBoss,
     enemy,
     enemyLoadout: defaultLoadout(enemy),
   };
@@ -414,7 +465,9 @@ export function claimArenaReward(
   );
 
   const parts: GenePart[] = [];
-  for (const locus of candidates) {
+  // 「パーツドロップなし」: the dragon is not something you take pieces off.
+  const dropsParts = !run.encounter.isFinalBoss || arena.finalBossDropsParts;
+  for (const locus of dropsParts ? candidates : []) {
     if (parts.length >= maxDrops) break;
     if (!chance(rng, dropChance)) continue;
     const part = partFromFeature(enemy, locus);
@@ -435,7 +488,7 @@ export function claimArenaReward(
     items.push(DOKURO_GESO);
   }
 
-  const cleared = run.wins > arena.normalWins;
+  const cleared = run.wins > finalBossIndex(arena);
   const nextRun: ArenaRun = {
     ...run,
     claimed: [...run.claimed, run.encounter.index],
@@ -473,7 +526,7 @@ export function nextArenaEncounter(run: ArenaRun, context: MonsterContext): Aren
   const config = context.config ?? DEFAULT_GAME_CONFIG;
   if (run.phase !== 'reward') return run;
   if (!run.claimed.includes(run.encounter.index)) return run;
-  if (run.wins > config.arena.normalWins) return { ...run, phase: 'cleared' };
+  if (run.wins > finalBossIndex(config.arena)) return { ...run, phase: 'cleared' };
 
   const encounter = createArenaEnemy(run.id, run.wins, run.player, context);
   return {
@@ -489,7 +542,8 @@ export function arenaRules(config: GameConfig = DEFAULT_GAME_CONFIG): string[] {
   const arena = config.arena;
   return [
     `通常戦に${arena.normalWins}回勝つとボス戦です。`,
-    '敗北・引き分けで連勝は終了します。',
+    `その先も戦いは続き、${arena.finalBossFight}戦目に${FINAL_BOSS_NAME}が待っています。`,
+    '敗北・引き分けで連勝は終了します。どこまで勝ち抜けるかが記録になります。',
     '各戦のあいだに全回復します。',
     '倒した相手が持っていた特徴だけが素材になります。',
     `素材は1回の融合につき${arena.partsPerFusion}個まで使えます。`,

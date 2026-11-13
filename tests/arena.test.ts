@@ -7,6 +7,7 @@ import {
   BOSS_TEMPLATE,
   claimArenaReward,
   createArenaEnemy,
+  FINAL_BOSS_NAME,
   isArenaOver,
   nextArenaEncounter,
   startArena,
@@ -88,12 +89,12 @@ test('a run opens on the first fight', () => {
   assert.ok(run.battle.combatants.some((c) => c.monsterId === monster.id));
 });
 
-test('the boss comes after five wins, once', () => {
+test('the boss comes after five wins, and the ladder goes on past it', () => {
   const { context, run } = runWithCrushingPlayer(11);
   let current = run;
   const bossAppearances: number[] = [];
 
-  for (let fight = 0; fight < DEFAULT_ARENA_CONFIG.normalWins + 1; fight++) {
+  for (let fight = 0; fight < DEFAULT_ARENA_CONFIG.normalWins + 2; fight++) {
     assert.equal(current.phase, 'battle', `fight ${fight} did not start`);
     if (current.encounter.isBoss) bossAppearances.push(fight);
     current = playOut(current, context);
@@ -102,9 +103,76 @@ test('the boss comes after five wins, once', () => {
     current = nextArenaEncounter(current, context);
   }
 
-  assert.deepEqual(bossAppearances, [DEFAULT_ARENA_CONFIG.normalWins], 'exactly one boss, last');
-  assert.equal(current.phase, 'cleared');
-  assert.ok(isArenaOver(current));
+  assert.deepEqual(bossAppearances, [DEFAULT_ARENA_CONFIG.normalWins], 'one boss, at the sixth');
+  assert.equal(current.phase, 'battle', 'beating it is no longer the end');
+  assert.equal(isArenaOver(current), false);
+});
+
+test('the dragon stands at the hundredth fight, and nowhere else', () => {
+  const context = testContext(31);
+  const me = player(31);
+  const last = DEFAULT_ARENA_CONFIG.finalBossFight - 1;
+
+  const dragon = createArenaEnemy('ladder', last, me, context);
+  assert.equal(dragon.isFinalBoss, true);
+  assert.equal(dragon.isBoss, true, 'it is a boss as well as the last one');
+  assert.equal(dragon.enemy.name, FINAL_BOSS_NAME);
+  assert.equal(dragon.enemy.phenotype.bodyColor, 'black', 'obsidian');
+  assert.equal(dragon.enemy.phenotype.horns, 'spiral', 'curled');
+  assert.equal(dragon.enemy.phenotype.crest, 'crystal', 'the soul core');
+  assert.equal(dragon.enemy.tier, DEFAULT_ARENA_CONFIG.finalBossTier);
+
+  for (const index of [0, 4, DEFAULT_ARENA_CONFIG.normalWins, 20, last - 1]) {
+    const other = createArenaEnemy('ladder', index, me, context);
+    assert.equal(other.isFinalBoss, false, `fight ${index + 1} brought the dragon out early`);
+    assert.notEqual(other.enemy.name, FINAL_BOSS_NAME);
+  }
+});
+
+test('the dragon leaves no parts behind', () => {
+  const context = testContext(32);
+  const me = player(32);
+  const last = DEFAULT_ARENA_CONFIG.finalBossFight - 1;
+  const opened = startArena(me, defaultLoadout(me), context, { id: 'no-parts' });
+
+  for (let attempt = 0; attempt < 30; attempt++) {
+    const encounter = createArenaEnemy(`no-parts-${attempt}`, last, me, context);
+    const run = { ...opened, id: `no-parts-${attempt}`, wins: last + 1, phase: 'reward' as const, encounter, claimed: [] };
+    const reward = claimArenaReward(run, createPartInventory(), context);
+    assert.deepEqual(reward.parts, [], 'the dragon is not something you take pieces off');
+  }
+
+  // An ordinary fight on the same ladder still drops, so this is the dragon
+  // and not a broken drop table.
+  let dropped = 0;
+  for (let attempt = 0; attempt < 30; attempt++) {
+    const encounter = createArenaEnemy(`plain-${attempt}`, 10, me, context);
+    const run = { ...opened, id: `plain-${attempt}`, wins: 11, phase: 'reward' as const, encounter, claimed: [] };
+    dropped += claimArenaReward(run, createPartInventory(), context).parts.length;
+  }
+  assert.ok(dropped > 0, 'ordinary fights stopped dropping too');
+});
+
+test('the ladder climbs the whole way without stepping backwards', () => {
+  const context = testContext(33);
+  const me = player(33);
+  const last = DEFAULT_ARENA_CONFIG.finalBossFight - 1;
+  const totals: number[] = [];
+  for (const index of [0, 2, 4, 6, 10, 30, 60, last - 1, last]) {
+    totals.push(statTotal(createArenaEnemy('climb', index, me, context).enemy.stats));
+  }
+  // The first boss is a spike, so compare the ordinary run after it onwards.
+  const ordinary = totals.slice(3);
+  for (let i = 1; i < ordinary.length; i++) {
+    assert.ok(
+      (ordinary[i] as number) >= (ordinary[i - 1] as number) * 0.9,
+      `fight ${i} came out weaker than the one before: ${ordinary.join(' → ')}`,
+    );
+  }
+  assert.ok(
+    (totals.at(-1) as number) > (totals[0] as number),
+    `the dragon is not stronger than the opening fight: ${totals.join(' → ')}`,
+  );
 });
 
 test('the arena arms its own monsters from their bodies, like everyone else', () => {

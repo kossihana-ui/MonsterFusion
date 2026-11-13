@@ -256,6 +256,8 @@ export function fuseWithPart(
   inventory: PartInventory,
   context: MonsterContext,
   requestId: string,
+  /** The child's name. Left out, the game names it. */
+  name?: string,
 ): PartFusionResult {
   if (hasCompleted(inventory, requestId)) {
     return {
@@ -303,6 +305,7 @@ export function fuseWithPart(
   const config = context.config ?? DEFAULT_GAME_CONFIG;
   const fusion = fuseDetailed(a, b, context, {
     ...(part ? { pinnedLoci: { [part.locus]: part.value } } : {}),
+    ...(name !== undefined && name !== '' ? { name } : {}),
   });
 
   if (part) {
