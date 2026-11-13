@@ -10,7 +10,10 @@ try {
     for(let run=0;run<12&&game.getGameSession().status==='playing';run++) {
       const owned=game.getGameSession().owned;
       const chosen=owned.find(m=>m.id==='starter-ignis')??owned[0];
-      let state=game.enterArena(chosen.id);
+      // A free ladder, so each attempt is a different set of opponents. On a
+      // season every retry is the same six fights, which is the point of a
+      // season and no use for finding a boss.
+      let state=game.enterArena(chosen.id,core.freeSeason(`check-${attempt}-${run}`).id);
       for(let fight=0;fight<6;fight++) {
         sawBoss ||= state.arenaRun.encounter.isBoss;
         const snapshot=JSON.stringify(state.arenaRun), old=state.arenaRun;

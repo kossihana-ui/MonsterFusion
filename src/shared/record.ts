@@ -20,6 +20,17 @@ export interface RunRecord {
   readonly wins: number;
   /** The monster that got that far. */
   readonly monster: string;
+  /** Who was playing, copied at the time so a later rename does not rewrite history. */
+  readonly player?: string;
+  /**
+   * What the monster looked like, kept so a record can still show the
+   * creature after it has been fused away or lost. A plain phenotype, which
+   * is all the sprite needs.
+   */
+  readonly look?: Record<string, string>;
+  /** Which ladder it was run on. Absent in records written before seasons. */
+  readonly season?: string;
+  readonly seasonLabel?: string;
   /** How it ended, because a retirement is not a defeat. */
   readonly ending: 'retired' | 'defeated' | 'cleared';
   /**
@@ -109,10 +120,19 @@ export function recordRun(
   wins: number,
   monster: string,
   ending: RunRecord['ending'],
+  extra: {
+    readonly look?: Record<string, string>;
+    readonly season?: string;
+    readonly seasonLabel?: string;
+  } = {},
 ): { record: PlayerRecord; run: RunRecord; isBest: boolean } {
   const current = read();
   const run: RunRecord = {
     wins: Math.max(0, Math.floor(wins)), monster, ending, at: Date.now(),
+    ...(current.name ? { player: current.name } : {}),
+    ...(extra.look ? { look: extra.look } : {}),
+    ...(extra.season ? { season: extra.season } : {}),
+    ...(extra.seasonLabel ? { seasonLabel: extra.seasonLabel } : {}),
     ...(automationSeen ? { suspect: true } : {}),
   };
   automationSeen = false;
@@ -126,6 +146,17 @@ export function recordRun(
 }
 
 /** Wipes the record. Only from a control the player pressed on purpose. */
+/** The best run on each ladder, newest ladder first. A local leaderboard. */
+export function bestBySeason(): readonly RunRecord[] {
+  const best = new Map<string, RunRecord>();
+  for (const run of read().runs) {
+    const key = run.season ?? '(記録のみ)';
+    const held = best.get(key);
+    if (!held || run.wins > held.wins) best.set(key, run);
+  }
+  return [...best.values()].sort((a, b) => b.wins - a.wins || b.at - a.at);
+}
+
 export function clearRecord(): PlayerRecord {
   try { localStorage.removeItem(KEY); } catch { /* nothing to do */ }
   return EMPTY;

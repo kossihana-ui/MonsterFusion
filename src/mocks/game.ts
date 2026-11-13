@@ -15,6 +15,7 @@ import {
   stepTurn,
   createBasicPolicy,
   startArena, advanceArenaTurn, nextArenaEncounter,
+  seasons, freeSeason,
   claimArenaRewardInSession, previewCapture, captureArenaMonster, getConsumables,
   previewPartFusion, createGameSession, deployMonsters, ownedMonster,
   fuseOwnedMonsters, settleBattleLoss, soulMakeInSession, isGameOver,
@@ -75,11 +76,21 @@ function presentArena(run: ArenaRun): BattleState {
   return { ...presentBattle(run.battle, present(run.player, spec ? starterArt[spec.art] : ""), enemy), arenaRun: run };
 }
 export function resumeArena(): BattleState | null { return arenaRun ? presentArena(arenaRun) : null; }
-export function enterArena(id: string): BattleState {
+/** The ladders on offer, plus a private one for trying a monster out. */
+export const arenaSeasons = () => [...seasons(), freeSeason(crypto.randomUUID())];
+let season = seasons()[0];
+export const currentSeason = () => season;
+export function enterArena(id: string, seasonId?: string): BattleState {
   const monster = ownedMonster(session, id);
   if (isGameOver(session) || !monster) throw new Error('出場できる仲間がいません。');
   if (arenaRun && arenaRun.phase !== 'failed' && arenaRun.phase !== 'cleared') throw new Error('現在の挑戦を終えてください。');
-  arenaRun = startArena(monster, getMoveLoadout(id), context);
+  // The season IS the run id: everyone on it walks the same ladder. A free
+  // ladder carries its own id, so it is taken as given rather than looked
+  // up - arenaSeasons() mints a new one every call and would never match.
+  season = seasons().find(s => s.id === seasonId)
+    ?? (seasonId?.startsWith('free-') ? freeSeason(seasonId.slice('free-'.length)) : undefined)
+    ?? seasons()[0];
+  arenaRun = startArena(monster, getMoveLoadout(id), context, { id: season.id });
   arenaId = crypto.randomUUID();
   applySession(deployMonsters(session, [id]));
   return presentArena(arenaRun);
@@ -121,17 +132,25 @@ export const arenaWins = () => arenaRun?.wins ?? 0;
  * stopped - and the monster comes home, because retiring is not a defeat.
  * The run itself is over either way.
  */
+function runDetails(run: ArenaRun) {
+  return {
+    look: run.player.phenotype as unknown as Record<string, string>,
+    season: season.id,
+    seasonLabel: season.label,
+  };
+}
 export function retireArena() {
   if (!arenaRun) throw new Error('挑戦がありません。');
   const wins = arenaRun.wins;
   const monster = arenaRun.player.name;
+  const details = runDetails(arenaRun);
   leaveArena();
-  return { wins, ...recordRun(wins, monster, 'retired') };
+  return { wins, ...recordRun(wins, monster, 'retired', details) };
 }
 /** Files a run that ended on its own, so the record sees it too. */
 export function recordArenaEnding(ending: 'defeated' | 'cleared') {
   if (!arenaRun) return null;
-  return recordRun(arenaRun.wins, arenaRun.player.name, ending);
+  return recordRun(arenaRun.wins, arenaRun.player.name, ending, runDetails(arenaRun));
 }
 // Session preferences, separate from canonical monsters, like the demo collection.
 const loadouts = new Map<string, MoveLoadout>();

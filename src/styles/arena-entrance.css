@@ -34,3 +34,21 @@
 .arena-retire > .panel h2 { margin: 0 0 8px; color: #ffd0a0; }
 .arena-retire > .panel button { margin-right: 10px; }
 .arena-record-suspect { margin: 8px 0 0; padding: 6px 8px; border-radius: 6px; background: #3a2a1b; color: #ffd0a0; font-size: 11px; line-height: 1.6; }
+
+/* Which ladder, and who has got how far up it. */
+.arena-seasons { display: grid; gap: 8px; margin-bottom: 14px; }
+.arena-seasons button { display: block; text-align: left; padding: 10px 12px; }
+.arena-seasons button strong { display: block; color: #e6efe9; }
+.arena-seasons button span { display: block; font-size: 11px; color: #90a096; line-height: 1.6; margin-top: 2px; }
+.arena-seasons button small { display: block; font-size: 10px; color: #7f8d85; margin-top: 4px; }
+.arena-seasons button[aria-pressed="true"] { border-color: #8fd3a4; background: #1d2a22; }
+.arena-board { list-style: none; margin: 10px 0 0; padding: 0; display: grid; gap: 6px; }
+.arena-board li { display: flex; align-items: center; gap: 10px; padding: 6px 8px; border-radius: 8px; background: #16201a; }
+.arena-board-face { width: 34px; height: 34px; flex: 0 0 auto; display: grid; place-items: center; overflow: hidden; }
+.arena-board-face.is-empty { color: #5d6a62; border: 1px dashed #3b4a41; border-radius: 6px; font-size: 14px; }
+.arena-board-face :global(svg), .arena-board-face img, .arena-board-face canvas { width: 34px; height: 34px; }
+.arena-board-who { flex: 1 1 auto; min-width: 0; }
+.arena-board-who strong { display: block; font-size: 12px; color: #dfe9e2; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.arena-board-who small { display: block; font-size: 10px; color: #8d9a92; }
+.arena-board-wins { font-size: 19px; color: #ffd9a8; font-variant-numeric: tabular-nums; }
+.arena-board-wins small { font-size: 10px; color: #8d9a92; margin-left: 2px; }

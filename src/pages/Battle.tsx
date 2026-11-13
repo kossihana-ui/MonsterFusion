@@ -28,7 +28,7 @@ type ReplayListener = (playing: boolean, muted?: boolean) => void;
 export function Battle(props: { monsters: Monster[]; adapter: GameAdapter; onReplay?: ReplayListener }) {
   const [initial, setInitial] = useState<BattleState | null>(() => resumeArena());
   const [session, setSession] = useState(0);
-  const enter = useCallback((id: string) => { setInitial(enterArena(id)); setSession(n => n + 1); }, []);
+  const enter = useCallback((id: string, seasonId: string) => { setInitial(enterArena(id, seasonId)); setSession(n => n + 1); }, []);
   if (!props.monsters.length && !initial) return <section className="panel"><h1>バトルアリーナ</h1><p>まずモンスターを登録してください。</p></section>;
   if (!initial) return <ArenaEntrance monsters={props.monsters} onEnter={enter} />;
   return <BattleSession key={session} {...props} initial={initial} onLeave={() => { leaveArena(); setInitial(null); }} />;
