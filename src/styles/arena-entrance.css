@@ -19,3 +19,17 @@
 .arena-gate-status { position: absolute; bottom: 16px; left: 0; right: 0; text-align: center; font-size: .75rem; color: #daf2b5; background: #112127d9; padding: 8px; }
 @media (max-width: 800px) { .arena-entry-layout { grid-template-columns: 1fr; } }
 @media (prefers-reduced-motion: reduce) { .arena-door { transition: none; } }
+
+/* The streak the player is trying to beat, and who they are. */
+.arena-record { margin: 16px 0; padding: 12px 14px; border-radius: 10px; background: #1a231e; border: 1px solid #39493f; }
+.arena-record h3 { margin: 0 0 8px; font-size: 13px; letter-spacing: .1em; color: #9fb3a6; }
+.arena-record-best { margin: 0 0 10px; font-size: 14px; color: #dfe9e2; }
+.arena-record-best strong { font-size: 30px; color: #ffd9a8; font-variant-numeric: tabular-nums; margin-right: 2px; }
+.arena-record-best small { color: #8d9a92; margin-left: 6px; }
+.arena-record label { display: block; font-size: 12px; color: #9fb3a6; }
+.arena-record input { width: 100%; margin-top: 4px; }
+
+/* Walking away is a real choice, so it is visible without being a trap. */
+.arena-retire { margin: 12px 0; }
+.arena-retire > .panel h2 { margin: 0 0 8px; color: #ffd0a0; }
+.arena-retire > .panel button { margin-right: 10px; }

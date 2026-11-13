@@ -27,6 +27,7 @@ import type {
 } from "@core/core/index.ts";
 import type { Monster, BattleState, GameAdapter } from "../shared/ui";
 import { battleLogLabel } from "../shared/battlePresentation";
+import { recordRun } from "../shared/record";
 
 // UI presentation adapter. Core objects are kept intact and never edited here.
 const context = { rng: createSeededRandom(12345) };
@@ -111,6 +112,27 @@ export function continueArena(): BattleState {
   return presentArena(arenaRun);
 }
 export function leaveArena() { arenaRun = null; if (!isGameOver(session)) applySession(deployMonsters(session)); }
+/** How far the current run has got. 0 outside a run. */
+export const arenaWins = () => arenaRun?.wins ?? 0;
+/**
+ * Walks away mid-fight.
+ *
+ * The streak is kept - eight wins is eight wins whether you stopped or were
+ * stopped - and the monster comes home, because retiring is not a defeat.
+ * The run itself is over either way.
+ */
+export function retireArena() {
+  if (!arenaRun) throw new Error('挑戦がありません。');
+  const wins = arenaRun.wins;
+  const monster = arenaRun.player.name;
+  leaveArena();
+  return { wins, ...recordRun(wins, monster, 'retired') };
+}
+/** Files a run that ended on its own, so the record sees it too. */
+export function recordArenaEnding(ending: 'defeated' | 'cleared') {
+  if (!arenaRun) return null;
+  return recordRun(arenaRun.wins, arenaRun.player.name, ending);
+}
 // Session preferences, separate from canonical monsters, like the demo collection.
 const loadouts = new Map<string, MoveLoadout>();
 export function getFeatureMoves(id: string) {

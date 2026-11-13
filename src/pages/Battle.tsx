@@ -10,7 +10,7 @@ import { MoveBadges } from "../components/MoveBadges";
 import "../styles/battle.css";
 import type { SpriteMotion } from "../components/MonsterSprite";
 import type { BattleAction, BattleState, GameAdapter, Monster } from "../shared/ui";
-import { createBattle, getCoreMonster, enterArena, resumeArena, receiveArenaReward, continueArena, leaveArena, getPartInventory, getGameSession, captureEnemy, getItems } from "../mocks/game";
+import { createBattle, getCoreMonster, enterArena, resumeArena, receiveArenaReward, continueArena, leaveArena, getPartInventory, getGameSession, captureEnemy, getItems, retireArena, recordArenaEnding, arenaWins } from "../mocks/game";
 import { Portrait } from "../components/MonsterView";
 import { BattleEffect } from "../components/BattleEffect";
 import { MultiplierEffect, multiplierPresentation, orchestraHit } from "../components/MultiplierEffect";
@@ -48,6 +48,7 @@ function BattleSession({
   const [captured, setCaptured] = useState<Monster | null>(null);
   /** A move that wants five seconds of the player's thumbs before it lands. */
   const [charging, setCharging] = useState<{ id: string; name: string; seconds: number; perPress: number } | null>(null);
+  const [retiring, setRetiring] = useState(false);
   const [rewardMessage, setRewardMessage] = useState("");
   const [loot, setLoot] = useState<readonly GenePart[]>([]);
   const [muted, setMuted] = useState(false);
@@ -234,6 +235,8 @@ function BattleSession({
         }
       }
       if (!controller.signal.aborted) {
+        if (next.status === 'lost') recordArenaEnding('defeated');
+        else if (next.arenaRun?.phase === 'cleared') recordArenaEnding('cleared');
         setState(next);
         if (next.status === 'lost' && getGameSession().status === 'gameOver') {
           // Let zero HP and the delayed red trail paint before beginning the fade.
@@ -374,6 +377,26 @@ function BattleSession({
         }}
       />}
       {busy && <button data-custom-sound onClick={skipReplay}>演出をスキップ</button>}
+      {run && state.status === "active" && !captured && !charging && <div className="arena-retire">
+        {retiring
+          ? <section className="panel" role="alertdialog" aria-label="リタイアの確認">
+              <h2>{arenaWins()}連勝でリタイアしますか？</h2>
+              <p>ここまでの{arenaWins()}連勝が記録に残ります。{state.player.name}は無事に戻ります。</p>
+              <p className="battle-help">この挑戦は終わります。報酬の受け取りは続けられません。</p>
+              <button className="primary" disabled={busy} onClick={() => {
+                try {
+                  const result = retireArena();
+                  setRetiring(false);
+                  onLeave();
+                  if (result.isBest) setRewardMessage(`自己ベスト更新：${result.wins}連勝`);
+                } catch { setError("リタイアできませんでした。"); setRetiring(false); }
+              }}>{arenaWins()}連勝で終える</button>
+              <button className="text-button" onClick={() => setRetiring(false)}>やめる（戦いを続ける）</button>
+            </section>
+          : <button className="text-button" disabled={busy} onClick={() => setRetiring(true)}>
+              リタイアする（現在 {arenaWins()}連勝）
+            </button>}
+      </div>}
       {state.status !== "active" && getGameSession().status !== "gameOver" && <BattleResult state={state}>
         <div className="victory-reward" aria-label="アリーナ報酬">
           {state.status === "won" && run && <>

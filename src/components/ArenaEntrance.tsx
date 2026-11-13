@@ -1,35 +1,73 @@
 import { useEffect, useRef, useState } from "react";
 import type { Monster } from "../shared/ui";
 import { Portrait } from "./MonsterView";
-import { arenaRules } from "@core/core/index.ts";
+import { MoveLoadoutEditor } from "./MoveLoadoutEditor";
+import { arenaRules, MAX_MOVE_SLOTS } from "@core/core/index.ts";
+import { getMoveLoadout } from "../mocks/game";
+import { getRecord, setPlayerName } from "../shared/record";
 import "../styles/arena-entrance.css";
 
 export function ArenaEntrance({ monsters, onEnter }: { monsters: Monster[]; onEnter: (id: string) => void }) {
   const [selected, setSelected] = useState(monsters[0].id);
   const [opening, setOpening] = useState(false);
+  // The gate asks for the three moves before it opens. A set nobody chose is
+  // the game choosing, and this is the decision worth the most in the whole
+  // game - 39 points of win rate - so it is not made silently any more.
+  const [confirmed, setConfirmed] = useState<string | null>(null);
+  const [record, setRecord] = useState(getRecord);
   const pending = useRef(false);
   const chosen = monsters.find(m => m.id === selected) ?? monsters[0];
+  const ready = confirmed === chosen.id;
+  const slots = getMoveLoadout(chosen.id).skillIds;
+
   useEffect(() => {
     if (!opening) return;
     const timer = window.setTimeout(() => onEnter(chosen.id), window.matchMedia("(prefers-reduced-motion: reduce)").matches ? 0 : 1250);
     return () => window.clearTimeout(timer);
   }, [opening, chosen.id, onEnter]);
+
   return <>
-    <div className="hero"><div><div className="eyebrow">ARENA GATE</div><h1>バトルアリーナ</h1><p>出場する仲間を選んで、扉の向こうへ。</p></div></div>
+    <div className="hero"><div><div className="eyebrow">ARENA GATE</div><h1>バトルアリーナ</h1><p>出場する仲間と、持っていく技を決めて。</p></div></div>
     <div className="arena-entry-layout">
-      <section className="panel"><h2>出場モンスター</h2>
-        <div className="arena-roster">{monsters.map(m => <button key={m.id} type="button" aria-pressed={chosen.id === m.id} disabled={opening} onClick={() => setSelected(m.id)}><strong>{m.name}</strong><span>{m.genes.element} · 第{m.generation}世代</span></button>)}</div>
-        <p className="battle-help">技は図鑑の「技セット」で変更できます。</p>
+      <section className="panel"><h2>① 出場モンスター</h2>
+        <div className="arena-roster">{monsters.map(m => <button key={m.id} type="button" aria-pressed={chosen.id === m.id} disabled={opening} onClick={() => { setSelected(m.id); setConfirmed(null); }}><strong>{m.name}</strong><span>{m.genes.element} · 第{m.generation}世代</span></button>)}</div>
+
+        <section className="arena-record" aria-label="連勝記録">
+          <h3>連勝記録</h3>
+          <p className="arena-record-best">
+            {record.best
+              ? <><strong>{record.best.wins}</strong>連勝<small>（{record.best.monster}・{record.best.ending === 'retired' ? 'リタイア' : record.best.ending === 'cleared' ? '完全制覇' : '敗北'}）</small></>
+              : <small>まだ記録がありません。</small>}
+          </p>
+          <label>プレイヤー名
+            <input value={record.name} maxLength={20} placeholder="名前を入力"
+              onChange={e => setRecord(setPlayerName(e.target.value))} />
+          </label>
+          <p className="battle-help">記録はこのブラウザに保存されます。世界ランキングは準備中です。</p>
+        </section>
+
+        <h2>② 持っていく技（{MAX_MOVE_SLOTS}枠）</h2>
+        <MoveLoadoutEditor monsterId={chosen.id} onSaved={() => setConfirmed(chosen.id)}>
+          <p className="battle-help">
+            入場前に技を決めてください。<strong>「この技でセット」を押すと扉が開きます。</strong>
+            戦いの合間には変更できません。
+          </p>
+        </MoveLoadoutEditor>
+
         <p>敗北すると出場した仲間を失います。最後の1体を失うとゲームオーバーです。</p>
         <ul className="battle-help">{arenaRules().map(rule => <li key={rule}>{rule}</li>)}</ul>
         <p className="battle-help">進行・パーツはプレイ中のみ保持されます。再読み込みすると戻ります。</p>
-        <button type="button" className="arena-enter" disabled={opening} onClick={() => { if (!pending.current) { pending.current = true; setOpening(true); } }}> {opening ? "扉を開いています…" : `${chosen.name}で入場する`} </button>
+        <button type="button" className="arena-enter" disabled={opening || !ready}
+          onClick={() => { if (!pending.current) { pending.current = true; setOpening(true); } }}>
+          {opening ? "扉を開いています…" : ready ? `${chosen.name}で入場する` : "技を決めると入場できます"}
+        </button>
+        {ready && !opening && <p className="battle-help">持っていく技：{slots.length}枠ぶん決定済み。</p>}
       </section>
       <section className={`arena-gate ${opening ? "is-opening" : ""}`} aria-label="アリーナの扉">
         <div className="arena-gate-inner"><Portrait monster={chosen} large /><strong>{chosen.name}</strong></div>
         <div className="arena-door arena-door-left" aria-hidden="true"><span>MF</span></div>
         <div className="arena-door arena-door-right" aria-hidden="true"><span>ARENA</span></div>
-        <p className="arena-gate-status" role="status">{opening ? "GATE OPEN · 出撃" : "STANDBY · 出場待ち"}</p>
+        <p className="arena-gate-status" role="status">{opening ? "GATE OPEN · 出撃" : ready ? "READY · 技セット完了" : "STANDBY · 技を選んでください"}</p>
       </section>
     </div>
   </>;

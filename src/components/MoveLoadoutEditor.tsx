@@ -10,7 +10,7 @@ import { skillLabel } from "../shared/battlePresentation";
 import { MoveBadges } from "./MoveBadges";
 import { playUiSound } from "./uiSound";
 
-export function MoveLoadoutEditor({ monsterId, children, onInspect }: { monsterId: string; children: ReactNode; onInspect?: (move: LearnableMove | undefined) => void }) {
+export function MoveLoadoutEditor({ monsterId, children, onInspect, onSaved }: { monsterId: string; children: ReactNode; onInspect?: (move: LearnableMove | undefined) => void; onSaved?: (skillIds: readonly string[]) => void }) {
   const monster = getCoreMonster(monsterId);
   const moves = getFeatureMoves(monsterId);
   const pad = (ids: readonly string[]) => Array.from({ length: MAX_MOVE_SLOTS }, (_, i) => ids[i] ?? "");
@@ -40,6 +40,7 @@ export function MoveLoadoutEditor({ monsterId, children, onInspect }: { monsterI
     if (!result.ok) { setError(result.message); setMessage(""); return; }
     playUiSound(); setError("");
     setMessage("技をセットしました。次のバトルから使えます。");
+    onSaved?.(result.loadout.skillIds);
   }
   return <>
     <section className="panel" data-custom-sound>
