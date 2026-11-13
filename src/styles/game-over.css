@@ -1,4 +1,7 @@
-.game-over-screen { position: fixed; inset: 0; width: 100vw; height: 100dvh; max-width: none; max-height: none; margin: 0; padding: 0; border: 0; background: transparent; color: #ddd8e7; overflow: auto; }
+/* Sized by inset rather than by 100vw: a page with a scrollbar is narrower
+   than the viewport, and the 15px difference left a lit strip of the battle
+   beside the black. */
+.game-over-screen { position: fixed; inset: 0; width: auto; height: auto; max-width: none; max-height: none; margin: 0; padding: 0; border: 0; background: transparent; color: #ddd8e7; overflow: auto; }
 .game-over-screen::backdrop { background: transparent; }
 .game-over-black { position: fixed; inset: 0; background: #000; animation: game-over-fade 1.2s ease-in both; }
 .game-over-content { position: relative; min-height: 100%; box-sizing: border-box; display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 32px 20px; text-align: center; animation: game-over-words .8s 1.2s ease-out both; }
