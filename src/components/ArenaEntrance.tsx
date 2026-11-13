@@ -43,11 +43,17 @@ export function ArenaEntrance({ monsters, onEnter }: { monsters: Monster[]; onEn
             <input value={record.name} maxLength={20} placeholder="名前を入力"
               onChange={e => setRecord(setPlayerName(e.target.value))} />
           </label>
+          {record.best?.suspect && <p className="arena-record-suspect">
+            この記録は連打ツールの疑いありとして記録されています。ランキングには載りません。
+          </p>}
           <p className="battle-help">記録はこのブラウザに保存されます。世界ランキングは準備中です。</p>
+          <p className="battle-help">連打ツール（オートクリッカー等）の使用は禁止です。</p>
         </section>
 
         <h2>② 持っていく技（{MAX_MOVE_SLOTS}枠）</h2>
-        <MoveLoadoutEditor monsterId={chosen.id} onSaved={() => setConfirmed(chosen.id)}>
+        {/* Keyed, so switching monster rebuilds the slots from that monster's
+            own set rather than carrying the last one's across. */}
+        <MoveLoadoutEditor key={chosen.id} monsterId={chosen.id} onSaved={() => setConfirmed(chosen.id)}>
           <p className="battle-help">
             入場前に技を決めてください。<strong>「この技でセット」を押すと扉が開きます。</strong>
             戦いの合間には変更できません。

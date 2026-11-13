@@ -33,3 +33,4 @@
 .arena-retire { margin: 12px 0; }
 .arena-retire > .panel h2 { margin: 0 0 8px; color: #ffd0a0; }
 .arena-retire > .panel button { margin-right: 10px; }
+.arena-record-suspect { margin: 8px 0 0; padding: 6px 8px; border-radius: 6px; background: #3a2a1b; color: #ffd0a0; font-size: 11px; line-height: 1.6; }

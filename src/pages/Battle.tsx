@@ -369,6 +369,7 @@ function BattleSession({
         skillName={charging.name}
         seconds={charging.seconds}
         perPress={charging.perPress}
+        cap={Math.round(charging.seconds * DEFAULT_BATTLE_CONFIG.maxChargePressesPerSecond)}
         muted={muted}
         onDone={(count) => {
           const skillId = charging.id;

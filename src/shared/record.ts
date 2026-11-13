@@ -22,6 +22,14 @@ export interface RunRecord {
   readonly monster: string;
   /** How it ended, because a retirement is not a defeat. */
   readonly ending: 'retired' | 'defeated' | 'cleared';
+  /**
+   * Set when something during the run did not look like a pair of hands.
+   *
+   * The run still counts for the player - a false positive must not take
+   * somebody's streak away - but a ranking should leave it out, and the
+   * player is told why.
+   */
+  readonly suspect?: boolean;
   /** Epoch ms, so a later ranking can order and window them. */
   readonly at: number;
 }
@@ -66,6 +74,18 @@ function write(next: PlayerRecord): PlayerRecord {
   return next;
 }
 
+/**
+ * Raised when the input during a run looked automated.
+ *
+ * Cleared by the next run that is filed, so it marks that run and not the
+ * rest of the session. This is a flag, not a punishment: the real defence
+ * is that core only counts fifteen presses a second, so a tool wins nothing.
+ */
+let automationSeen = false;
+export function flagAutomation(): void { automationSeen = true; }
+export function automationFlagged(): boolean { return automationSeen; }
+export function clearAutomationFlag(): void { automationSeen = false; }
+
 export function getRecord(): PlayerRecord {
   return read();
 }
@@ -91,7 +111,11 @@ export function recordRun(
   ending: RunRecord['ending'],
 ): { record: PlayerRecord; run: RunRecord; isBest: boolean } {
   const current = read();
-  const run: RunRecord = { wins: Math.max(0, Math.floor(wins)), monster, ending, at: Date.now() };
+  const run: RunRecord = {
+    wins: Math.max(0, Math.floor(wins)), monster, ending, at: Date.now(),
+    ...(automationSeen ? { suspect: true } : {}),
+  };
+  automationSeen = false;
   const isBest = run.wins > (current.best?.wins ?? -1);
   const record = write({
     ...current,
