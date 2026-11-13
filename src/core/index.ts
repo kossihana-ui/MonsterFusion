@@ -398,6 +398,18 @@ export {
   previewCapture,
 } from './capture.ts';
 
+// The seeds everybody shares.
+export type { ArenaSeason, SeasonKind } from './seasons.ts';
+export {
+  allTimeSeason,
+  freeSeason,
+  isoWeek,
+  seasonIsOpen,
+  seasons,
+  weeklySeason,
+  weekEndsAt,
+} from './seasons.ts';
+
 // ソウルメイク: building a monster from collected parts.
 export type {
   PlacedPart,
