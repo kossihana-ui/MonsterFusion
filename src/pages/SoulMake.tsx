@@ -1,6 +1,6 @@
 import { useRef, useState } from 'react';
 import { LOCUS_LABELS, getSoulMakeRecipe, soulMakeLoci, previewSoulMake, type CategoricalLocus } from '@core/core/index.ts';
-import { getPartInventory, makeSoul } from '../mocks/game';
+import { getPartInventory, makeSoul, suggestMonsterName } from '../mocks/game';
 import type { Monster } from '../shared/ui';
 import { Portrait } from '../components/MonsterView';
 import { PartIcon } from '../components/LootReveal';
@@ -68,9 +68,11 @@ export function SoulMake() {
         {(active === 'bodyShape' || active === 'eyes') && <p className="battle-help">体と目もアリーナの勝利報酬で手に入ります。</p>}
         <h3>誕生の準備</h3><p>{preview.message}</p>
         <p>使用するパーツ：{preview.cost}個</p>
-        <label>仲間の名前（任意）<input value={name} maxLength={30} onChange={e => { request.current = null; setName(e.target.value); }} placeholder="空欄ならおまかせ" /></label>
+        <label>仲間の名前<input value={name} maxLength={30} onChange={e => { request.current = null; setName(e.target.value); }} placeholder="名前を入力" /></label>
+        <button className="text-button" type="button" onClick={() => { request.current = null; setName(suggestMonsterName()); }}>おまかせで決める</button>
+        {!name.trim() && <p className="battle-help">名前をつけてから生み出せます。</p>}
         <p className="battle-help">色・大きさ・属性は誕生時に決まります。</p>
-        <button className="primary" disabled={!preview.ok} onClick={create}>ソウルメイクする</button>
+        <button className="primary" disabled={!preview.ok || !name.trim()} onClick={create}>ソウルメイクする</button>
         <p className="battle-help">仲間が0体になるとゲームオーバーです。仲間が残っている間に使いましょう。</p>
         {created && <div className="soul-born" role="status"><h3>{created.name}が誕生！</h3><Portrait monster={created} large /><p>図鑑に加わりました。第0世代の新しい仲間です。</p></div>}
       </section>

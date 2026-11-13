@@ -47,7 +47,7 @@ export interface BattleState {
   status: "active" | "won" | "lost" | "draw";
 }
 export interface GameAdapter {
-  fuseMonsters(a: Monster, b: Monster, partId?: string): Promise<FusionResult>;
+  fuseMonsters(a: Monster, b: Monster, partId?: string, name?: string): Promise<FusionResult>;
   calculateBattleTurn(
     state: BattleState,
     action: BattleAction,

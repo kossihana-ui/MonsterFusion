@@ -2,7 +2,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import type { FusionResult, GameAdapter, Monster } from "../shared/ui";
 import { Portrait } from "../components/MonsterView";
 import { FusionReveal } from "../components/FusionReveal";
-import { getPartInventory, previewMaterial, getGameSession } from "../mocks/game";
+import { getPartInventory, previewMaterial, getGameSession, suggestMonsterName } from "../mocks/game";
 export function Fusion({
   monsters,
   adapter,
@@ -15,6 +15,7 @@ export function Fusion({
   const [a, setA] = useState(monsters[0]?.id ?? "");
   const [b, setB] = useState(monsters[1]?.id ?? "");
   const [partId, setPartId] = useState("");
+  const [childName, setChildName] = useState("");
   const [result, setResult] = useState<FusionResult | null>(null);
   const [busy, setBusy] = useState(false);
   const [animating, setAnimating] = useState(false);
@@ -46,8 +47,9 @@ export function Fusion({
     setError("");
     setResult(null);
     try {
-      const r = await adapter.fuseMonsters(parentA, parentB, partId || undefined);
+      const r = await adapter.fuseMonsters(parentA, parentB, partId || undefined, childName.trim());
       setPartId("");
+      setChildName("");
       onCreated(r.child);
       setAnimating(true);
       setResult(r);
@@ -112,19 +114,31 @@ export function Fusion({
           {preview && <p role="status">{preview.message}{preview.ok && preview.guaranteedExpression ? "（発現保証）" : ""}</p>}
           <p>アリーナで獲得したパーツを1個投入できます。成功したときだけ消費します。</p>
         </section>
+        <section className="panel" aria-label="子の名前">
+          <h2>名前をつける</h2>
+          <label>生まれてくる子の名前
+            <input value={childName} maxLength={30} disabled={busy || animating}
+              onChange={e => setChildName(e.target.value)} placeholder="名前を入力" />
+          </label>
+          <button className="text-button" type="button" disabled={busy || animating}
+            onClick={() => setChildName(suggestMonsterName())}>おまかせで決める</button>
+          <p>名前のない子は生まれません。迷ったら「おまかせ」を押してください。</p>
+        </section>
         <button className="text-button" onClick={() => setMuted(value => !value)} aria-pressed={!muted}>
           {muted ? "融合音：オフ" : "融合音：オン"}
         </button>
         <span>✧</span>
         <button
           className="primary"
-          disabled={!parentA || !parentB || a === b || busy || animating || arenaLocked || (!!preview && !preview.ok)}
+          disabled={!parentA || !parentB || a === b || busy || animating || arenaLocked || !childName.trim() || (!!preview && !preview.ok)}
           onClick={fuse}
         >
           {busy ? "融合中…" : "✦ 融合する"}
         </button>
         <p>
-          {arenaLocked ? "出場中の仲間は融合できません。ほかの2体を選んでください。" : monsters.length < 2
+          {!childName.trim() && monsters.length >= 2 && a !== b && !arenaLocked
+            ? "子の名前を入力してください。"
+            : arenaLocked ? "出場中の仲間は融合できません。ほかの2体を選んでください。" : monsters.length < 2
             ? "融合には2体必要です。今いる仲間を大切にしましょう。"
             : a === b
               ? "異なる2体を選んでください。"

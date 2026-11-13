@@ -1,5 +1,7 @@
 import {
   createStarterMonsters,
+  DEFAULT_GAME_CONFIG,
+  createMonsterName,
   createSeededRandom,
   findStarterSpec,
   createMonsterFromAnalysis,
@@ -37,6 +39,9 @@ export const subscribeSession = (listener: () => void) => { listeners.add(listen
 function applySession(next: GameSession) { if (session === next) return; session = next; listeners.forEach(listener => listener()); }
 export const getPartInventory = () => session.inventory;
 export const getItems = () => getConsumables(session);
+/** A name to offer when the player would rather not think of one. */
+export const suggestMonsterName = () =>
+  createMonsterName(context.rng, DEFAULT_GAME_CONFIG.fusion.nameSyllables);
 export function presentSessionMonster(monster: CoreMonster) {
   const spec = findStarterSpec(monster.id);
   return present(monster, spec ? starterArt[spec.art] : '');
@@ -232,8 +237,8 @@ export function createBattle(player: Monster, enemy: Monster): BattleState {
   return presentBattle(battle, player, enemy);
 }
 export const gameAdapter: GameAdapter = {
-  async fuseMonsters(a, b, partId) {
-    const outcome = fuseOwnedMonsters(session, a.id, b.id, context, crypto.randomUUID(), partId);
+  async fuseMonsters(a, b, partId, name) {
+    const outcome = fuseOwnedMonsters(session, a.id, b.id, context, crypto.randomUUID(), partId, name);
     const result = outcome.result;
     if (!result.ok || !result.child || !result.fusion) throw new Error(result.message);
     applySession(outcome.session);
