@@ -796,7 +796,10 @@ export function stepTurn(
     // A move the player hammered a key for. The count is the damage: no
     // attack stat, no defence, no element. They earned it at the keyboard.
     if (resolved.attacks && connected && resolved.chargeDamage > 0) {
-      const presses = Math.max(0, Math.floor(action.charge ?? 0));
+      // Only what a pair of hands could have produced counts. A tool can
+      // send any number it likes; past the ceiling it buys nothing.
+      const ceiling = Math.round(resolved.chargeSeconds * config.maxChargePressesPerSecond);
+      const presses = Math.min(ceiling, Math.max(0, Math.floor(action.charge ?? 0)));
       const lost = Math.min(target.hp, presses * resolved.chargeDamage);
       target.hp -= lost;
       dealt = lost;

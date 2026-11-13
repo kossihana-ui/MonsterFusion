@@ -363,6 +363,16 @@ export interface BattleConfig {
   /** The ceiling MP cannot be restored past. */
   readonly maxMp: number;
   /**
+   * The most presses a second that count toward a 連打 move.
+   *
+   * Set by the player at 15, which is above what a person sustains and far
+   * below what a macro produces. A tool can still send a million; only the
+   * first fifteen a second are worth anything, so there is nothing to win
+   * by using one. Enforced here rather than on the screen, because the
+   * screen is the part an attacker controls.
+   */
+  readonly maxChargePressesPerSecond: number;
+  /**
    * Chance a blinded monster's physical attack misses.
    *
    * The move spec asked for 「目をくらませると物理を75パーで回避」. At 0.75 a
@@ -460,6 +470,7 @@ export const DEFAULT_BATTLE_CONFIG: BattleConfig = {
   startingMp: 10,
   mpRegenPerTurn: 3,
   maxMp: 99,
+  maxChargePressesPerSecond: 15,
   // Advantage compounds: a monster that deals 1.3x while taking 0.7x is at
   // nearly twice the strength of its counter, which made one starter beat
   // another 98 times in 100. These are deliberately milder than they look -

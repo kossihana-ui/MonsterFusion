@@ -1148,3 +1148,34 @@ test('a turn spent guarding frees a move that cannot repeat', () => {
   state = stepTurn(state, heal, rng);
   assert.ok(!refusedIn(state.log.slice(mark)), 'a turn had passed, so it should have been allowed');
 });
+
+test('only what hands could manage counts, however much is sent', () => {
+  const perSecond = DEFAULT_BATTLE_CONFIG.maxChargePressesPerSecond;
+  const behavior = getMoveBehavior('final-tail');
+  const ceiling = Math.round(behavior.chargeSeconds * perSecond);
+  assert.equal(perSecond, 15, 'the player set fifteen a second');
+  assert.equal(ceiling, 75, 'so five seconds is worth seventy-five presses');
+
+  const tailed = wearing({ tail: 'spiked' }, 44, 'tailed');
+  const hit = (charge: number) => {
+    const state = createDuelWithLoadouts(tailed, tailed, [
+      { monsterId: tailed.id, skillIds: ['final-tail'] },
+    ]);
+    for (const combatant of state.combatants) { combatant.mp = 99; combatant.hp = 9999; }
+    const next = stepTurn(
+      state,
+      createScriptedPolicy([{ kind: 'skill', skillId: 'final-tail', charge }]),
+      createSeededRandom(7),
+    );
+    return effectsOf(next).find(
+      (e): e is Extract<BattleEffectEvent, { type: 'damage' }> => e.type === 'damage',
+    )?.amount;
+  };
+
+  const most = ceiling * behavior.chargeDamage;
+  assert.equal(hit(ceiling), most, 'a very fast player gets the lot');
+  assert.equal(hit(ceiling - 10), (ceiling - 10) * behavior.chargeDamage, 'and a slower one gets theirs');
+  for (const absurd of [ceiling + 1, 500, 10_000, 1_000_000]) {
+    assert.equal(hit(absurd), most, `${absurd} presses bought more than the ceiling`);
+  }
+});
