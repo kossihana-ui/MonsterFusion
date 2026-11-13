@@ -12,7 +12,8 @@ import {
   validateMoveLoadout,
   stepTurn,
   createBasicPolicy,
-  startArena, advanceArenaTurn, claimArenaReward, nextArenaEncounter,
+  startArena, advanceArenaTurn, nextArenaEncounter,
+  claimArenaRewardInSession, previewCapture, captureArenaMonster, getConsumables,
   previewPartFusion, createGameSession, deployMonsters, ownedMonster,
   fuseOwnedMonsters, settleBattleLoss, soulMakeInSession, isGameOver,
 } from "@core/core/index.ts";
@@ -35,6 +36,7 @@ export const getGameSession = () => session;
 export const subscribeSession = (listener: () => void) => { listeners.add(listener); return () => { listeners.delete(listener); }; };
 function applySession(next: GameSession) { if (session === next) return; session = next; listeners.forEach(listener => listener()); }
 export const getPartInventory = () => session.inventory;
+export const getItems = () => getConsumables(session);
 export function presentSessionMonster(monster: CoreMonster) {
   const spec = findStarterSpec(monster.id);
   return present(monster, spec ? starterArt[spec.art] : '');
@@ -73,10 +75,25 @@ export function enterArena(id: string): BattleState {
 }
 export function receiveArenaReward() {
   if (!arenaRun) throw new Error("挑戦がありません。");
-  const result = claimArenaReward(arenaRun, session.inventory, context);
+  // Core puts parts and consumables in their own inventories; the UI only
+  // has to adopt the session it hands back.
+  const claimed = claimArenaRewardInSession(session, arenaRun, context);
+  arenaRun = claimed.run;
+  if (!isGameOver(session)) applySession(claimed.session);
+  return claimed.result;
+}
+/** Whether ドクロゲソ can be used on the fight in progress, and on whom. */
+export function previewEnemyCapture() {
+  if (!arenaRun) return { ok: false, message: "挑戦がありません。", target: null, held: 0, refusal: null };
+  return previewCapture(session, arenaRun);
+}
+export function captureEnemy(requestId: string) {
+  if (!arenaRun) throw new Error("挑戦がありません。");
+  const result = captureArenaMonster(session, arenaRun, context, requestId);
+  if (!result.ok) return { ...result, captured: null };
   arenaRun = result.run;
-  if (!isGameOver(session)) applySession(createGameSession(session.owned, { ...session, inventory: result.inventory }));
-  return result;
+  applySession(result.session);
+  return { ...result, captured: result.captured ? presentSessionMonster(result.captured) : null };
 }
 export function continueArena(): BattleState {
   if (!arenaRun) throw new Error("挑戦がありません。");

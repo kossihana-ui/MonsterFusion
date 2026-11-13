@@ -2,4 +2,9 @@
 .capture-item img { width: 80px; height: 80px; object-fit: contain; image-rendering: pixelated; flex: 0 0 auto; }
 .capture-item h3 { margin: 0 0 8px; color: #f4b0a2; }
 .capture-item p, .capture-item small { font-size: 12px; line-height: 1.6; }
-.capture-item button { padding: 8px; opacity: .6; }
+/* Dimmed only while it cannot be used; the item is the point of the card
+   once the player actually has one. */
+.capture-item button { padding: 8px; margin-top: 8px; }
+.capture-item button:disabled { opacity: .5; }
+.capture-item button:not(:disabled) { border-color: #f4b0a2; color: #ffd9d0; }
+.capture-result h2 { color: #f4b0a2; }

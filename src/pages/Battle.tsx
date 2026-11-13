@@ -10,7 +10,7 @@ import { MoveBadges } from "../components/MoveBadges";
 import "../styles/battle.css";
 import type { SpriteMotion } from "../components/MonsterSprite";
 import type { BattleAction, BattleState, GameAdapter, Monster } from "../shared/ui";
-import { createBattle, getCoreMonster, enterArena, resumeArena, receiveArenaReward, continueArena, leaveArena, getPartInventory, getGameSession } from "../mocks/game";
+import { createBattle, getCoreMonster, enterArena, resumeArena, receiveArenaReward, continueArena, leaveArena, getPartInventory, getGameSession, captureEnemy, getItems } from "../mocks/game";
 import { Portrait } from "../components/MonsterView";
 import { BattleEffect } from "../components/BattleEffect";
 import { MultiplierEffect, multiplierPresentation, orchestraHit } from "../components/MultiplierEffect";
@@ -42,6 +42,7 @@ function BattleSession({
   onReplay?: ReplayListener;
 }) {
   const [state, setState] = useState(initial);
+  const [captured, setCaptured] = useState<Monster | null>(null);
   const [rewardMessage, setRewardMessage] = useState("");
   const [loot, setLoot] = useState<readonly GenePart[]>([]);
   const [muted, setMuted] = useState(false);
@@ -89,6 +90,20 @@ function BattleSession({
     });
   }
   function skipReplay() { skip.current = true; finishWait.current(); stopSound.current(); setMultiplier(null); }
+  function useCaptureItem() {
+    try {
+      // A fresh id per press: core spends one item per id, so a double tap
+      // cannot cost two.
+      const result = captureEnemy(crypto.randomUUID());
+      if (!result.ok || !result.captured) { setError(result.message); return; }
+      stopSound.current();
+      setError("");
+      setShowInventory(false);
+      setCaptured(result.captured);
+      setRewardMessage(result.message);
+      setState(resumeArena() ?? state);
+    } catch { setError("ドクロゲソを使えませんでした。もう一度お試しください。"); }
+  }
   async function play(
     side: number,
     animation: "attack" | "hurt",
@@ -252,9 +267,9 @@ function BattleSession({
       </div>
       <button className="text-button" aria-pressed={!muted} disabled={loot.length > 0} onClick={() => { stopSound.current(); setMuted(!muted); }}>戦闘音：{muted ? "オフ" : "オン"}</button>
       <button ref={inventoryDock} className={`inventory-dock ${loot.length ? 'is-receiving' : ''}`} onClick={() => setShowInventory(v => !v)} aria-expanded={showInventory} aria-label="アイテムボックス">
-        <span aria-hidden="true">▣</span> アイテムボックス · {getPartInventory().stacks.reduce((n,s)=>n+s.count,0)}
+        <span aria-hidden="true">▣</span> アイテムボックス · {getPartInventory().stacks.reduce((n,s)=>n+s.count,0) + getItems().reduce((n,i)=>n+i.count,0)}
       </button>
-      {showInventory && <section className="inventory-popover panel" aria-label="所持パーツ一覧"><h2>アイテムボックス</h2><button onClick={() => setShowInventory(false)}>閉じる</button>{getPartInventory().stacks.length ? getPartInventory().stacks.map(s => <p key={s.part.id}><PartIcon part={s.part} /> {s.part.name} ×{s.count}</p>) : <p>まだ素材を持っていません。</p>}<CaptureItemCard /></section>}
+      {showInventory && <section className="inventory-popover panel" aria-label="所持パーツ一覧"><h2>アイテムボックス</h2><button onClick={() => setShowInventory(false)}>閉じる</button>{getPartInventory().stacks.length ? getPartInventory().stacks.map(s => <p key={s.part.id}><PartIcon part={s.part} /> {s.part.name} ×{s.count}</p>) : <p>まだ素材を持っていません。</p>}<CaptureItemCard onCapture={useCaptureItem} busy={busy} /></section>}
       {loot.length > 0 && <LootReveal parts={loot} source={rewardChest} destination={inventoryDock} muted={muted} onDone={() => setLoot([])} />}
       {!run && <><label className="battle-select">
         出場モンスター
@@ -344,7 +359,8 @@ function BattleSession({
                   try {
                     const reward = receiveArenaReward();
                     stopSound.current(); setError("");
-                    setRewardMessage(reward.parts.length ? `獲得：${reward.parts.map(p => p.name).join("、")}` : reward.message);
+                    const won = [...reward.parts.map(p => p.name), ...reward.items.map(i => i.name)];
+                    setRewardMessage(won.length ? `獲得：${won.join("、")}` : reward.message);
                     setState(resumeArena()!);
                     if (reward.parts.length) setLoot(reward.parts);
                     else stopSound.current = battleSound('chest', muted);
@@ -364,7 +380,12 @@ function BattleSession({
           {(claimed || state.status !== "won") && <button disabled={loot.length > 0} className="text-button" onClick={onLeave}>入口へ戻る（今回の挑戦を終了）</button>}
         </div>
       </BattleResult>}
-      {state.status === "active" && <section className="panel battle-command-panel" aria-label="バトルコマンド">
+      {captured && <section className="panel capture-result" aria-label="捕獲">
+        <h2>{captured.name}が仲間になった！</h2>
+        <p>ドクロゲソを使ったので、この挑戦はここで終わりです。{captured.name}は図鑑に加わりました。</p>
+        <button className="primary" onClick={onLeave}>入口へ戻る</button>
+      </section>}
+      {state.status === "active" && !captured && <section className="panel battle-command-panel" aria-label="バトルコマンド">
         <h2>行動を選ぶ</h2>
         <p>技で攻める。MPが減ったら、守って回復。</p>
         <div className="battle-command-grid">
