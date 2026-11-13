@@ -22,6 +22,7 @@ import { LootReveal, PartIcon, TreasureChestIcon } from "../components/LootRevea
 import type { GenePart } from "@core/core/index.ts";
 import { blockingStatus, getMoveBehavior } from "@core/core/index.ts";
 import { StatusChips } from "../components/StatusChips";
+import { ChargeMash } from "../components/ChargeMash";
 import type { BattleCue } from "../components/BattleEffect";
 type ReplayListener = (playing: boolean, muted?: boolean) => void;
 export function Battle(props: { monsters: Monster[]; adapter: GameAdapter; onReplay?: ReplayListener }) {
@@ -45,6 +46,8 @@ function BattleSession({
 }) {
   const [state, setState] = useState(initial);
   const [captured, setCaptured] = useState<Monster | null>(null);
+  /** A move that wants five seconds of the player's thumbs before it lands. */
+  const [charging, setCharging] = useState<{ id: string; name: string; seconds: number; perPress: number } | null>(null);
   const [rewardMessage, setRewardMessage] = useState("");
   const [loot, setLoot] = useState<readonly GenePart[]>([]);
   const [muted, setMuted] = useState(false);
@@ -359,6 +362,17 @@ function BattleSession({
         ))}
         <span className="versus">VS</span>
       </div>
+      {charging && <ChargeMash
+        skillName={charging.name}
+        seconds={charging.seconds}
+        perPress={charging.perPress}
+        muted={muted}
+        onDone={(count) => {
+          const skillId = charging.id;
+          setCharging(null);
+          void act({ kind: "skill", skillId, charge: count });
+        }}
+      />}
       {busy && <button data-custom-sound onClick={skipReplay}>演出をスキップ</button>}
       {state.status !== "active" && getGameSession().status !== "gameOver" && <BattleResult state={state}>
         <div className="victory-reward" aria-label="アリーナ報酬">
@@ -424,7 +438,14 @@ function BattleSession({
           </button>
           {player?.skills.map((skill) => (
             <div key={skill.id} className={`battle-move-option ${inspectedSkill === skill.id ? "is-inspected" : ""}`} onMouseEnter={() => setInspectedSkill(skill.id)} onFocus={() => setInspectedSkill(skill.id)}>
-            <button data-element={skill.element} key={skill.id} className={blocked && !getMoveBehavior(skill.id).usableWhileBound ? "is-unusable" : ""} disabled={locked || availableMp < skill.cost} onClick={() => act({ kind: "skill", skillId: skill.id })}>
+            <button data-element={skill.element} key={skill.id} className={blocked && !getMoveBehavior(skill.id).usableWhileBound ? "is-unusable" : ""} disabled={locked || availableMp < skill.cost} onClick={() => {
+              const move = getMoveBehavior(skill.id);
+              if (move.chargeSeconds > 0) {
+                setCharging({ id: skill.id, name: skillLabel(skill), seconds: move.chargeSeconds, perPress: move.chargeDamage });
+                return;
+              }
+              void act({ kind: "skill", skillId: skill.id });
+            }}>
               <strong>{skillLabel(skill)} {finishers.has(skill.id) && <span className="finisher-badge">大技</span>}</strong>
               <MoveBadges element={skill.element} scaling={skill.scaling} />
               <span>{moveHelp(skill,getCoreMonster(state.player.id)).summary}</span>

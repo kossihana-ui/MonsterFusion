@@ -10,7 +10,7 @@ try {
   const sounds = [...MOVE_CATALOGUE.map(m => ({id:m.id,name:m.name,major:m.category==='finisher',element:m.element})), ...extras.map(([id,name])=>({id,name,major:false,element:id.startsWith('sig-')?id.slice(4):'neutral'})), ...elements.map((element,i)=>({id:`element-${element}`,name:labels[i],element,major:false}))];
   await mkdir('public/audio/battle',{recursive:true});
   for (const [index, sound] of sounds.entries()) {
-    const id=sound.id, sr=32000, duration=sound.major?1.18:elements.includes(sound.element)?1.05:.68, count=Math.ceil(sr*duration);
+    const id=sound.id, sr=32000, duration=id==='final-tail'?2.0:sound.major?1.18:elements.includes(sound.element)?1.05:.68, count=Math.ceil(sr*duration);
     const out=new Float64Array(count); let seed=149+index*701, smooth=0, low=0, crack=0;
     const magic=/eye|gaze|ray|crystal|soul|royal|pulse|pollen|sig|collect/.test(id);
     const sweep=/tail|lash|whip|wing|slash|wind|fin/.test(id);
@@ -84,6 +84,24 @@ try {
         v+=hitTone(t,double?85:base,14)*.18;
         if(double)v+=hitTone(t-.17,base,15)*.16;
         if(sweep)v+=smooth*.4*Math.exp(-(((t-.12)/.08)**2));
+      }
+      // 「ゴゴゴゴゴと轟音」: a rolling low rumble that builds, not one strike.
+      if(id==='final-tail'){
+        const roll=.52+.48*Math.sin(2*Math.PI*7.5*t-Math.PI/2);
+        const build=Math.min(1,t/.8);
+        v=(low*5.4+smooth*2.1)*roll*build
+          +Math.sin(2*Math.PI*(36+7*Math.sin(2*Math.PI*3.2*t))*t)*.52*build
+          +crack*noise*.22*build;
+      }
+      // 「シャキーンと高い音」: two bright rings of drawn metal.
+      if(id==='twin-lash'){
+        v=0;
+        for(const onset of [0,.13]){
+          const u=t-onset; if(u<0) continue;
+          const ring=Math.exp(-u*9)*Math.min(1,u/.0015);
+          v+=ring*(Math.sin(2*Math.PI*2350*u)*.34+Math.sin(2*Math.PI*3570*u)*.19+Math.sin(2*Math.PI*5180*u)*.09);
+          v+=Math.exp(-u*48)*noise*.1;
+        }
       }
       out[i]=v*attack*(sound.element==='wind' || sound.element==='water' ? Math.min(1,(duration-t)/.12) : release);
     }

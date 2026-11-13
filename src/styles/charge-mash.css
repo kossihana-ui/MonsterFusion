@@ -1,0 +1,29 @@
+.charge-mash {
+  position: fixed; inset: 0; z-index: 60; display: flex; align-items: center; justify-content: center;
+  background: #06080799; backdrop-filter: blur(2px);
+}
+.charge-mash-card {
+  width: min(420px, 90vw); padding: 24px; border-radius: 14px; text-align: center;
+  background: #15201b; border: 1px solid #3f5a4a; box-shadow: 0 18px 50px #0009;
+}
+.charge-mash-card h2 { margin: 0 0 4px; color: #ffd9a8; }
+.charge-mash-call { margin: 0 0 16px; font-size: 18px; font-weight: 700; color: #f2efe6; }
+.charge-mash-key {
+  width: 100%; padding: 22px 0; margin-bottom: 14px; border-radius: 10px; cursor: pointer;
+  border: 2px solid #8fa89a; background: linear-gradient(#2b3a31, #1c2721);
+  color: #eaf3ed; font-size: 20px; letter-spacing: .22em; font-weight: 700;
+  transform: translateY(-3px); box-shadow: 0 4px 0 #0e1512;
+  animation: charge-mash-hint .62s ease-in-out infinite;
+}
+.charge-mash-key.is-down { transform: translateY(0); box-shadow: 0 1px 0 #0e1512; animation: none; }
+.charge-mash-count { margin: 0 0 10px; font-size: 15px; color: #cdd8d1; }
+.charge-mash-count strong { font-size: 40px; color: #ffd9a8; font-variant-numeric: tabular-nums; }
+.charge-mash-bar { height: 8px; border-radius: 4px; background: #27332c; overflow: hidden; }
+.charge-mash-bar span { display: block; height: 100%; background: linear-gradient(90deg, #ffb169, #ff7a5c); }
+.charge-mash-left { margin: 6px 0 12px; font-size: 12px; color: #9aa79f; font-variant-numeric: tabular-nums; }
+.charge-mash-help { margin: 0; font-size: 12px; color: #8d9a92; line-height: 1.6; }
+@keyframes charge-mash-hint {
+  0%, 100% { transform: translateY(-3px); box-shadow: 0 4px 0 #0e1512; }
+  50% { transform: translateY(0); box-shadow: 0 1px 0 #0e1512; }
+}
+@media (prefers-reduced-motion: reduce) { .charge-mash-key { animation: none; } }
