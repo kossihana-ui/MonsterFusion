@@ -653,7 +653,14 @@ export function stepTurn(
     const actor = byId.get(actorRef.id);
     if (!actor || actor.hp <= 0) continue;
     const action = intents.get(actor.id);
-    if (!action || action.kind === 'defend') continue;
+    if (!action || action.kind === 'defend') {
+      // A turn spent guarding is still a turn between two uses, so a move
+      // that cannot repeat is free again afterwards. Otherwise 「連続で使えない」
+      // would mean "until you have used something else", which is not what
+      // it says.
+      actor.lastSkillId = undefined;
+      continue;
+    }
     if (evaluateOutcome(combatants, turn, config).status !== 'ongoing') break;
 
     const chosen = action.kind === 'skill'
@@ -671,6 +678,8 @@ export function stepTurn(
         effects: [{ type: 'skip', actorId: actor.id, reason: blocked }],
         message: `${actor.name} cannot move (${blocked}).`,
       });
+      // Held in place, so the move was not used this turn either.
+      actor.lastSkillId = undefined;
       continue;
     }
 
@@ -782,6 +791,35 @@ export function stepTurn(
           reason: 'chance',
         });
       }
+    }
+
+    // A move the player hammered a key for. The count is the damage: no
+    // attack stat, no defence, no element. They earned it at the keyboard.
+    if (resolved.attacks && connected && resolved.chargeDamage > 0) {
+      const presses = Math.max(0, Math.floor(action.charge ?? 0));
+      const lost = Math.min(target.hp, presses * resolved.chargeDamage);
+      target.hp -= lost;
+      dealt = lost;
+      connected = false; // the ordinary swing below is not also taken
+      effects.push({
+        type: 'damage',
+        actorId: actor.id,
+        targetId: target.id,
+        ...(logSkillId ? { skillId: logSkillId } : {}),
+        amount: lost,
+        critical: false,
+        elementMultiplier: 1,
+        mitigated: 0,
+        hit: 1,
+        hits: 1,
+        pierced: false,
+        boosts: [{
+          source: 'charge',
+          reason: BOOST_REASONS.charge,
+          factor: resolved.chargeDamage,
+        }],
+        boostTotal: resolved.chargeDamage,
+      });
     }
 
     if (resolved.attacks && connected && resolved.instantDeathChance > 0

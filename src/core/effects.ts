@@ -69,6 +69,7 @@ export const BOOST_REASONS: Readonly<Record<DamageBoost['source'], string>> = {
   targetNotDefending: '守っていない',
   targetBound: '拘束中',
   selfPoisoned: '毒をおして',
+  charge: '連打',
   element: '属性',
 };
 
@@ -228,6 +229,7 @@ export interface DamageBoost {
     | 'targetNotDefending'
     | 'targetBound'
     | 'selfPoisoned'
+    | 'charge'
     | 'element';
   readonly reason: string;
   readonly factor: number;
@@ -362,6 +364,17 @@ export interface MoveBehavior {
   readonly applies: readonly StatusApplication[];
   /** Cannot be used two turns running. */
   readonly noConsecutiveUse: boolean;
+  /**
+   * Damage per press, for a move the player hammers a key for.
+   *
+   * Zero for every ordinary move. When set, the damage is the press count
+   * times this and nothing else: no attack stat, no defence, no element
+   * chart. The player earned it at the keyboard, so the keyboard is what
+   * decides it, and a monster with no hands is not better at mashing.
+   */
+  readonly chargeDamage: number;
+  /** Seconds the player gets to press. Shown by the UI, enforced by it too. */
+  readonly chargeSeconds: number;
   /** Usable even while bound. */
   readonly usableWhileBound: boolean;
   /**
@@ -386,6 +399,8 @@ const PLAIN: Omit<MoveBehavior, 'skillId'> = {
   restoreMp: 0,
   transfersDebuffs: false,
   heal: 0,
+  chargeDamage: 0,
+  chargeSeconds: 0,
   cleanse: [],
   cure: [],
   applies: [],
@@ -425,7 +440,11 @@ export const MOVE_BEHAVIOURS: Readonly<Record<string, MoveBehavior>> = {
   // --- 尻尾 --------------------------------------------------------------
 
   // 使用後1ターン動けない／火力を強く（大技の230のまま）。
+  // 「５秒間スペースキーを連打させて連打数×２ダメージ／連続で使えない」
   'final-tail': behaviour('final-tail', {
+    chargeDamage: 2,
+    chargeSeconds: 5,
+    noConsecutiveUse: true,
     applies: [{ status: 'recoil', target: 'self', turns: 1, chance: 1 }],
   }),
 

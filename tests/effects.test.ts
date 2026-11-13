@@ -1061,3 +1061,90 @@ test('the seed is spent once, not on every hit of a multi-hit move', () => {
   );
   assert.equal(spent.length, 1, 'one seed, one payout');
 });
+
+// ---------------------------------------------------------------------------
+// A move the player works for
+// ---------------------------------------------------------------------------
+
+test('ファイナルテール deals what the player hammered out, and nothing else', () => {
+  const behavior = getMoveBehavior('final-tail');
+  assert.equal(behavior.chargeDamage, 2, 'two damage a press, as asked');
+  assert.equal(behavior.chargeSeconds, 5);
+  assert.equal(behavior.noConsecutiveUse, true, 'and not two turns running');
+
+  const tailed = wearing({ tail: 'spiked' }, 41, 'tailed');
+  const hit = (charge: number | undefined) => {
+    const state = createDuelWithLoadouts(tailed, tailed, [
+      { monsterId: tailed.id, skillIds: ['final-tail'] },
+    ]);
+    // A finisher costs more than a monster starts with.
+    for (const combatant of state.combatants) combatant.mp = 99;
+    const next = stepTurn(
+      state,
+      createScriptedPolicy([{ kind: 'skill', skillId: 'final-tail', ...(charge !== undefined ? { charge } : {}) }]),
+      createSeededRandom(3),
+    );
+    const damage = effectsOf(next).find(
+      (e): e is Extract<BattleEffectEvent, { type: 'damage' }> => e.type === 'damage',
+    );
+    return { damage, next };
+  };
+
+  assert.equal(hit(37).damage?.amount, 74, '37 presses is 74 damage');
+  assert.equal(hit(1).damage?.amount, 2);
+  assert.equal(hit(0).damage?.amount, 0, 'no presses, no damage');
+  assert.equal(hit(undefined).damage?.amount, 0, 'and a UI that forgets to count does no harm');
+
+  // The multiplier flourish the player asked for rides on the existing one.
+  const boosted = hit(20).damage;
+  assert.equal(boosted?.boostTotal, 2);
+  assert.deepEqual(boosted?.boosts?.map((b) => b.source), ['charge']);
+  assert.equal(boosted?.boosts?.[0]?.reason, '連打');
+});
+
+test('a hammered hit is not also an ordinary swing, and still costs the recoil', () => {
+  const tailed = wearing({ tail: 'spiked' }, 42, 'tailed');
+  const state = createDuelWithLoadouts(tailed, tailed, [
+    { monsterId: tailed.id, skillIds: ['final-tail'] },
+  ]);
+  for (const combatant of state.combatants) combatant.mp = 99;
+  const next = stepTurn(
+    state,
+    createScriptedPolicy([{ kind: 'skill', skillId: 'final-tail', charge: 5 }]),
+    createSeededRandom(4),
+  );
+  const damages = effectsOf(next).filter((e) => e.type === 'damage');
+  assert.equal(damages.length, 2, 'one hit each, not a hammered hit plus a normal one');
+  for (const event of damages) {
+    assert.equal(event.type === 'damage' && event.amount, 10, 'five presses, ten damage');
+  }
+  assert.ok(
+    next.combatants.some((c) => (c.statuses ?? []).some((s) => s.kind === 'recoil')),
+    'the move still locks whoever swung it',
+  );
+});
+
+test('a turn spent guarding frees a move that cannot repeat', () => {
+  // ウォーターヒール rather than ファイナルテール: the tail locks its user with
+  // recoil anyway, so it could not show whether guarding was what freed it.
+  const { aqua } = pair(43);
+  let state = createDuelWithLoadouts(aqua, aqua, [
+    { monsterId: aqua.id, skillIds: ['hydro-ram'] },
+  ]);
+  for (const combatant of state.combatants) { combatant.mp = 99; combatant.hp = 30; }
+  const rng = createSeededRandom(6);
+  const heal = createScriptedPolicy([{ kind: 'skill', skillId: 'hydro-ram' }]);
+  const guard = createScriptedPolicy([{ kind: 'defend' }]);
+  const refusedIn = (entries: readonly { effects?: readonly BattleEffectEvent[] }[]) =>
+    entries.some((e) => e.effects?.some((x) => x.type === 'blocked' && x.reason === 'consecutive'));
+
+  state = stepTurn(state, heal, rng);
+  let mark = state.log.length;
+  state = stepTurn(state, heal, rng);
+  assert.ok(refusedIn(state.log.slice(mark)), 'the second turn running should have been refused');
+
+  state = stepTurn(state, guard, rng);
+  mark = state.log.length;
+  state = stepTurn(state, heal, rng);
+  assert.ok(!refusedIn(state.log.slice(mark)), 'a turn had passed, so it should have been allowed');
+});

@@ -332,6 +332,15 @@ export interface BattleAction {
   readonly targetId?: string;
   /** Skill id for `kind: 'skill'`. */
   readonly skillId?: string;
+  /**
+   * What the player did at the controls, for a move that asks for it.
+   *
+   * ファイナルテール counts five seconds of key presses. The count comes from
+   * outside the simulation, so it arrives with the action rather than being
+   * rolled: core decides what a press is worth, the screen decides how many
+   * there were.
+   */
+  readonly charge?: number;
 }
 
 export interface Skill {
