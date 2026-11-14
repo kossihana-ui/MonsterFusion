@@ -35,7 +35,22 @@ coreの保存APIは完成しています（`serializeSaveFile` / `deserializeSav
 | | 注意点 |
 |---|---|
 | Cloudflare Pages / Netlify / Vercel | ルート配信なので**そのまま動きます**。無料枠で足ります |
-| GitHub Pages（プロジェクトサイト） | `/MonsterFusion/` 配下になるため、`vite.config.ts` に `base` の設定が必要です。**現在 `base` は未設定**（＝ルート前提）。またリポジトリが非公開のままでは無料枠で公開できません |
+| GitHub Pages（プロジェクトサイト） | **ここに決めました（2026-11-15）。** 設定済みです |
+
+### 2026-11-15 追記：GitHub Pages に合わせました
+
+公開先は `https://kossihana-ui.github.io/MonsterFusion/` です。
+
+- `vite.config.ts` の `base` を環境変数 `MONSTERFUSION_BASE` で切り替えるようにしました。未設定ならルート（`scripts/local-app-server.mjs` での確認用）、CI では `/MonsterFusion/` です
+- `index.html` の `og:url`・`og:image`・`twitter:image` を絶対URLにしました。**引っ越すときはこの3行を書き換えてください**
+- `.github/workflows/pages.yml` を追加しました。`codex-ui` への push で動き、`claude-core` を隣に並べて取得 → core のテスト → ビルド → Pages へ配信します
+
+**あなたにしかできない設定が2つあります。**
+
+1. リポジトリを**公開（Public）**にする。GitHub Pages は非公開リポジトリだと有料プランが要ります
+2. Settings → Pages → Source を **「GitHub Actions」** にする（「Deploy from a branch」ではありません）
+
+この2つが終わるまで、ワークフローは失敗します。
 
 音声が48ファイル、ボス画像が2.3MBあります。全体で数MB程度なので問題はありませんが、**ボスの概念画は実寸に縮小したほうが初回表示が速くなります**（現在2329600バイト）。
 

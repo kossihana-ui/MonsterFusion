@@ -11,10 +11,13 @@
     />
 
     <!--
-      The share card. og:url and the two image URLs want the real address
-      before publishing: most clients resolve a relative og:image, but some
-      fetch it as given and show nothing without an absolute one.
+      The share card. Absolute URLs on purpose: most clients resolve a relative
+      og:image, but some fetch it as given and show nothing without the host.
+      They are written out rather than built, because a <meta> tag is read by a
+      crawler that never runs the page's JavaScript. Moving the site means
+      changing these three lines.
     -->
+    <meta property="og:url" content="https://kossihana-ui.github.io/MonsterFusion/" />
     <meta property="og:type" content="website" />
     <meta property="og:site_name" content="MonsterFusion" />
     <meta property="og:locale" content="ja_JP" />
@@ -23,7 +26,7 @@
       property="og:description"
       content="2体を融合して、世界に1体だけのモンスターを。技は体の部位から決まり、負けると仲間を失います。週替わりのアリーナで、何連勝できますか。"
     />
-    <meta property="og:image" content="/og.jpg" />
+    <meta property="og:image" content="https://kossihana-ui.github.io/MonsterFusion/og.jpg" />
     <meta property="og:image:width" content="800" />
     <meta property="og:image:height" content="420" />
     <meta property="og:image:alt" content="モス・イグニス・アクアの3体が並ぶMonsterFusionのタイトル画像" />
@@ -34,7 +37,7 @@
       name="twitter:description"
       content="2体を融合して、世界に1体だけのモンスターを。技は体の部位から決まり、負けると仲間を失います。週替わりのアリーナで、何連勝できますか。"
     />
-    <meta name="twitter:image" content="/og.jpg" />
+    <meta name="twitter:image" content="https://kossihana-ui.github.io/MonsterFusion/og.jpg" />
   </head>
   <body>
     <div id="root"></div>

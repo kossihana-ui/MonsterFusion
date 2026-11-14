@@ -1,0 +1,63 @@
+# Publishes the game to GitHub Pages.
+#
+# The build needs two branches at once: this one holds the UI, and claude-core
+# holds the game logic that vite.config.ts reaches for at ../MonsterFusion-Core.
+# So the job checks out both, side by side, in the layout the two worktrees
+# already have on the machine this is developed on.
+name: Pages
+
+on:
+  push:
+    branches: [codex-ui]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+# One deploy at a time, and a push that lands mid-build wins.
+concurrency:
+  group: pages
+  cancel-in-progress: true
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          path: MonsterFusion-UI
+      - uses: actions/checkout@v4
+        with:
+          ref: claude-core
+          path: MonsterFusion-Core
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+          cache: npm
+          cache-dependency-path: MonsterFusion-UI/package-lock.json
+      - run: npm ci
+        working-directory: MonsterFusion-UI
+      # The core tests are the game's own guarantee; a build that would publish
+      # a broken ladder should not reach the artifact step.
+      - run: npm test
+        working-directory: MonsterFusion-Core
+      - run: npm run build
+        working-directory: MonsterFusion-UI
+        env:
+          # Pages serves the site from /<repository>/, not from the root.
+          MONSTERFUSION_BASE: /MonsterFusion/
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: MonsterFusion-UI/dist
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - id: deployment
+        uses: actions/deploy-pages@v4
