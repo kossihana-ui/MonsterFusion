@@ -33,3 +33,4 @@
 .guide-ladders dd { margin: 2px 0 0; font-size: 13px; color: #b7c7bc; }
 .guide-rules { margin: 8px 0 0; padding-left: 20px; line-height: 1.8; }
 @media (max-width: 520px) { .guide-shot { float: none; width: 140px; margin: 0 auto 12px; } .guide-shot.is-left { float: none; margin: 0 auto 12px; } }
+.guide-tag { margin-left: 8px; padding: 2px 7px; border-radius: 999px; background: #2b3b31; color: #c9dc91; font-style: normal; font-size: 10px; font-weight: normal; vertical-align: middle; }

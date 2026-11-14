@@ -16,7 +16,7 @@ import {
   createBasicPolicy,
   startArena, advanceArenaTurn, nextArenaEncounter,
   serializeSaveFile, deserializeSaveFile, restoreSession, resumeSeededRandom,
-  seasons, freeSeason,
+  seasons, freeSeason, weeklySeason,
   claimArenaRewardInSession, previewCapture, captureArenaMonster, getConsumables,
   previewPartFusion, createGameSession, deployMonsters, ownedMonster,
   fuseOwnedMonsters, settleBattleLoss, soulMakeInSession, isGameOver,
@@ -63,7 +63,10 @@ let arenaId = '';
 const duelIds = new WeakMap<CoreBattleState, string>();
 function settle(battle: CoreBattleState, id: string, arena = false) {
   if (battle.outcome.status === 'ongoing') return;
-  let next = settleBattleLoss(session, battle, id).session;
+  // A practice defeat is a defeat - the run ends - but the monster walks
+  // back out of the door it came in by.
+  const stakes = !(arena && arenaRun?.practice === true);
+  let next = settleBattleLoss(session, battle, id, { stakes }).session;
   if (!isGameOver(next) && (!arena || battle.outcome.status !== 'win' || battle.outcome.winningSide !== 0)) next = deployMonsters(next);
   applySession(next);
 }
@@ -84,7 +87,10 @@ function presentArena(run: ArenaRun): BattleState {
 export function resumeArena(): BattleState | null { return arenaRun ? presentArena(arenaRun) : null; }
 /** The ladders on offer, plus a private one for trying a monster out. */
 export const arenaSeasons = () => [...seasons(), freeSeason(crypto.randomUUID())];
-let season = seasons()[0];
+// The ranked ladder is the default for anyone who has played: practice is
+// offered first at the gate, but nothing should fall back into it by
+// accident, because a practice run wins nothing.
+let season = weeklySeason();
 export const currentSeason = () => season;
 export function enterArena(id: string, seasonId?: string): BattleState {
   const monster = ownedMonster(session, id);
@@ -95,8 +101,11 @@ export function enterArena(id: string, seasonId?: string): BattleState {
   // up - arenaSeasons() mints a new one every call and would never match.
   season = seasons().find(s => s.id === seasonId)
     ?? (seasonId?.startsWith('free-') ? freeSeason(seasonId.slice('free-'.length)) : undefined)
-    ?? seasons()[0];
-  arenaRun = startArena(monster, getMoveLoadout(id), context, { id: season.id });
+    ?? weeklySeason();
+  arenaRun = startArena(monster, getMoveLoadout(id), context, {
+    id: season.id,
+    practice: season.practice === true,
+  });
   saveGame();
   arenaId = crypto.randomUUID();
   applySession(deployMonsters(session, [id]));
@@ -149,6 +158,7 @@ function runDetails(run: ArenaRun) {
     look: run.player.phenotype as unknown as Record<string, string>,
     season: season.id,
     seasonLabel: season.label,
+    practice: run.practice === true,
   };
 }
 export function retireArena() {

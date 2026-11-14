@@ -31,6 +31,14 @@ export interface RunRecord {
   /** Which ladder it was run on. Absent in records written before seasons. */
   readonly season?: string;
   readonly seasonLabel?: string;
+  /**
+   * Run on the practice ladder, where the opponents are scaled down.
+   *
+   * Kept, because it is still something the player did and the board shows
+   * it on its own line, but never allowed to become the personal best: a
+   * best set against weaker opponents would be a record of nothing.
+   */
+  readonly practice?: boolean;
   /** How it ended, because a retirement is not a defeat. */
   readonly ending: 'retired' | 'defeated' | 'cleared';
   /**
@@ -124,6 +132,7 @@ export function recordRun(
     readonly look?: Record<string, string>;
     readonly season?: string;
     readonly seasonLabel?: string;
+    readonly practice?: boolean;
   } = {},
 ): { record: PlayerRecord; run: RunRecord; isBest: boolean } {
   const current = read();
@@ -133,10 +142,11 @@ export function recordRun(
     ...(extra.look ? { look: extra.look } : {}),
     ...(extra.season ? { season: extra.season } : {}),
     ...(extra.seasonLabel ? { seasonLabel: extra.seasonLabel } : {}),
+    ...(extra.practice ? { practice: true } : {}),
     ...(automationSeen ? { suspect: true } : {}),
   };
   automationSeen = false;
-  const isBest = run.wins > (current.best?.wins ?? -1);
+  const isBest = !run.practice && run.wins > (current.best?.wins ?? -1);
   const record = write({
     ...current,
     best: isBest ? run : current.best,

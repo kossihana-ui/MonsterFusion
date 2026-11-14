@@ -30,7 +30,14 @@ export function ArenaEntrance({ monsters, onEnter }: { monsters: Monster[]; onEn
   const [confirmed, setConfirmed] = useState<string | null>(null);
   const [record, setRecord] = useState(getRecord);
   const [allSeasons] = useState(arenaSeasons);
-  const [seasonId, setSeasonId] = useState(allSeasons[0].id);
+  // A first-timer is pointed at the practice ladder, because the measured
+  // alternative is three monsters and a game over inside ten minutes.
+  // Anyone with a ranked run behind them gets the real one.
+  const [seasonId, setSeasonId] = useState(() => {
+    const practice = allSeasons.find(s => s.practice);
+    const ranked = allSeasons.find(s => s.kind === 'weekly');
+    return ((record.best ? ranked : practice) ?? allSeasons[0]).id;
+  });
   // One step open at a time. All three used to stand open together, which
   // put the button that actually opens the gate below the fold: the player
   // had to scroll to do the one thing the screen is for.
@@ -66,7 +73,9 @@ export function ArenaEntrance({ monsters, onEnter }: { monsters: Monster[]; onEn
     <div className="hero arena-hero">
       <div><div className="eyebrow">ARENA GATE</div><h1>バトルアリーナ</h1></div>
       <p className="arena-hero-note">
-        評価は<strong>何連勝できたか</strong>だけ。敗北すると出場した仲間を失い、最後の1体を失うとゲームオーバーです。
+        {season.practice
+          ? <>これは<strong>練習</strong>です。相手は弱く、<strong>負けても仲間を失いません。</strong>そのかわり素材は手に入らず、順位にも加わりません。</>
+          : <>評価は<strong>何連勝できたか</strong>だけ。敗北すると出場した仲間を失い、最後の1体を失うとゲームオーバーです。</>}
       </p>
     </div>
     <div className="arena-entry-layout">
@@ -82,7 +91,7 @@ export function ArenaEntrance({ monsters, onEnter }: { monsters: Monster[]; onEn
             <div className="arena-seasons">
               {allSeasons.map(s => <button key={s.id} type="button" aria-pressed={s.id === season.id}
                 disabled={opening} onClick={() => { setSeasonId(s.id); setStep(3); }}>
-                <strong>{s.label}</strong><span>{s.detail}</span>
+                <strong>{s.label}{s.practice && <em className="arena-season-tag">おすすめ・初回</em>}</strong><span>{s.detail}</span>
                 {s.endsAt && <small>{new Date(s.endsAt).toLocaleString('ja-JP', { month: 'numeric', day: 'numeric', hour: '2-digit', minute: '2-digit' })}まで</small>}
               </button>)}
             </div>)}
