@@ -8,10 +8,10 @@
  *
  * Two of them, by the player's request of 2026-11-14:
  *
- *   - 週替わり, which rolls over every Monday. A fresh ladder a week, and
- *     a reason to come back on Monday.
- *   - 総合, which never changes. The permanent one, for a table that is
- *     about the best run anyone has ever had rather than this week's.
+ *   - 今週のチャンピオン, which rolls over every Monday. A fresh ladder a
+ *     week, and a reason to come back on Monday.
+ *   - 総合チャンピオン, which never changes. The permanent one, for a table
+ *     that is about the best run anyone has ever had rather than this week's.
  *
  * Weeks are counted in UTC on purpose. A world ranking cannot have Japan
  * and Brazil on different ladders on the same day.
@@ -65,8 +65,8 @@ export function weeklySeason(at: number | Date = Date.now()): ArenaSeason {
   return {
     kind: 'weekly',
     id: `season-week-${tag}`,
-    label: `今週の挑戦（${tag}）`,
-    detail: '毎週月曜に新しい並びになります。世界中が同じ順番の敵と戦います。',
+    label: `今週のチャンピオン（${tag}）`,
+    detail: '今週は世界中が同じ敵・同じ順番で戦います。いちばん長く勝ち抜いた人が今週のチャンピオンです。月曜に敵が入れ替わり、記録は週ごとに分かれます。',
     endsAt: weekEndsAt(at),
   };
 }
@@ -76,8 +76,8 @@ export function allTimeSeason(): ArenaSeason {
   return {
     kind: 'allTime',
     id: 'season-all-time',
-    label: '総合（固定）',
-    detail: '変わらない並びです。何度でも挑めて、歴代の記録はここに積みます。',
+    label: '総合チャンピオン',
+    detail: 'いつ挑んでも敵の順番が変わらないラダーです。条件が同じなので、歴代でいちばん長い連勝を競えます。何度でも挑戦できます。',
   };
 }
 
@@ -92,8 +92,8 @@ export function freeSeason(id: string): ArenaSeason {
   return {
     kind: 'free',
     id: `free-${id}`,
-    label: '自由に挑戦',
-    detail: '毎回ちがう並びです。記録は残りますが、順位は競いません。',
+    label: '腕試し（順位なし）',
+    detail: '毎回ちがう敵の順番になります。記録は手元に残りますが、チャンピオンの順位には加わりません。',
   };
 }
 

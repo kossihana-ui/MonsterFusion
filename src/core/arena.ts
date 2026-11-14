@@ -541,9 +541,10 @@ export function nextArenaEncounter(run: ArenaRun, context: MonsterContext): Aren
 export function arenaRules(config: GameConfig = DEFAULT_GAME_CONFIG): string[] {
   const arena = config.arena;
   return [
-    `通常戦に${arena.normalWins}回勝つとボス戦です。`,
+    '評価は「何連勝できたか」だけで決まります。長く勝ち抜いた人がチャンピオンです。',
+    `通常戦に${arena.normalWins}回勝つとボス戦です（${arena.normalWins + 1}戦目）。`,
     `その先も戦いは続き、${arena.finalBossFight}戦目に${FINAL_BOSS_NAME}が待っています。`,
-    '敗北・引き分けで連勝は終了します。どこまで勝ち抜けるかが記録になります。',
+    '敗北・引き分けで連勝は終了します。そこまでの勝ち数が記録になります。',
     '各戦のあいだに全回復します。',
     '倒した相手が持っていた特徴だけが素材になります。',
     `素材は1回の融合につき${arena.partsPerFusion}個まで使えます。`,
