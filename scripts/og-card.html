@@ -1,0 +1,98 @@
+<!doctype html>
+<!--
+  The share card, at exactly 1200x630.
+
+  Regenerating it: copy this file and the three starter PNGs into dist/,
+  open http://127.0.0.1:5187/og-card.html at a 1200x630 viewport, screenshot
+  it, and save the result as public/og.png. It is laid out from the game's
+  own palette and art so the card and the game look like the same thing.
+
+    node scripts/build-og-card.mjs   (stages dist/, prints the next step)
+-->
+<html lang="ja">
+<head>
+<meta charset="utf-8" />
+<title>MonsterFusion OG card</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  /* Authored at 1200x630 and scaled into whatever frame the capture tool
+     offers, so the proportions are the ones the card was designed at
+     whatever size it ends up being saved. Set --card-scale to 1 when
+     capturing somewhere that can take the full 1200x630. */
+  :root { --card-scale: 0.6667; }
+  html, body { width: calc(1200px * var(--card-scale)); height: calc(630px * var(--card-scale)); overflow: hidden; }
+  .card {
+    width: 1200px; height: 630px;
+    transform: scale(var(--card-scale)); transform-origin: top left;
+    font-family: "Yu Gothic UI", "Hiragino Kaku Gothic ProN", system-ui, sans-serif;
+    color: #e2e8e5;
+    background:
+      radial-gradient(900px 500px at 78% 42%, #1d2b2740 0%, transparent 70%),
+      linear-gradient(145deg, #0d1215 0%, #121b1d 55%, #0e1618 100%);
+    display: grid;
+    grid-template-columns: 1fr 470px;
+    align-items: center;
+    position: relative;
+  }
+  /* The faint grid the arena doors use, so the card reads as the same world. */
+  .card::before {
+    content: ""; position: absolute; inset: 0;
+    background: repeating-linear-gradient(0deg, transparent 0 78px, #5d746614 79px 81px);
+  }
+  .left { padding: 0 0 0 72px; position: relative; }
+  .mark {
+    display: inline-flex; align-items: center; gap: 10px;
+    font-size: 17px; letter-spacing: .34em; color: #9ab3a0; margin-bottom: 26px;
+  }
+  .mark b {
+    display: grid; place-items: center; width: 34px; height: 34px; border-radius: 9px;
+    background: #b2d890; color: #0f1714; font-size: 20px; letter-spacing: 0;
+  }
+  h1 { font-size: 78px; line-height: 1.02; letter-spacing: .01em; }
+  h1 small { display: block; font-size: 30px; font-weight: 400; color: #b2d890; letter-spacing: .3em; margin-top: 12px; }
+  .lead { margin-top: 30px; font-size: 27px; line-height: 1.62; color: #cfdad3; }
+  .lead b { color: #ffd9a8; font-weight: 700; }
+  .facts { display: flex; gap: 10px; margin-top: 34px; }
+  .facts span {
+    padding: 9px 15px; border-radius: 999px; font-size: 18px;
+    border: 1px solid #44584c; background: #16201c; color: #bcccc1;
+  }
+  .right { position: relative; height: 100%; }
+  .art { position: absolute; image-rendering: pixelated; filter: drop-shadow(0 16px 26px #0008); }
+  .art.a { width: 300px; left: 118px; top: 150px; }
+  .art.b { width: 214px; left: 8px;   top: 318px; }
+  .art.c { width: 214px; left: 246px; top: 330px; }
+  .glow {
+    position: absolute; left: 150px; top: 190px; width: 300px; height: 300px; border-radius: 50%;
+    background: radial-gradient(circle, #b2d89026 0%, transparent 68%);
+  }
+  .foot {
+    position: absolute; left: 72px; bottom: 44px; font-size: 18px; color: #7d8d84; letter-spacing: .08em;
+  }
+</style>
+</head>
+<body>
+<div class="card">
+  <div class="left">
+    <div class="mark"><b>M</b> MONSTERFUSION</div>
+    <h1>融合のアトリエ<small>MONSTER FUSION</small></h1>
+    <p class="lead">
+      2体を融合して、<b>世界に1体だけ</b>のモンスターを。<br />
+      部位から覚えた技を3つ選んで、<b>100戦のアリーナ</b>へ。
+    </p>
+    <div class="facts">
+      <span>遺伝で決まる見た目と技</span>
+      <span>負けると仲間を失う</span>
+      <span>週替わりの連勝記録</span>
+    </div>
+  </div>
+  <div class="right">
+    <div class="glow"></div>
+    <img class="art a" src="./moss-v2-64.png" alt="" />
+    <img class="art b" src="./ignis-v2-64.png" alt="" />
+    <img class="art c" src="./aqua-v2-64.png" alt="" />
+  </div>
+  <div class="foot">ブラウザですぐ遊べる・登録不要</div>
+</div>
+</body>
+</html>

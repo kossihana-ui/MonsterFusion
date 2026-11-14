@@ -5,7 +5,7 @@ import { fileURLToPath } from 'node:url';
 
 const root = fileURLToPath(new URL('../dist/', import.meta.url));
 const port = Number(process.env.MONSTERFUSION_PORT || 5187);
-const types = { '.html':'text/html; charset=utf-8', '.js':'text/javascript; charset=utf-8', '.css':'text/css; charset=utf-8', '.json':'application/json', '.png':'image/png', '.svg':'image/svg+xml', '.wav':'audio/wav', '.ico':'image/x-icon', '.webp':'image/webp' };
+const types = { '.html':'text/html; charset=utf-8', '.js':'text/javascript; charset=utf-8', '.css':'text/css; charset=utf-8', '.json':'application/json', '.png':'image/png', '.jpg':'image/jpeg', '.jpeg':'image/jpeg', '.svg':'image/svg+xml', '.wav':'audio/wav', '.ico':'image/x-icon', '.webp':'image/webp' };
 await stat(resolve(root, 'index.html'));
 createServer(async (req, res) => {
   const send = (code, body, type='text/plain; charset=utf-8') => {
