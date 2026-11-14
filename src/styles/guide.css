@@ -13,3 +13,23 @@
 .game-guide summary { cursor: pointer; font-weight: bold; }
 .guide-start { width: 100%; padding: 14px; margin-top: 18px; color: #16241c; background: #c2e29e; border: 0; border-radius: 6px; font-weight: bold; }
 @media (max-width: 650px) { .game-guide { padding: 20px; } .topbar { flex-wrap: wrap; height: auto; gap: 8px; } }
+
+/* The illustrated sections. A manual that only tells you the ladder is 100
+   fights long is asking the reader to picture it; these show it. */
+.guide-figure { margin: 20px 0; padding: 16px; border: 1px solid #3c504a; border-radius: 10px; background: #111a1f; }
+.guide-figure h3 { margin: 0 0 8px; font-size: 1rem; color: #c8e5b2; }
+.guide-figure p { margin: 0 0 10px; }
+.guide-figure strong { color: #ffd9a8; }
+.guide-figure .guide-note { margin: 0; padding: 10px 12px; border-radius: 8px; background: #16211c; font-size: 13px; color: #b7c7bc; }
+.guide-ladder { display: block; width: 100%; height: auto; margin: 14px 0 12px; }
+.guide-shot { margin: 0; float: right; width: 180px; text-align: center; }
+.guide-shot.is-left { float: left; width: 96px; margin: 0 16px 8px 0; }
+.guide-shot img { display: block; width: 100%; height: auto; border-radius: 10px; border: 1px solid #44584c; image-rendering: pixelated; }
+.guide-shot figcaption { margin-top: 6px; font-size: 11px; color: #8d9a92; line-height: 1.5; }
+.guide-figure::after { content: ""; display: block; clear: both; }
+.guide-ladders { margin: 0; }
+.guide-ladders dt { margin-top: 10px; color: #c8e5b2; font-weight: bold; }
+.guide-ladders dt:first-child { margin-top: 0; }
+.guide-ladders dd { margin: 2px 0 0; font-size: 13px; color: #b7c7bc; }
+.guide-rules { margin: 8px 0 0; padding-left: 20px; line-height: 1.8; }
+@media (max-width: 520px) { .guide-shot { float: none; width: 140px; margin: 0 auto 12px; } .guide-shot.is-left { float: none; margin: 0 auto 12px; } }

@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from "react";
+import type { ReactNode } from "react";
 import type { Monster } from "../shared/ui";
 import { Portrait } from "./MonsterView";
 import { MoveLoadoutEditor } from "./MoveLoadoutEditor";
@@ -30,6 +31,10 @@ export function ArenaEntrance({ monsters, onEnter }: { monsters: Monster[]; onEn
   const [record, setRecord] = useState(getRecord);
   const [allSeasons] = useState(arenaSeasons);
   const [seasonId, setSeasonId] = useState(allSeasons[0].id);
+  // One step open at a time. All three used to stand open together, which
+  // put the button that actually opens the gate below the fold: the player
+  // had to scroll to do the one thing the screen is for.
+  const [step, setStep] = useState(1);
   const season = allSeasons.find(s => s.id === seasonId) ?? allSeasons[0];
   const board = bestBySeason();
   const pending = useRef(false);
@@ -43,20 +48,77 @@ export function ArenaEntrance({ monsters, onEnter }: { monsters: Monster[]; onEn
     return () => window.clearTimeout(timer);
   }, [opening, chosen.id, season.id, onEnter]);
 
-  return <>
-    <div className="hero"><div><div className="eyebrow">ARENA GATE</div><h1>バトルアリーナ</h1><p>出場する仲間と、持っていく技を決めて。</p></div></div>
-    <div className="arena-entry-layout">
-      <section className="panel"><h2>① 出場モンスター</h2>
-        <div className="arena-roster">{monsters.map(m => <button key={m.id} type="button" aria-pressed={chosen.id === m.id} disabled={opening} onClick={() => { setSelected(m.id); setConfirmed(null); }}><strong>{m.name}</strong><span>{m.genes.element} · 第{m.generation}世代</span></button>)}</div>
+  /** A step, collapsed to its heading and its answer unless it is the open one. */
+  function stepCard(n: number, title: string, answer: string, done: boolean, body: ReactNode) {
+    const active = step === n;
+    return <li key={n} className={`${active ? 'is-active' : ''} ${done ? 'is-done' : ''}`}>
+      <button type="button" className="arena-step-head" aria-expanded={active} disabled={opening}
+        onClick={() => setStep(active ? 0 : n)}>
+        <b aria-hidden="true">{done ? '✓' : n}</b>
+        <span>{title}</span>
+        <em>{answer}</em>
+      </button>
+      {active && <div className="arena-step-body">{body}</div>}
+    </li>;
+  }
 
-        <h2>② 挑むラダー</h2>
-        <div className="arena-seasons">
-          {allSeasons.map(s => <button key={s.id} type="button" aria-pressed={s.id === season.id}
-            disabled={opening} onClick={() => setSeasonId(s.id)}>
-            <strong>{s.label}</strong><span>{s.detail}</span>
-            {s.endsAt && <small>{new Date(s.endsAt).toLocaleString('ja-JP', { month: 'numeric', day: 'numeric', hour: '2-digit', minute: '2-digit' })}まで</small>}
-          </button>)}
+  return <>
+    <div className="hero arena-hero">
+      <div><div className="eyebrow">ARENA GATE</div><h1>バトルアリーナ</h1></div>
+      <p className="arena-hero-note">
+        評価は<strong>何連勝できたか</strong>だけ。敗北すると出場した仲間を失い、最後の1体を失うとゲームオーバーです。
+      </p>
+    </div>
+    <div className="arena-entry-layout">
+      <section className="panel arena-steps-panel">
+        <ol className="arena-steps">
+          {stepCard(1, '出場モンスター', chosen.name, true,
+            <div className="arena-roster">{monsters.map(m => <button key={m.id} type="button" aria-pressed={chosen.id === m.id} disabled={opening}
+              onClick={() => { setSelected(m.id); setConfirmed(null); setStep(2); }}>
+              <strong>{m.name}</strong><span>{m.genes.element} · 第{m.generation}世代</span>
+            </button>)}</div>)}
+
+          {stepCard(2, '挑むラダー', season.label, true,
+            <div className="arena-seasons">
+              {allSeasons.map(s => <button key={s.id} type="button" aria-pressed={s.id === season.id}
+                disabled={opening} onClick={() => { setSeasonId(s.id); setStep(3); }}>
+                <strong>{s.label}</strong><span>{s.detail}</span>
+                {s.endsAt && <small>{new Date(s.endsAt).toLocaleString('ja-JP', { month: 'numeric', day: 'numeric', hour: '2-digit', minute: '2-digit' })}まで</small>}
+              </button>)}
+            </div>)}
+
+          {stepCard(3, `持っていく技（${MAX_MOVE_SLOTS}枠）`, ready ? `${slots.length}枠ぶん決定済み` : '未決定', ready,
+            /* Keyed, so switching monster rebuilds the slots from that monster's
+               own set rather than carrying the last one's across. */
+            <MoveLoadoutEditor key={chosen.id} monsterId={chosen.id} onSaved={() => setConfirmed(chosen.id)}>
+              <p className="battle-help">
+                入場前に技を決めてください。<strong>「この技でセット」を押すと扉が開きます。</strong>
+                戦いの合間には変更できません。
+              </p>
+            </MoveLoadoutEditor>)}
+        </ol>
+
+        <div className="arena-entry-foot">
+          <button type="button" className="arena-enter" disabled={opening || !ready}
+            onClick={() => { if (!pending.current) { pending.current = true; setOpening(true); } }}>
+            {opening ? "扉を開いています…" : ready ? `${chosen.name}で入場する` : "③で技を決めると入場できます"}
+          </button>
+          <details className="arena-rules">
+            <summary>アリーナのルール</summary>
+            <ul>{arenaRules().map(rule => <li key={rule}>{rule}</li>)}</ul>
+            <p>進行・パーツ・技セットはこのブラウザに自動保存されます。再読み込みしても続きから遊べます。</p>
+            <p>連打ツール（オートクリッカー等）の使用は禁止です。</p>
+          </details>
         </div>
+      </section>
+
+      <aside className="arena-side">
+        <section className={`arena-gate ${opening ? "is-opening" : ""}`} aria-label="アリーナの扉">
+          <div className="arena-gate-inner"><Portrait monster={chosen} large /><strong>{chosen.name}</strong></div>
+          <div className="arena-door arena-door-left" aria-hidden="true"><span>MF</span></div>
+          <div className="arena-door arena-door-right" aria-hidden="true"><span>ARENA</span></div>
+          <p className="arena-gate-status" role="status">{opening ? "GATE OPEN · 出撃" : ready ? "READY · 技セット完了" : "STANDBY · 技を選んでください"}</p>
+        </section>
 
         <section className="arena-record" aria-label="連勝記録">
           <h3>連勝記録</h3>
@@ -66,7 +128,7 @@ export function ArenaEntrance({ monsters, onEnter }: { monsters: Monster[]; onEn
               : <small>まだ記録がありません。</small>}
           </p>
           {board.length > 0 && <ol className="arena-board">
-            {board.slice(0, 5).map(run => <li key={run.at}>
+            {board.slice(0, 2).map(run => <li key={run.at}>
               <RecordFace run={run} />
               <span className="arena-board-who">
                 <strong>{run.monster}</strong>
@@ -83,34 +145,8 @@ export function ArenaEntrance({ monsters, onEnter }: { monsters: Monster[]; onEn
             この記録は連打ツールの疑いありとして記録されています。ランキングには載りません。
           </p>}
           <p className="battle-help">記録はこのブラウザに保存されます。世界ランキングは準備中です。</p>
-          <p className="battle-help">連打ツール（オートクリッカー等）の使用は禁止です。</p>
         </section>
-
-        <h2>③ 持っていく技（{MAX_MOVE_SLOTS}枠）</h2>
-        {/* Keyed, so switching monster rebuilds the slots from that monster's
-            own set rather than carrying the last one's across. */}
-        <MoveLoadoutEditor key={chosen.id} monsterId={chosen.id} onSaved={() => setConfirmed(chosen.id)}>
-          <p className="battle-help">
-            入場前に技を決めてください。<strong>「この技でセット」を押すと扉が開きます。</strong>
-            戦いの合間には変更できません。
-          </p>
-        </MoveLoadoutEditor>
-
-        <p>敗北すると出場した仲間を失います。最後の1体を失うとゲームオーバーです。</p>
-        <ul className="battle-help">{arenaRules().map(rule => <li key={rule}>{rule}</li>)}</ul>
-        <p className="battle-help">進行・パーツ・技セットはこのブラウザに自動保存されます。再読み込みしても続きから遊べます。</p>
-        <button type="button" className="arena-enter" disabled={opening || !ready}
-          onClick={() => { if (!pending.current) { pending.current = true; setOpening(true); } }}>
-          {opening ? "扉を開いています…" : ready ? `${chosen.name}で入場する` : "技を決めると入場できます"}
-        </button>
-        {ready && !opening && <p className="battle-help">持っていく技：{slots.length}枠ぶん決定済み。</p>}
-      </section>
-      <section className={`arena-gate ${opening ? "is-opening" : ""}`} aria-label="アリーナの扉">
-        <div className="arena-gate-inner"><Portrait monster={chosen} large /><strong>{chosen.name}</strong></div>
-        <div className="arena-door arena-door-left" aria-hidden="true"><span>MF</span></div>
-        <div className="arena-door arena-door-right" aria-hidden="true"><span>ARENA</span></div>
-        <p className="arena-gate-status" role="status">{opening ? "GATE OPEN · 出撃" : ready ? "READY · 技セット完了" : "STANDBY · 技を選んでください"}</p>
-      </section>
+      </aside>
     </div>
   </>;
 }

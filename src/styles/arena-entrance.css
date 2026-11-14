@@ -1,15 +1,44 @@
-.arena-entry-layout { display: grid; grid-template-columns: minmax(0,1fr) minmax(0,1fr); gap: 24px; }
-.arena-roster { display: grid; gap: 10px; }
-.arena-roster button { display: flex; justify-content: space-between; flex-wrap: wrap; gap: 8px; padding: 16px; background: #17292c; color: #d9e7dc; border: 1px solid #496258; border-radius: 6px; text-align: left; }
+.arena-entry-layout { display: grid; grid-template-columns: minmax(0,1fr) minmax(0,340px); gap: 20px; align-items: start; }
+
+/* One step at a time, so the gate button never falls below the fold. */
+.arena-hero { margin-bottom: 16px; }
+.arena-hero-note { max-width: 420px; font-size: 12px; line-height: 1.7; color: #a9bbb0; }
+.arena-hero-note strong { color: #ffd9a8; }
+/* The column is given the screen's leftover height, and the open step takes
+   whatever is left after the headings and the gate button. Nothing the
+   player has to press ends up below the fold. */
+.arena-steps-panel { padding: 16px; display: flex; flex-direction: column; max-height: calc(100dvh - 190px); }
+.arena-steps { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 8px; min-height: 0; }
+.arena-steps > li { flex: 0 0 auto; display: flex; flex-direction: column; min-height: 0; border: 1px solid #39493f; border-radius: 10px; background: #141d1f; }
+.arena-steps > li.is-active { flex: 1 1 auto; border-color: #8fd3a4; }
+.arena-step-head { flex: 0 0 auto; display: flex; align-items: center; gap: 10px; width: 100%; padding: 11px 12px; background: transparent; border: 0; border-radius: 10px; color: #dfe9e2; text-align: left; }
+.arena-step-head b { flex: 0 0 auto; width: 22px; height: 22px; display: grid; place-items: center; border-radius: 50%; background: #2b3b31; color: #c9dc91; font-size: 12px; }
+.arena-steps > li.is-done .arena-step-head b { background: #c9dc91; color: #17292c; }
+.arena-step-head > span { flex: 1 1 auto; font-size: 13px; }
+.arena-step-head em { flex: 0 1 auto; min-width: 0; font-style: normal; font-size: 12px; color: #9fb3a6; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+/* The move list is the tall one; it scrolls inside its step rather than
+   pushing the page down. */
+.arena-step-body { flex: 1 1 auto; min-height: 120px; overflow-y: auto; padding: 2px 12px 12px; }
+.arena-step-body .panel { padding: 14px; margin: 0 0 10px; }
+.arena-step-body .panel:last-child { margin-bottom: 0; }
+.arena-step-body h2 { font-size: 14px; }
+.arena-entry-foot { flex: 0 0 auto; margin-top: 12px; }
+.arena-rules { margin-top: 10px; font-size: 12px; color: #9fb3a6; }
+.arena-rules summary { cursor: pointer; }
+.arena-rules ul { margin: 8px 0 0; padding-left: 18px; line-height: 1.7; }
+.arena-rules p { margin: 8px 0 0; line-height: 1.7; }
+.arena-side { display: grid; gap: 14px; align-content: start; }
+.arena-roster { display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 8px; }
+.arena-roster button { display: block; padding: 11px 12px; background: #17292c; color: #d9e7dc; border: 1px solid #496258; border-radius: 6px; text-align: left; }
 .arena-roster button[aria-pressed="true"] { background: #314735; border: 2px solid #c9dc91; }
 .arena-roster span { font-size: .8rem; }
-.arena-enter { width: 100%; padding: 16px; margin-top: 16px; background: #c9dc91; color: #17292c; border: 0; border-radius: 6px; font-weight: bold; }
+.arena-enter { width: 100%; padding: 15px; margin-top: 0; background: #c9dc91; color: #17292c; border: 0; border-radius: 6px; font-weight: bold; }
 .arena-reward { margin: 20px 0; border-color: #b8c68d; }
 .arena-reward button { margin: 8px; padding: 12px; }
 .arena-boss-field { border: 2px solid #d19e68; background: radial-gradient(ellipse, #593c3144, #172024); }
 .arena-boss-field section:nth-of-type(2) .portrait { transform: scale(1.12); }
-.arena-gate { position: relative; overflow: hidden; min-height: 380px; border: 6px solid #415454; border-radius: 12px; background: radial-gradient(ellipse, #789b5b55, #101d24 70%); }
-.arena-gate-inner { height: 100%; min-height: 380px; display: flex; flex-direction: column; justify-content: center; align-items: center; }
+.arena-gate { position: relative; overflow: hidden; min-height: 210px; border: 6px solid #415454; border-radius: 12px; background: radial-gradient(ellipse, #789b5b55, #101d24 70%); }
+.arena-gate-inner { height: 100%; min-height: 210px; display: flex; flex-direction: column; justify-content: center; align-items: center; }
 .arena-gate-inner .portrait { width: 100%; }
 .arena-door { position: absolute; top: 0; bottom: 0; width: 50%; display: grid; place-items: center; color: #a6b6ad; font-family: monospace; letter-spacing: .16em; background: repeating-linear-gradient(0deg, transparent 0 80px, #5d746622 81px 83px), linear-gradient(100deg,#19272d,#354849,#19272d); box-shadow: inset 0 0 0 4px #152326; transition: transform 1000ms cubic-bezier(.65,0,.25,1) 150ms; }
 .arena-door-left { left: 0; border-right: 3px solid #bddf94; }
@@ -21,7 +50,7 @@
 @media (prefers-reduced-motion: reduce) { .arena-door { transition: none; } }
 
 /* The streak the player is trying to beat, and who they are. */
-.arena-record { margin: 16px 0; padding: 12px 14px; border-radius: 10px; background: #1a231e; border: 1px solid #39493f; }
+.arena-record { margin: 0; padding: 12px 14px; border-radius: 10px; background: #1a231e; border: 1px solid #39493f; }
 .arena-record h3 { margin: 0 0 8px; font-size: 13px; letter-spacing: .1em; color: #9fb3a6; }
 .arena-record-best { margin: 0 0 10px; font-size: 14px; color: #dfe9e2; }
 .arena-record-best strong { font-size: 30px; color: #ffd9a8; font-variant-numeric: tabular-nums; margin-right: 2px; }
@@ -36,7 +65,7 @@
 .arena-record-suspect { margin: 8px 0 0; padding: 6px 8px; border-radius: 6px; background: #3a2a1b; color: #ffd0a0; font-size: 11px; line-height: 1.6; }
 
 /* Which ladder, and who has got how far up it. */
-.arena-seasons { display: grid; gap: 8px; margin-bottom: 14px; }
+.arena-seasons { display: grid; gap: 8px; }
 .arena-seasons button { display: block; text-align: left; padding: 10px 12px; }
 .arena-seasons button strong { display: block; color: #e6efe9; }
 .arena-seasons button span { display: block; font-size: 11px; color: #90a096; line-height: 1.6; margin-top: 2px; }

@@ -1,0 +1,17 @@
+<!doctype html>
+<!--
+  A thumbnail of the 100th-fight dragon for the guide.
+
+  The concept art is 1254x1254 and 2.3MB, which is far more than a picture
+  in a manual needs. This page shows it at the size the guide uses; capture
+  the viewport at 360x360 and save the result as
+  public/monsters/bosses/arena-100-dragon-thumb.jpg.
+
+    cp scripts/boss-thumb.html dist/   (the art is already served from dist)
+-->
+<html lang="ja"><head><meta charset="utf-8" /><title>boss thumb</title>
+<style>
+  html, body { margin: 0; width: 360px; height: 360px; overflow: hidden; background: #0d1215; }
+  img { width: 360px; height: 360px; object-fit: cover; display: block; }
+</style></head>
+<body><img src="./monsters/bosses/arena-100-dragon-concept.png" alt="" /></body></html>
