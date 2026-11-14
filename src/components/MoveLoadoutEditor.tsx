@@ -71,7 +71,7 @@ export function MoveLoadoutEditor({ monsterId, children, onInspect, onSaved }: {
       </div>
       {error && <p role="alert">{error}</p>}
       <p role="status">{message}</p>
-      <p className="battle-help">攻撃・守るはいつでも使えます。技セットはこのプレイ中のみ保持され、ページを再読み込みすると戻ります。</p>
+      <p className="battle-help">攻撃・守るはいつでも使えます。技セットは自動保存され、次に開いたときもそのままです。</p>
     </section>
     <section className="panel" data-custom-sound aria-label="覚えられる技">
       <h2>部位から覚えられる技</h2>

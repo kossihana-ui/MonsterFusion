@@ -98,7 +98,7 @@ export function ArenaEntrance({ monsters, onEnter }: { monsters: Monster[]; onEn
 
         <p>敗北すると出場した仲間を失います。最後の1体を失うとゲームオーバーです。</p>
         <ul className="battle-help">{arenaRules().map(rule => <li key={rule}>{rule}</li>)}</ul>
-        <p className="battle-help">進行・パーツはプレイ中のみ保持されます。再読み込みすると戻ります。</p>
+        <p className="battle-help">進行・パーツ・技セットはこのブラウザに自動保存されます。再読み込みしても続きから遊べます。</p>
         <button type="button" className="arena-enter" disabled={opening || !ready}
           onClick={() => { if (!pending.current) { pending.current = true; setOpening(true); } }}>
           {opening ? "扉を開いています…" : ready ? `${chosen.name}で入場する` : "技を決めると入場できます"}

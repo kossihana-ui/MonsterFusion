@@ -15,6 +15,7 @@ import {
   stepTurn,
   createBasicPolicy,
   startArena, advanceArenaTurn, nextArenaEncounter,
+  serializeSaveFile, deserializeSaveFile, restoreSession, resumeSeededRandom,
   seasons, freeSeason,
   claimArenaRewardInSession, previewCapture, captureArenaMonster, getConsumables,
   previewPartFusion, createGameSession, deployMonsters, ownedMonster,
@@ -38,7 +39,12 @@ let session: GameSession;
 const listeners = new Set<() => void>();
 export const getGameSession = () => session;
 export const subscribeSession = (listener: () => void) => { listeners.add(listener); return () => { listeners.delete(listener); }; };
-function applySession(next: GameSession) { if (session === next) return; session = next; listeners.forEach(listener => listener()); }
+function applySession(next: GameSession) {
+  if (session === next) return;
+  session = next;
+  saveGame();
+  listeners.forEach(listener => listener());
+}
 export const getPartInventory = () => session.inventory;
 export const getItems = () => getConsumables(session);
 /** A name to offer when the player would rather not think of one. */
@@ -91,6 +97,7 @@ export function enterArena(id: string, seasonId?: string): BattleState {
     ?? (seasonId?.startsWith('free-') ? freeSeason(seasonId.slice('free-'.length)) : undefined)
     ?? seasons()[0];
   arenaRun = startArena(monster, getMoveLoadout(id), context, { id: season.id });
+  saveGame();
   arenaId = crypto.randomUUID();
   applySession(deployMonsters(session, [id]));
   return presentArena(arenaRun);
@@ -120,9 +127,14 @@ export function captureEnemy(requestId: string) {
 export function continueArena(): BattleState {
   if (!arenaRun) throw new Error("挑戦がありません。");
   arenaRun = nextArenaEncounter(arenaRun, context);
+  saveGame();
   return presentArena(arenaRun);
 }
-export function leaveArena() { arenaRun = null; if (!isGameOver(session)) applySession(deployMonsters(session)); }
+export function leaveArena() {
+  arenaRun = null;
+  if (!isGameOver(session)) applySession(deployMonsters(session));
+  saveGame();
+}
 /** How far the current run has got. 0 outside a run. */
 export const arenaWins = () => arenaRun?.wins ?? 0;
 /**
@@ -221,7 +233,85 @@ export const initialMonsters = createStarterMonsters(context).map((monster) => {
 });
 session = createGameSession(initialMonsters.map(m => getCoreMonster(m.id)));
 
+// ---------------------------------------------------------------------------
+// Saving
+// ---------------------------------------------------------------------------
+
+/**
+ * The whole game, in one key.
+ *
+ * Core already knows how to write monsters, loadouts, parts, items, the
+ * session and a run in progress, and how to repair an older one on the way
+ * back in. Two things are the UI's own: where the random stream had got to,
+ * which stops a reload handing out ids that already exist, and which ladder
+ * was chosen.
+ *
+ * This is also exactly what an account would hold, so the day there is a
+ * server the payload is already the right shape.
+ */
+const SAVE_KEY = 'monsterfusion.save.v1';
+
+export function saveGame(): boolean {
+  try {
+    localStorage.setItem(SAVE_KEY, JSON.stringify({
+      version: 1,
+      savedAt: Date.now(),
+      rng: context.rng.state(),
+      season: season.id,
+      core: JSON.parse(serializeSaveFile([], {
+        session,
+        arena: arenaRun,
+        loadouts: [...loadouts.values()],
+      })),
+    }));
+    return true;
+  } catch {
+    // Private windows and full quotas must not stop anybody playing.
+    return false;
+  }
+}
+
+/** True when a game was found and restored. */
+export function loadGame(): boolean {
+  let payload: { version?: number; rng?: number; season?: string; core?: unknown };
+  try {
+    const raw = localStorage.getItem(SAVE_KEY);
+    if (!raw) return false;
+    payload = JSON.parse(raw);
+  } catch { return false; }
+  if (payload.version !== 1 || !payload.core) return false;
+
+  const loaded = deserializeSaveFile(JSON.stringify(payload.core));
+  if (!loaded.ok) return false;
+
+  const restored = restoreSession(loaded.value);
+  if (restored.history.length === 0) return false;
+
+  // The stream resumes where it stopped, so new monsters get new ids.
+  if (typeof payload.rng === 'number') context.rng = resumeSeededRandom(payload.rng);
+  records.clear();
+  for (const monster of restored.history) records.set(monster.id, monster);
+  loadouts.clear();
+  for (const loadout of loaded.value.loadouts) loadouts.set(loadout.monsterId, loadout);
+  arenaRun = loaded.value.arena;
+  arenaId = arenaRun ? crypto.randomUUID() : '';
+  season = seasons().find(s => s.id === payload.season)
+    ?? (payload.season?.startsWith('free-') ? freeSeason(payload.season.slice('free-'.length)) : undefined)
+    ?? seasons()[0];
+  applySession(restored);
+  return true;
+}
+
+export function hasSavedGame(): boolean {
+  try { return localStorage.getItem(SAVE_KEY) !== null; } catch { return false; }
+}
+
+export function clearSavedGame(): void {
+  try { localStorage.removeItem(SAVE_KEY); } catch { /* nothing to clear */ }
+}
+
 export function restartGame(seed = 12345) {
+  clearSavedGame();
   arenaRun = null;
   arenaId = '';
   context.rng = createSeededRandom(seed);
@@ -294,6 +384,7 @@ export const gameAdapter: GameAdapter = {
       if (arenaRun !== state.arenaRun) throw new Error("最新のアリーナ状態で操作してください。");
       const target = coreState.combatants.find(c => c.side === 1)!;
       arenaRun = advanceArenaTurn(state.arenaRun, typeof action === "object" ? { ...action, targetId: target.id } : action === "defend" ? { kind: "defend" } : { kind: "attack", targetId: target.id }, context);
+      saveGame();
       settle(arenaRun.battle, arenaId + ":" + arenaRun.encounter.index, true);
       return presentArena(arenaRun);
     }
@@ -331,3 +422,8 @@ export const gameAdapter: GameAdapter = {
     return presentBattle(next, state.player, state.enemy);
   },
 };
+
+// A returning player carries on; a new one starts with the three starters.
+// Last in the file on purpose: loading touches SAVE_KEY and the season, and
+// a call placed earlier would run before those are initialised.
+loadGame();
