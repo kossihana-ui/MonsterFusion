@@ -562,3 +562,29 @@ test('the whole run can be driven from the public entry point alone', async () =
   assert.equal(settled.session.owned.length, 1);
   assert.equal(settled.session.history.length, restored.history.length);
 });
+
+test('a practice defeat is settled, but nobody is taken', () => {
+  const { a, b } = pair(12);
+  const battle = foughtToTheEnd(a, b);
+  assert.equal(battle.outcome.status, 'win', 'this fixture needs a decided fight');
+
+  const { session, lost } = settleBattleLoss(
+    createGameSession([a, b]),
+    battle,
+    'practice-1',
+    { stakes: false },
+  );
+  assert.deepEqual(lost, [], 'practice costs nothing');
+  assert.deepEqual(
+    session.owned.map((m) => m.id).sort(),
+    [a.id, b.id].sort(),
+    'both go home',
+  );
+  assert.ok(
+    session.settledBattles.includes('practice-1'),
+    'it is still a battle that happened, so it cannot be settled again',
+  );
+  const again = settleBattleLoss(session, battle, 'practice-1');
+  assert.equal(again.duplicate, true, 'and a second settle finds it already done');
+  assert.deepEqual(again.lost, []);
+});

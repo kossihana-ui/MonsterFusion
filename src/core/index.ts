@@ -405,6 +405,8 @@ export {
   allTimeSeason,
   freeSeason,
   isoWeek,
+  practiceSeason,
+  rankedSeasons,
   seasonIsOpen,
   seasons,
   weeklySeason,

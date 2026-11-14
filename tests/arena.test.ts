@@ -28,7 +28,7 @@ import { defaultLoadout, getLearnableMoves, MOVE_CATALOGUE } from '../src/core/m
 import { computeStats, statTotal, withinCaps } from '../src/core/stats.ts';
 import { expressGenes } from '../src/core/genetics.ts';
 import { createSeededRandom } from '../src/core/random.ts';
-import { createGameConfig, DEFAULT_ARENA_CONFIG } from '../src/core/config.ts';
+import { createGameConfig, DEFAULT_ARENA_CONFIG, DEFAULT_GAME_CONFIG } from '../src/core/config.ts';
 import {
   createSaveFile,
   deserializeSaveFile,
@@ -637,5 +637,78 @@ test('the fights get harder, rather than merely differing', () => {
   assert.ok(
     (totals[0] as number) < statTotal(monster.stats),
     'the opening fight should be winnable',
+  );
+});
+
+// ---------------------------------------------------------------------------
+// はじめての挑戦: the practice ladder
+// ---------------------------------------------------------------------------
+
+test('a practice opponent is weaker than the same fight on the real ladder', () => {
+  const me = player(5);
+  const context = testContext(5);
+  for (const index of [0, 2, DEFAULT_ARENA_CONFIG.normalWins]) {
+    const real = statTotal(createArenaEnemy('same-run', index, me, context).enemy.stats);
+    const easy = statTotal(createArenaEnemy('same-run', index, me, context, true).enemy.stats);
+    assert.ok(
+      easy < real,
+      `fight ${index}: practice ${easy} should be under the ordinary ${real}`,
+    );
+  }
+});
+
+test('practice scales with the config rather than a number in the code', () => {
+  const me = player(6);
+  const config = {
+    ...DEFAULT_GAME_CONFIG,
+    arena: { ...DEFAULT_ARENA_CONFIG, practiceStrength: 1 },
+  };
+  const context = { ...testContext(6), config };
+  const real = statTotal(createArenaEnemy('dial', 1, me, context).enemy.stats);
+  const easy = statTotal(createArenaEnemy('dial', 1, me, context, true).enemy.stats);
+  assert.equal(easy, real, 'at 1 the practice ladder is the ordinary ladder');
+});
+
+test('a practice run carries its flag to every later fight', () => {
+  const run = startArena(player(7), undefined, testContext(7), { id: 'p1', practice: true });
+  assert.equal(run.practice, true);
+  const won = claimArenaReward(
+    { ...run, wins: 1, phase: 'reward' },
+    createPartInventory(),
+    testContext(7),
+  );
+  const next = nextArenaEncounter(won.run, testContext(7));
+  const me = run.player;
+  assert.equal(
+    statTotal(next.encounter.enemy.stats),
+    statTotal(createArenaEnemy('p1', 1, me, testContext(7), true).enemy.stats),
+    'the second practice fight is still a practice fight',
+  );
+});
+
+test('practice hands out nothing, however the fight went', () => {
+  const run = startArena(player(8), undefined, testContext(8), { id: 'p2', practice: true });
+  // The boss fight, which is the only one that can drop a ドクロゲソ.
+  const atBoss = {
+    ...run,
+    wins: DEFAULT_ARENA_CONFIG.normalWins + 1,
+    phase: 'reward' as const,
+    encounter: createArenaEnemy('p2', DEFAULT_ARENA_CONFIG.normalWins, run.player, testContext(8), true),
+  };
+  const result = claimArenaReward(atBoss, createPartInventory(), testContext(8));
+  assert.deepEqual(result.parts, [], 'no parts');
+  assert.deepEqual(result.items, [], 'no ドクロゲソ');
+  assert.equal(result.empty, true);
+  assert.equal(result.inventory.stacks.length, 0, 'the inventory is untouched');
+  assert.ok(result.run.claimed.includes(atBoss.encounter.index), 'still claimed, so it cannot be re-rolled');
+});
+
+test('an ordinary run is untouched by any of this', () => {
+  const me = player(9);
+  const run = startArena(me, undefined, testContext(9), { id: 'ordinary' });
+  assert.notEqual(run.practice, true);
+  assert.equal(
+    statTotal(run.encounter.enemy.stats),
+    statTotal(createArenaEnemy('ordinary', 0, me, testContext(9)).enemy.stats),
   );
 });

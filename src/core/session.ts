@@ -277,11 +277,16 @@ export interface SettledBattle {
  * is decided and costs nothing - the request of 2026-11-08 excludes it. Only
  * the side that actually lost gives anything up, whichever side that was. And
  * a run that is already over settles nothing at all.
+ *
+ * `stakes: false` settles the battle without taking anybody: the practice
+ * ladder of 2026-11-14, where a defeat costs nothing because the point is to
+ * find out what a defeat looks like.
  */
 export function settleBattleLoss(
   session: GameSession,
   battle: BattleState,
   battleId: string,
+  options: { readonly stakes?: boolean } = {},
 ): SettledBattle {
   // A finished run is finished. There is nothing left to take, and a run that
   // could still change after it ended would not have ended.
@@ -299,6 +304,11 @@ export function settleBattleLoss(
     settledBattles: remember(session.settledBattles, battleId),
   };
   if (battle.outcome.status !== 'win') {
+    return { session: settled, lost: [], duplicate: false };
+  }
+  // A practice fight is still a decided battle - it is remembered, so the
+  // same one cannot be settled twice - but nobody goes home.
+  if (options.stakes === false) {
     return { session: settled, lost: [], duplicate: false };
   }
 

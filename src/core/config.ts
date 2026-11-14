@@ -595,6 +595,23 @@ export interface ArenaConfig {
   readonly finalBossTier: number;
   /** 「パーツドロップなし」, confirmed by the player: the dragon leaves no parts. */
   readonly finalBossDropsParts: boolean;
+  /**
+   * How hard the practice ladder is, as a share of the ordinary one.
+   *
+   * Measured 2026-11-14: a starter reaches a median of 2-3 fights, and a
+   * defeat takes the monster that fought, so a first-timer runs out of
+   * monsters in about ten minutes - before they have learnt what any of it
+   * does. 「はじめての挑戦」 is the same ladder with every opponent scaled by
+   * this, and it neither takes the monster nor gives anything away, so there
+   * is a place to find out how the game works before it costs something.
+   *
+   * 0.75 measured over 60 runs a starter, played greedily on the default
+   * move set: median 3/2/4 fights on the ordinary ladder becomes 10/5/12,
+   * so the boss on the sixth fight is something a first run usually sees.
+   * 0.7 ran to a median of 19, which is a long time to spend winning
+   * nothing; 0.85 put the boss back out of reach.
+   */
+  readonly practiceStrength: number;
 }
 
 export const DEFAULT_ARENA_CONFIG: ArenaConfig = {
@@ -624,6 +641,7 @@ export const DEFAULT_ARENA_CONFIG: ArenaConfig = {
   finalBossStrength: 2.2,
   finalBossTier: 3,
   finalBossDropsParts: false,
+  practiceStrength: 0.75,
 };
 
 export function createArenaConfig(overrides: Partial<ArenaConfig> = {}): ArenaConfig {

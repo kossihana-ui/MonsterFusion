@@ -7,6 +7,7 @@ import {
   isoWeek,
   seasonIsOpen,
   seasons,
+  rankedSeasons,
   weeklySeason,
   weekEndsAt,
 } from '../src/core/seasons.ts';
@@ -83,9 +84,14 @@ test('a free run is nobody else\u2019s ladder', () => {
   assert.equal(seasonIsOpen(freeSeason('a')), true);
 });
 
-test('the gate is offered both seasons, weekly first', () => {
+test('the gate is offered practice first, then the two ranked ladders', () => {
   const list = seasons(at('2026-11-18T09:00:00Z'));
-  assert.deepEqual(list.map((s) => s.kind), ['weekly', 'allTime']);
+  assert.deepEqual(list.map((s) => s.kind), ['practice', 'weekly', 'allTime']);
+  assert.deepEqual(
+    rankedSeasons(at('2026-11-18T09:00:00Z')).map((s) => s.kind),
+    ['weekly', 'allTime'],
+    'practice is not something a streak can be ranked on',
+  );
   for (const season of list) {
     assert.ok(season.label.length > 0, 'a season needs a name to show');
     assert.ok(season.detail.length > 0);

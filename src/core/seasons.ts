@@ -24,7 +24,7 @@
  * and not yet a fair race. See docs/COMPETITION_AND_DEPTH.md.
  */
 
-export type SeasonKind = 'weekly' | 'allTime' | 'free';
+export type SeasonKind = 'weekly' | 'allTime' | 'free' | 'practice';
 
 export interface ArenaSeason {
   readonly kind: SeasonKind;
@@ -35,6 +35,11 @@ export interface ArenaSeason {
   readonly detail: string;
   /** When this season stops accepting runs. Absent when it never does. */
   readonly endsAt?: number;
+  /**
+   * A sparring ladder: weaker opponents, no parts, and the monster comes
+   * home whatever happens. Absent means an ordinary ladder.
+   */
+  readonly practice?: boolean;
 }
 
 const DAY = 86_400_000;
@@ -82,6 +87,26 @@ export function allTimeSeason(): ArenaSeason {
 }
 
 /**
+ * The ladder a first run should start on.
+ *
+ * Measured 2026-11-14: a starter gets a median of 2-3 fights, and a defeat
+ * takes the monster that fought. Three starters, ten minutes, game over -
+ * before the player has seen what a part does or why a move set matters.
+ * This is the same ladder with the opponents scaled down, and it is worth
+ * nothing: no parts, no ranking, and nobody is lost. A place to learn the
+ * game rather than a cheaper way to win it.
+ */
+export function practiceSeason(): ArenaSeason {
+  return {
+    kind: 'practice',
+    id: 'season-practice',
+    label: 'はじめての挑戦（練習）',
+    detail: '相手が弱く、負けても仲間を失いません。そのかわり素材は手に入らず、順位にも加わりません。遊び方を覚えるためのラダーです。',
+    practice: true,
+  };
+}
+
+/**
  * A ladder of one's own.
  *
  * Not for comparing - the id is whatever the caller passes - but a player
@@ -99,7 +124,12 @@ export function freeSeason(id: string): ArenaSeason {
 
 /** The seasons on offer right now, in the order a screen should show them. */
 export function seasons(at: number | Date = Date.now()): readonly ArenaSeason[] {
-  return [weeklySeason(at), allTimeSeason()];
+  return [practiceSeason(), weeklySeason(at), allTimeSeason()];
+}
+
+/** The ladders a streak can be ranked on. Practice is not one of them. */
+export function rankedSeasons(at: number | Date = Date.now()): readonly ArenaSeason[] {
+  return seasons(at).filter((season) => season.practice !== true);
 }
 
 /** Whether a run on this season still counts. Free runs never expire. */

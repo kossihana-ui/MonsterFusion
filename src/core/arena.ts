@@ -65,6 +65,13 @@ export interface ArenaRun {
   readonly battle: BattleState;
   /** Encounters whose reward has been taken. Guards against a second claim. */
   readonly claimed: readonly number[];
+  /**
+   * A sparring run: weaker opponents, nothing won and nothing lost.
+   *
+   * Optional so that a save written before practice existed still loads as
+   * the ordinary thing it was.
+   */
+  readonly practice?: boolean;
 }
 
 export interface ArenaRewardResult {
@@ -110,7 +117,12 @@ function encounterRandom(runId: string, index: number): Random {
  * The opening fight sits a little below the player and the boss well above,
  * so a run reads as a climb rather than a flat wall.
  */
-function strengthFor(index: number, config: ArenaConfig): number {
+function strengthFor(index: number, config: ArenaConfig, practice = false): number {
+  const scale = practice ? config.practiceStrength : 1;
+  return scale * rawStrengthFor(index, config);
+}
+
+function rawStrengthFor(index: number, config: ArenaConfig): number {
   if (index === finalBossIndex(config)) return config.finalBossStrength;
   if (index === config.normalWins) return config.bossStrength;
   if (index > config.normalWins) {
@@ -219,13 +231,14 @@ export function createArenaEnemy(
   index: number,
   player: Monster,
   context: MonsterContext,
+  practice = false,
 ): ArenaEncounter {
   const config = context.config ?? DEFAULT_GAME_CONFIG;
   const arena = config.arena;
   const isFinalBoss = isFinalBossIndex(index, arena);
   const isBoss = isFinalBoss || index === arena.normalWins;
   const rng = encounterRandom(runId, index);
-  const strength = strengthFor(index, arena);
+  const strength = strengthFor(index, arena, practice);
 
   const enemyContext: MonsterContext = {
     rng,
@@ -341,7 +354,7 @@ export function startArena(
   player: Monster,
   loadout: MoveLoadout | undefined,
   context: MonsterContext,
-  options: { readonly id?: string } = {},
+  options: { readonly id?: string; readonly practice?: boolean } = {},
 ): ArenaRun {
   const config = context.config ?? DEFAULT_GAME_CONFIG;
   const id = options.id ?? `arena-${player.id}-${Math.floor(context.rng.next() * 1e9)}`;
@@ -349,7 +362,8 @@ export function startArena(
     ? reconcileLoadout(player, loadout.skillIds)
     : defaultLoadout(player);
 
-  const encounter = createArenaEnemy(id, 0, player, context);
+  const practice = options.practice === true;
+  const encounter = createArenaEnemy(id, 0, player, context, practice);
 
   return {
     id,
@@ -361,6 +375,7 @@ export function startArena(
     encounter,
     battle: battleFor(player, playerLoadout, encounter, config),
     claimed: [],
+    practice,
   };
 }
 
@@ -452,6 +467,27 @@ export function claimArenaReward(
     };
   }
 
+  // Practice takes nothing and gives nothing. Without this a risk-free run
+  // would be the cheapest way to farm parts, and the ladder that exists to
+  // take the pressure off a first run would quietly become the best one.
+  if (run.practice === true) {
+    const practiceCleared = run.wins > finalBossIndex(arena);
+    return {
+      run: {
+        ...run,
+        claimed: [...run.claimed, run.encounter.index],
+        phase: practiceCleared ? 'cleared' : 'reward',
+      },
+      inventory,
+      parts: [],
+      items: [],
+      empty: true,
+      duplicate: false,
+      canContinue: !practiceCleared,
+      message: '練習なので、素材は手に入らない。',
+    };
+  }
+
   const rng = runRandom(run, `reward:${run.encounter.index}`);
   const enemy = run.encounter.enemy;
   const maxDrops = run.encounter.isBoss ? arena.bossDropCount : arena.dropCount;
@@ -528,7 +564,7 @@ export function nextArenaEncounter(run: ArenaRun, context: MonsterContext): Aren
   if (!run.claimed.includes(run.encounter.index)) return run;
   if (run.wins > finalBossIndex(config.arena)) return { ...run, phase: 'cleared' };
 
-  const encounter = createArenaEnemy(run.id, run.wins, run.player, context);
+  const encounter = createArenaEnemy(run.id, run.wins, run.player, context, run.practice === true);
   return {
     ...run,
     phase: 'battle',
