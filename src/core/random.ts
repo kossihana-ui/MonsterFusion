@@ -55,7 +55,20 @@ export function shuffled<T>(rng: Random, items: readonly T[]): T[] {
  * mulberry32: small, fast, good enough for gameplay, and fully reproducible
  * from a 32-bit seed.
  */
-export function createSeededRandom(seed: number): Random {
+/**
+ * A seeded stream that can say where it is.
+ *
+ * `Random` stays a single method so a caller can still inject anything that
+ * produces numbers. This is the one core makes, and it can be saved and
+ * picked up again - without that, loading a game would rewind the stream
+ * and hand out ids that already exist.
+ */
+export interface SeededRandom extends Random {
+  /** The position in the stream. Pass it to `resumeSeededRandom`. */
+  state(): number;
+}
+
+export function createSeededRandom(seed: number): SeededRandom {
   let state = Math.trunc(seed) >>> 0;
   // A zero state would degenerate, so nudge it.
   if (state === 0) state = 0x9e3779b9;
@@ -67,7 +80,15 @@ export function createSeededRandom(seed: number): Random {
       t ^= t + Math.imul(t ^ (t >>> 7), t | 61);
       return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
     },
+    state(): number {
+      return state;
+    },
   };
+}
+
+/** Picks the stream up exactly where `state()` left it. */
+export function resumeSeededRandom(state: number): SeededRandom {
+  return createSeededRandom(Math.trunc(state) >>> 0);
 }
 
 /** Derives a stable seed from a string, for "same name -> same monster" flows. */

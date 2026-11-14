@@ -55,6 +55,7 @@ export type { Random } from './random.ts';
 export {
   chance,
   createSeededRandom,
+  resumeSeededRandom,
   createSystemRandom,
   nextFloat,
   nextInt,

@@ -24,7 +24,7 @@ import { getMoveBehavior } from '../src/core/effects.ts';
 import { createRootMonster, fuse } from '../src/core/fusion.ts';
 import { createStarterMonsters } from '../src/core/starters.ts';
 import { defaultLoadout, MAX_MOVE_SLOTS } from '../src/core/moves.ts';
-import { createSeededRandom } from '../src/core/random.ts';
+import { createSeededRandom, resumeSeededRandom } from '../src/core/random.ts';
 import type { BattlePolicy } from '../src/shared/types.ts';
 import { testContext } from './helpers.ts';
 
@@ -626,4 +626,22 @@ test('the off-hand offence still counts for something', () => {
   assert.ok(
     expectedDamage(rounded, target) > expectedDamage(lopsided, target),
   );
+});
+
+test('a seeded stream can be put down and picked up again', () => {
+  // Without this a loaded game rewinds its randomness and starts handing
+  // out ids that already belong to something.
+  const rng = createSeededRandom(4242);
+  const before = Array.from({ length: 7 }, () => rng.next());
+  const mark = rng.state();
+  const after = Array.from({ length: 5 }, () => rng.next());
+
+  const resumed = resumeSeededRandom(mark);
+  assert.deepEqual(Array.from({ length: 5 }, () => resumed.next()), after, 'it carried on');
+
+  // And a fresh one from the seed is back at the beginning, as it should be.
+  const restarted = createSeededRandom(4242);
+  assert.deepEqual(Array.from({ length: 7 }, () => restarted.next()), before);
+  assert.notDeepEqual(before.slice(0, 5), after, 'the stream really did move');
+  assert.equal(typeof createSeededRandom(1).state(), 'number');
 });
