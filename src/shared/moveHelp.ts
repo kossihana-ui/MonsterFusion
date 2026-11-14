@@ -1,5 +1,6 @@
 import { getMoveHealing, getMoveBehavior, STATUS_LABELS, STATUS_POLARITY, DEFAULT_BATTLE_CONFIG } from '@core/core/index.ts';
-import type { Skill, LearnableMove, Monster } from '@core/core/index.ts';
+import type { Skill, LearnableMove, Monster, MonsterPhenotype } from '@core/core/index.ts';
+import { partUrls } from '../mocks/assets/parts-detailed/manifest';
 
 export const partNames: Record<string, string> = { tail:'尻尾', horns:'角', wings:'翼', jaw:'口・顎', eyes:'目', crest:'頭飾り', bodyShape:'体型', size:'体の大きさ' };
 export function moveHelp(skill: Skill, caster?: Monster) {
@@ -37,4 +38,21 @@ export function moveHelp(skill: Skill, caster?: Monster) {
 }
 export function highlightPart(move?: LearnableMove) {
   return move?.source === 'bodyShape' || move?.source === 'size' ? 'body' : move?.source ?? undefined;
+}
+
+/**
+ * The pixel art of the body part a move came from.
+ *
+ * A move's name says nothing about where it came from, and the slot list is
+ * where that matters most: three names in a column look interchangeable, while
+ * a tail, a horn and a pair of wings do not. Empty string when there is no art
+ * for that part, so callers can fall back to a mark.
+ */
+export function movePartArt(source: string | null | undefined, phenotype?: MonsterPhenotype): string {
+  if (!source || !phenotype) return '';
+  const look = phenotype as unknown as Record<string, unknown>;
+  const key = source === 'size' || source === 'bodyShape'
+    ? `body/${String(look.bodyShape)}`
+    : `${source}/${String(look[source])}`;
+  return partUrls[key] ?? '';
 }

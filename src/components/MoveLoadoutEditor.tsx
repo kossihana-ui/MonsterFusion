@@ -1,6 +1,6 @@
 import type { LearnableMove } from "@core/core/index.ts";
 import { MoveHelp } from "./MoveHelp";
-import { moveHelp } from "../shared/moveHelp";
+import { moveHelp, movePartArt } from "../shared/moveHelp";
 import { useState } from "react";
 import type { ReactNode } from "react";
 import { MAX_MOVE_SLOTS } from "@core/core/index.ts";
@@ -19,10 +19,14 @@ export function MoveLoadoutEditor({ monsterId, children, onInspect, onSaved }: {
   function inspect(id: string) { setInspected(id); onInspect?.(moves.find(m => m.skill.id === id)); }
   const [picked, setPicked] = useState("");
   const [expanded, setExpanded] = useState<string[]>([]);
+  // The slot whose numbers are open. One at a time: the slots are a short list
+  // read top to bottom, and three help panels standing open at once is the
+  // tall screen this row layout exists to get rid of.
+  const [openSlot, setOpenSlot] = useState(-1);
   const [message, setMessage] = useState("");
   const [error, setError] = useState("");
   function change(next: string[], sound: "equip" | "remove") {
-    setSlots(next); setError("");
+    setSlots(next); setError(""); setOpenSlot(-1);
     setMessage("変更中です。「この技でセット」で反映します。");
     playUiSound(sound);
   }
@@ -42,26 +46,50 @@ export function MoveLoadoutEditor({ monsterId, children, onInspect, onSaved }: {
     setMessage("技をセットしました。次のバトルから使えます。");
     onSaved?.(result.loadout.skillIds);
   }
+  /**
+   * The part a move came from, drawn beside its name. Three move names in a
+   * column look interchangeable; a tail, a horn and a pair of wings do not.
+   */
+  function partArt(move: LearnableMove | undefined, empty: string) {
+    const art = move ? movePartArt(move.source, monster.phenotype) : "";
+    return <span className="move-art" aria-hidden="true">
+      {art ? <img src={art} alt="" /> : <span>{move ? "✦" : empty}</span>}
+    </span>;
+  }
   return <>
     <section className="panel" data-custom-sound>
       {children}
       <h2>技セット <small>{slots.filter(Boolean).length} / {MAX_MOVE_SLOTS}</small></h2>
-      <p className="battle-help">技を枠へドラッグ。技を選んで枠を押してもセットできます。全枠を空にして、通常攻撃と守るだけで戦うこともできます。</p>
+      <p className="battle-help">技を枠へドラッグ。技を選んで枠を押してもセットできます。ⓘで技の性能を開けます。全枠を空にして、通常攻撃と守るだけで戦うこともできます。</p>
       <div className="move-slot-grid" aria-label="セットする技">
         {slots.map((id, index) => {
           const move = moves.find(m => m.skill.id === id);
+          const open = openSlot === index && !!move;
           return <div className={`move-slot ${inspected === id && id ? "is-inspected" : ""}`} onMouseEnter={() => inspect(id)} onFocus={() => inspect(id)} data-element={move?.skill.element} key={index}
             onDragOver={e => { e.preventDefault(); e.dataTransfer.dropEffect = "move"; }}
             onDrop={e => { e.preventDefault(); equip(e.dataTransfer.getData("text/plain"), index); }}>
-            <button className="slot-target" type="button" aria-label={`技枠${index + 1}：${move ? skillLabel(move.skill) : "空き枠"}`} onClick={() => {
-              if (picked) equip(picked, index);
-              else { playUiSound(); setMessage("技一覧から技を選んで、この枠を押してください。"); }
-            }}>
-              <small>SLOT {index + 1}</small>
-              <strong>{move ? skillLabel(move.skill) : "＋ 空き枠"}</strong>
-              {move && <><MoveBadges element={move.skill.element} scaling={move.skill.scaling} /><span>MP {move.skill.cost}{move.category === "finisher" ? " · 大技" : ""}</span></>}
-            </button>
-            {move && <button type="button" className="slot-remove" aria-label={`${skillLabel(move.skill)}を外す`} onClick={() => change(slots.map((v, i) => i === index ? "" : v), "remove")}>×</button>}
+            <div className="move-slot-row">
+              <button className="slot-target" type="button" aria-label={`技枠${index + 1}：${move ? skillLabel(move.skill) : "空き枠"}`} onClick={() => {
+                if (picked) equip(picked, index);
+                else { playUiSound(); setMessage("技一覧から技を選んで、この枠を押してください。"); }
+              }}>
+                <small className="slot-no" aria-hidden="true">{index + 1}</small>
+                {partArt(move, "＋")}
+                <span className="slot-copy">
+                  <strong>{move ? skillLabel(move.skill) : "空き枠"}</strong>
+                  <span className="slot-meta">
+                    {move
+                      ? <><MoveBadges element={move.skill.element} scaling={move.skill.scaling} /><small>MP {move.skill.cost}{move.category === "finisher" ? " · 大技" : ""}</small></>
+                      : <small>技一覧から選んでください</small>}
+                  </span>
+                </span>
+              </button>
+              {move && <button type="button" className="move-info" aria-label={`${skillLabel(move.skill)}の性能`} aria-expanded={open} aria-controls={`slot-info-${index}`} onClick={() => {
+                inspect(move.skill.id); setOpenSlot(open ? -1 : index); playUiSound();
+              }}>ⓘ</button>}
+              {move && <button type="button" className="slot-remove" aria-label={`${skillLabel(move.skill)}を外す`} onClick={() => change(slots.map((v, i) => i === index ? "" : v), "remove")}>×</button>}
+            </div>
+            {open && move && <div id={`slot-info-${index}`} className="slot-info"><MoveHelp caster={monster} skill={move.skill} move={move} phenotype={monster.phenotype} /></div>}
           </div>;
         })}
       </div>
@@ -87,10 +115,15 @@ export function MoveLoadoutEditor({ monsterId, children, onInspect, onSaved }: {
                 onDragStart={e => { e.dataTransfer.setData("text/plain", skill.id); e.dataTransfer.effectAllowed = "move"; setPicked(skill.id); playUiSound(); }}
                 onDragEnd={() => setPicked("")}
                 onClick={() => { setPicked(picked === skill.id ? "" : skill.id); playUiSound(); setMessage("入れたい技枠を押してください。"); }}>
-                <strong>{skillLabel(skill)}</strong>{category === "finisher" && <span className="finisher-badge">大技</span>}
-                <MoveBadges element={skill.element} scaling={skill.scaling} />
-                <span>{moveHelp(skill,monster).summary}</span>
-                <span>MP {skill.cost}{slots.includes(skill.id) ? " · セット済み" : ""}</span>
+                {partArt(move, "✦")}
+                <span className="slot-copy">
+                  <strong>{skillLabel(skill)}{category === "finisher" && <span className="finisher-badge">大技</span>}</strong>
+                  <span className="slot-meta">
+                    <MoveBadges element={skill.element} scaling={skill.scaling} />
+                    <small>MP {skill.cost}{slots.includes(skill.id) ? " · セット済み" : ""}</small>
+                  </span>
+                  <span className="move-summary">{moveHelp(skill, monster).summary}</span>
+                </span>
               </button>
               <button type="button" className="move-info" aria-label={`${skillLabel(skill)}の説明`} aria-expanded={open} aria-controls={`move-info-${skill.id}`} onClick={() => {
                 inspect(skill.id); setExpanded(open ? expanded.filter(id => id !== skill.id) : [...expanded, skill.id]); playUiSound();
