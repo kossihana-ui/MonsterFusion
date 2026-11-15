@@ -4,6 +4,7 @@ import { MoveHelp } from "../components/MoveHelp";
 import { moveHelp, highlightPart, partNames } from "../shared/moveHelp";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { ArenaEntrance } from "../components/ArenaEntrance";
+import { StreakBanner } from "../components/StreakBanner";
 import { STATUS_LABELS, animationDuration, DEFAULT_ARENA_CONFIG, DEFAULT_BATTLE_CONFIG, elementMultiplier, getLearnableMoves } from "@core/core/index.ts";
 import { matchupLabel, skillLabel } from "../shared/battlePresentation";
 import { MoveBadges } from "../components/MoveBadges";
@@ -18,6 +19,7 @@ import { MultiplierEffect, multiplierPresentation, orchestraHit } from "../compo
 import type { MultiplierPresentation } from "../components/MultiplierEffect";
 import { BattleResult } from "../components/BattleResult";
 import { ShareStreak } from "../components/ShareStreak";
+import { getRecord } from "../shared/record";
 import type { RunRecord } from "../shared/record";
 import { BattleHpBar } from "../components/BattleHpBar";
 import { battleSound } from "../components/battleSound";
@@ -31,7 +33,10 @@ type ReplayListener = (playing: boolean, muted?: boolean) => void;
 export function Battle(props: { monsters: Monster[]; adapter: GameAdapter; onReplay?: ReplayListener }) {
   const [initial, setInitial] = useState<BattleState | null>(() => resumeArena());
   const [session, setSession] = useState(0);
-  const enter = useCallback((id: string, seasonId: string) => { setInitial(enterArena(id, seasonId)); setSession(n => n + 1); }, []);
+  const enter = useCallback((id: string, seasonId: string) => {
+    setInitial(enterArena(id, seasonId));
+    setSession(n => n + 1);
+  }, []);
   if (!props.monsters.length && !initial) return <section className="panel"><h1>バトルアリーナ</h1><p>まずモンスターを登録してください。</p></section>;
   if (!initial) return <ArenaEntrance monsters={props.monsters} onEnter={enter} />;
   return <BattleSession key={session} {...props} initial={initial} onLeave={() => { leaveArena(); setInitial(null); }} />;
@@ -87,6 +92,14 @@ function BattleSession({
   const [cue, setCue] = useState<BattleCue | null>(null);
   const [displayHp, setDisplayHp] = useState<Record<number, number> | null>(null);
   const [motions, setMotions] = useState<Record<number, SpriteMotion>>({});
+  /**
+   * The best streak this player had BEFORE this run.
+   *
+   * Read once, at mount - this component is remounted per run - because
+   * reading it live would be wrong the moment the run ends and writes its own
+   * record: 「自己ベスト更新」 has to compare against what they walked in with.
+   */
+  const bestBeforeRun = useRef<number | null>(getRecord().best?.wins ?? null);
   const active = useRef<AbortController | null>(null);
   const arena = useRef<HTMLDivElement>(null);
   const serial = useRef(0);
@@ -443,6 +456,14 @@ function BattleSession({
       {state.status !== "active" && getGameSession().status !== "gameOver" && <BattleResult state={state}>
         <div className="victory-reward" aria-label="アリーナ報酬">
           {state.status === "won" && run && <>
+            {/* The streak comes first, before the chest: it is what the run is
+                scored on, and the reward is the smaller news. */}
+            <StreakBanner moment={{
+              wins: run.wins,
+              previousBest: bestBeforeRun.current,
+              bossNext: run.wins === DEFAULT_ARENA_CONFIG.normalWins,
+              practice: run.practice === true,
+            }} />
             {run.phase === "cleared" && <h3>アリーナ制覇！</h3>}
             <div ref={rewardChest} className="victory-chest-anchor">
               <button type="button" className={`victory-chest ${claimed ? 'is-open' : ''} ${loot.length ? 'is-revealing' : ''}`}
