@@ -8,6 +8,7 @@ import { STATUS_LABELS, animationDuration, DEFAULT_ARENA_CONFIG, DEFAULT_BATTLE_
 import { matchupLabel, skillLabel } from "../shared/battlePresentation";
 import { MoveBadges } from "../components/MoveBadges";
 import "../styles/battle.css";
+import "../styles/battle-impact.css";
 import type { SpriteMotion } from "../components/MonsterSprite";
 import type { BattleAction, BattleState, GameAdapter, Monster } from "../shared/ui";
 import { createBattle, getCoreMonster, enterArena, resumeArena, receiveArenaReward, continueArena, leaveArena, getPartInventory, getGameSession, captureEnemy, getItems, retireArena, recordArenaEnding, arenaWins } from "../mocks/game";
@@ -72,6 +73,15 @@ function BattleSession({
   const [multiplier, setMultiplier] = useState<MultiplierPresentation | null>(null);
   const [healing, setHealing] = useState<{ sequence: number; target: number; amount: number } | null>(null);
   const [damageNumber, setDamageNumber] = useState<{ sequence: number; target: number; amount: number } | null>(null);
+  /**
+   * How hard the last hit landed, as a share of the target's whole health.
+   *
+   * Every hit used to look the same: a number appeared and a bar moved. Twenty
+   * turns of identical feedback is what makes a fight feel like one turn
+   * repeated, so the screen now answers a 4-point graze and a 60-point
+   * finisher differently.
+   */
+  const [hit, setHit] = useState<{ sequence: number; target: number; weight: 'graze' | 'solid' | 'heavy' } | null>(null);
   const skip = useRef(false);
   const finishWait = useRef<() => void>(() => {});
   const [cue, setCue] = useState<BattleCue | null>(null);
@@ -230,12 +240,19 @@ function BattleSession({
           replayHp[target.side] = Math.max(0, replayHp[target.side] - event.amount);
           setDisplayHp({ ...replayHp });
           if (!skip.current && event.amount > 0) {
+            const share = event.amount / Math.max(1, target.maxHp);
+            setHit({
+              sequence: ++serial.current,
+              target: target.side,
+              weight: share >= 0.28 ? 'heavy' : share >= 0.12 ? 'solid' : 'graze',
+            });
             setDamageNumber({ sequence: ++serial.current, target: target.side, amount: event.amount });
             await wait(200, controller.signal);
             setMultiplier(null);
             await wait(650, controller.signal);
           }
           setDamageNumber(null);
+          setHit(null);
         }
       }
       if (!controller.signal.aborted) {
@@ -271,6 +288,7 @@ function BattleSession({
         setCue(null);
         setMultiplier(null);
         setDamageNumber(null);
+        setHit(null);
         setDisplayHp(null);
       }
     }
@@ -326,7 +344,15 @@ function BattleSession({
         </select>
       </label>
       </>}
-      <div className={`battle-field ${run?.encounter.isBoss ? "arena-boss-field" : ""}`} ref={arena} onClick={busy ? skipReplay : undefined}>
+      {/* `data-quake` only ever appears for the heaviest hits. Shaking the
+          field on every blow is the same mistake as never shaking it: it
+          stops meaning anything. */}
+      <div
+        className={`battle-field ${run?.encounter.isBoss ? "arena-boss-field" : ""}`}
+        ref={arena}
+        onClick={busy ? skipReplay : undefined}
+        {...(hit?.weight === 'heavy' ? { 'data-quake': hit.sequence } : {})}
+      >
         {effectNotice && <div className="battle-effect-notice" role="status">{effectNotice}</div>}
         {multiplier && <MultiplierEffect value={multiplier} />}
         {cue && <BattleEffect key={cue.sequence} cue={cue} />}
@@ -336,7 +362,12 @@ function BattleSession({
         ].map((side, i) => (
           <section key={i}>
             <div className="eyebrow">{side.label}</div>
-            <div className={`battle-portrait-stage ${healing?.target === i ? "is-healing" : ""}`} ref={i === 1 ? enemyStage : undefined}>
+            <div
+              className={`battle-portrait-stage ${healing?.target === i ? "is-healing" : ""}`}
+              ref={i === 1 ? enemyStage : undefined}
+              {...(hit?.target === i ? { 'data-hit': hit.weight, 'data-hit-seq': hit.sequence } : {})}
+              {...(side.hp <= 0 ? { 'data-down': '' } : {})}
+            >
             <Portrait
               monster={side.monster}
               large
@@ -345,7 +376,12 @@ function BattleSession({
               highlight={i === 0 && !busy ? highlightPart(inspectedMove) : undefined}
             />
             {healing?.target === i && <HealEffect key={healing.sequence} amount={healing.amount} />}
-            {damageNumber?.target === i && <span key={damageNumber.sequence} className="battle-damage-number" aria-hidden="true">−{damageNumber.amount}</span>}
+            {damageNumber?.target === i && <span
+              key={damageNumber.sequence}
+              className="battle-damage-number"
+              data-weight={hit?.target === i ? hit.weight : 'solid'}
+              aria-hidden="true"
+            >−{damageNumber.amount}</span>}
             </div>
             <h2>{side.monster.name}</h2>
             {i === 0 && inspectedMove && !busy && <p className="part-focus-label">{skillLabel(inspectedMove.skill)} ← {inspectedMove.source ? partNames[inspectedMove.source] : "共通技"}</p>}

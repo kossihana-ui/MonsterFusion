@@ -1,0 +1,123 @@
+/*
+ * What a hit looks like when it lands.
+ *
+ * The fight had every piece of information and none of the weight: a number
+ * appeared, a bar moved, and both sides stood perfectly still. Twenty turns
+ * of identical feedback is what makes a battle feel like one turn repeated,
+ * which is the complaint this file exists to answer.
+ *
+ * Three strengths, set from how much of the target's health the blow took
+ * (see `hit` in pages/Battle.tsx). A graze is a flinch, a solid hit knocks
+ * the body back, and only the heaviest ones move the whole field. If
+ * everything shook, nothing would read as hard.
+ */
+
+.battle-portrait-stage > .portrait,
+.battle-portrait-stage > canvas {
+  /* The recoil is applied here rather than to the stage, so the damage number
+     and the heal effect stay where they are while the body moves. */
+  will-change: transform, filter;
+}
+
+/* --- the struck body ----------------------------------------------------- */
+
+.battle-portrait-stage[data-hit] > .portrait {
+  animation: hit-recoil var(--hit-time, 260ms) cubic-bezier(.2, .9, .3, 1) both;
+}
+.battle-portrait-stage[data-hit="graze"] > .portrait { --hit-time: 200ms; --hit-shift: 5px; --hit-tilt: 1.5deg; }
+.battle-portrait-stage[data-hit="solid"] > .portrait { --hit-time: 280ms; --hit-shift: 12px; --hit-tilt: 3.5deg; }
+.battle-portrait-stage[data-hit="heavy"] > .portrait { --hit-time: 420ms; --hit-shift: 22px; --hit-tilt: 7deg; }
+
+@keyframes hit-recoil {
+  0%   { transform: translate3d(0, 0, 0) rotate(0); filter: none; }
+  /* The flash is one frame long on purpose: a hit is an instant, and a slow
+     white fade reads as a status effect instead. */
+  8%   { transform: translate3d(calc(var(--hit-shift) * .6), 0, 0) rotate(var(--hit-tilt));
+         filter: brightness(2.6) saturate(.2) drop-shadow(0 0 10px #fff); }
+  26%  { transform: translate3d(var(--hit-shift), 2px, 0) rotate(calc(var(--hit-tilt) * .7));
+         filter: brightness(1.25); }
+  58%  { transform: translate3d(calc(var(--hit-shift) * -.28), 0, 0) rotate(calc(var(--hit-tilt) * -.3)); filter: none; }
+  100% { transform: translate3d(0, 0, 0) rotate(0); filter: none; }
+}
+
+/* The side that was hit is lit from the blow for a moment. Behind the sprite,
+   so it reads as the impact rather than as a glow on the creature. */
+.battle-portrait-stage[data-hit]::after {
+  content: "";
+  position: absolute; inset: -6% -10%;
+  border-radius: 50%;
+  pointer-events: none; z-index: 0;
+  background: radial-gradient(closest-side, rgba(255, 246, 214, .55), transparent 72%);
+  animation: hit-bloom var(--bloom-time, 320ms) ease-out both;
+}
+.battle-portrait-stage[data-hit="graze"]::after { --bloom-time: 220ms; opacity: .5; }
+.battle-portrait-stage[data-hit="heavy"]::after { --bloom-time: 460ms; }
+
+@keyframes hit-bloom {
+  0%   { opacity: 0; transform: scale(.55); }
+  12%  { opacity: 1; transform: scale(1); }
+  100% { opacity: 0; transform: scale(1.25); }
+}
+
+/* --- the field ----------------------------------------------------------- */
+
+.battle-field[data-quake] {
+  animation: field-quake 360ms cubic-bezier(.36, .07, .19, .97) both;
+}
+
+@keyframes field-quake {
+  0%, 100% { transform: translate3d(0, 0, 0); }
+  12%  { transform: translate3d(-7px, 3px, 0); }
+  28%  { transform: translate3d(6px, -4px, 0); }
+  45%  { transform: translate3d(-5px, -2px, 0); }
+  62%  { transform: translate3d(4px, 3px, 0); }
+  80%  { transform: translate3d(-2px, -1px, 0); }
+}
+
+/* --- the number ---------------------------------------------------------- */
+
+/* The size and colour carry the same information the body does, so a player
+   watching the creature and a player watching the number learn the same
+   thing. Red is reserved for the hits that actually hurt. */
+.battle-damage-number[data-weight="graze"] {
+  font-size: clamp(22px, 3.2vw, 34px);
+  color: #e9eee2;
+  opacity: .85;
+}
+.battle-damage-number[data-weight="heavy"] {
+  font-size: clamp(44px, 7vw, 76px);
+  color: #ffd2a1;
+  animation-duration: 1250ms;
+}
+
+/* --- quiet, for anybody who asked for it --------------------------------- */
+
+@media (prefers-reduced-motion: reduce) {
+  .battle-portrait-stage[data-hit] > .portrait,
+  .battle-field[data-quake] { animation: none; }
+  .battle-portrait-stage[data-hit]::after { animation: none; opacity: 0; }
+}
+
+/* --- the moment it goes down --------------------------------------------- */
+
+/*
+ * A monster at zero used to simply stand there until the screen changed,
+ * which is the one beat in a fight that should not be ambiguous - especially
+ * here, where losing one costs the player the creature for good.
+ */
+.battle-portrait-stage[data-down] > .portrait {
+  animation: hit-down 620ms cubic-bezier(.3, .1, .4, 1) both;
+}
+
+@keyframes hit-down {
+  0%   { transform: translate3d(0, 0, 0) rotate(0); opacity: 1; filter: none; }
+  20%  { transform: translate3d(0, -6px, 0) rotate(-4deg); }
+  100% { transform: translate3d(0, 26px, 0) rotate(-18deg); opacity: .25;
+         filter: grayscale(.85) brightness(.6); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .battle-portrait-stage[data-down] > .portrait {
+    animation: none; opacity: .3; filter: grayscale(.85) brightness(.6);
+  }
+}

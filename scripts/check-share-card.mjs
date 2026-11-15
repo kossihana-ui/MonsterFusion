@@ -54,13 +54,22 @@ assert.ok(
   "index.html's og:image is not under its own og:url",
 );
 
-// The asset prefix and the address cannot disagree: a page built for one and
-// served from the other 404s on every file it asks for.
-const base = built.match(/<script[^>]*src=["']([^"']+)["']/)?.[1] ?? '';
-assert.ok(
-  base.startsWith(new URL(site).pathname),
-  `the build asks for "${base}", which is not under "${new URL(site).pathname}"`,
-);
+// The asset prefix and the address the build was made for cannot disagree: a
+// page built for one path and served from another 404s on every file it asks
+// for, which is a blank screen, not a broken image.
+//
+// Only checked against MONSTERFUSION_SITE, because that is what says where
+// this build is going. A plain `npm run build` is the local one - it is
+// served from the root while og:url still names the published site, and that
+// is correct rather than a mismatch.
+const asset = built.match(/<script[^>]*src=["']([^"']+)["']/)?.[1] ?? '';
+assert.ok(asset.startsWith('/'), `the build asks for "${asset}", which is not an absolute path`);
+const going = process.env.MONSTERFUSION_SITE?.trim();
+if (going) {
+  const path = new URL(going.endsWith('/') ? going : `${going}/`).pathname;
+  assert.ok(asset.startsWith(path), `built for "${going}" but asks for "${asset}"`);
+  assert.equal(site, new URL(going.endsWith('/') ? going : `${going}/`).href, 'og:url follows the build');
+}
 
 // The image has to exist in the build, be an image, and be the shape a large
 // card wants. The build is what is served AT og:url, so the path is relative.

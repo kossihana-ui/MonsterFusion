@@ -33,13 +33,18 @@ export function siteFromEnv(env: NodeJS.ProcessEnv = process.env): URL {
 /**
  * The prefix every asset URL carries.
  *
- * Taken from the site address, because the two cannot be allowed to disagree:
- * a page served from /MonsterFusion/ but built for / 404s on every file it
- * asks for. `MONSTERFUSION_BASE` still wins where it is set, because the
- * local dist server serves that same build from the root.
+ * Taken from the site address when one was given, because the two cannot be
+ * allowed to disagree: a page served from /MonsterFusion/ but built for /
+ * 404s on every file it asks for.
+ *
+ * With nothing set at all it is the root, NOT the published site's path. A
+ * plain `vite build` is what the local dist server serves, from the root, and
+ * deriving the path from the fallback address broke it - every asset 404ing
+ * and a blank page. `MONSTERFUSION_BASE` still overrides both.
  */
 export function baseFromEnv(env: NodeJS.ProcessEnv = process.env): string {
-  return env.MONSTERFUSION_BASE || siteFromEnv(env).pathname;
+  if (env.MONSTERFUSION_BASE) return env.MONSTERFUSION_BASE;
+  return env.MONSTERFUSION_SITE?.trim() ? siteFromEnv(env).pathname : '/';
 }
 
 /**
