@@ -7,12 +7,13 @@ import { Fusion } from "./pages/Fusion";
 import { Battle } from "./pages/Battle";
 import { SoundLab } from "./pages/SoundLab";
 import { MoveWorkshop } from "./pages/MoveWorkshop";
+import { SaveTransfer } from "./pages/SaveTransfer";
 import { gameAdapter, getGameSession, subscribeSession, presentSessionMonster, restartGame } from "./mocks/game";
 import { playUiSound } from "./components/uiSound";
 import { GameGuide } from "./components/GameGuide";
 import { workshopHere } from "./shared/workshop";
 import type { GameAdapter, Monster } from "./shared/ui";
-type Page = "collection" | "fusion" | "battle" | "register" | "detail" | "sound" | "moves" | "soul";
+type Page = "collection" | "fusion" | "battle" | "register" | "detail" | "sound" | "moves" | "soul" | "transfer";
 // `workshop` marks a room that belongs to whoever is building the game, not
 // to the people playing it. Those doors are only drawn for them - see
 // shared/workshop.ts for how one says so.
@@ -27,6 +28,7 @@ const tabs: { id: Page; label: string; icon: string; english: string; workshop?:
   { id: "soul", label: "ソウルメイク", icon: "◇", english: "SOUL MAKE" },
   { id: "battle", label: "バトルアリーナ", icon: "⚔", english: "BATTLE" },
   { id: "register", label: "モンスター登録", icon: "＋", english: "REGISTER" },
+  { id: "transfer", label: "セーブの引き継ぎ", icon: "⇄", english: "SAVE TRANSFER" },
   { id: "sound", label: "音の試聴室", icon: "♪", english: "SOUND WORKSHOP", workshop: true },
   { id: "moves", label: "技の編集室", icon: "✎", english: "MOVE WORKSHOP", workshop: true },
 ];
@@ -153,6 +155,7 @@ export default function App({
           {page === "soul" && <SoulMake />}
           {/* Guarded as well as hidden, so no stray link can open a room the
               player was never meant to find. */}
+          {page === "transfer" && <SaveTransfer />}
           {page === "sound" && workshop && <SoundLab />}
           {page === "moves" && workshop && <MoveWorkshop />}
 

@@ -1,0 +1,67 @@
+.sync-page { display: grid; gap: 18px; }
+
+.sync-warning {
+  margin: 0; padding: 10px 12px; border-radius: 6px;
+  background: #1b2420; border: 1px solid #5a6f5f; color: #dfe9e1; font-size: .88rem;
+}
+
+.sync-block {
+  display: grid; gap: 10px; justify-items: start;
+  padding: 14px; border: 1px solid #38473f; border-radius: 8px; background: #121b17;
+}
+.sync-block h2 { margin: 0; font-size: 1rem; letter-spacing: .04em; }
+.sync-block p { margin: 0; font-size: .88rem; color: #cfdbd2; line-height: 1.7; }
+
+.sync-code-row { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; width: 100%; }
+.sync-code {
+  flex: 1 1 18ch; min-width: 0; overflow-wrap: anywhere;
+  padding: 10px 12px; border-radius: 6px; background: #0d1512; border: 1px solid #44544c;
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: .92rem; letter-spacing: .08em;
+  color: #edf4e9;
+}
+/* The dots are a placeholder, not a value: never the same width as the real
+   thing, so nobody reads a length off it. */
+.sync-code.is-hidden { color: #7f8f86; letter-spacing: .2em; }
+
+.sync-input {
+  flex: 1 1 18ch; min-width: 0; min-height: 44px; padding: 0 12px;
+  border-radius: 6px; background: #0d1512; border: 1px solid #44544c; color: #edf4e9;
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: .92rem;
+}
+
+.sync-code-row button { min-height: 44px; padding: 0 16px; }
+
+.sync-code-lead strong, .sync-code-warning strong { color: #ffd9a8; }
+.sync-code-warning { font-size: .82rem; color: #c6d3cb; }
+.sync-said { min-height: 1.4em; font-size: .86rem; color: #dfe9e1; }
+
+/* --- the divergence ------------------------------------------------------ */
+
+.sync-conflict {
+  display: grid; gap: 12px; width: 100%; margin-top: 4px;
+  padding: 14px; border-radius: 8px; border: 1px solid #8a6f4a; background: #1d1813;
+}
+.sync-conflict h3 { margin: 0; font-size: 1rem; }
+.sync-conflict-lead, .sync-conflict-note { margin: 0; font-size: .86rem; line-height: 1.7; color: #e7ded2; }
+.sync-conflict-lead strong { color: #ffd9a8; }
+.sync-conflict-note strong { color: #cfe9c8; }
+
+.sync-sides { display: grid; gap: 10px; grid-template-columns: 1fr 1fr; }
+.sync-side {
+  display: grid; gap: 8px; align-content: start;
+  padding: 12px; border-radius: 6px; background: #141d18; border: 1px solid #44544c;
+}
+.sync-side-who { margin: 0; font-weight: 700; font-size: .9rem; color: #edf4e9; }
+.sync-side-who small { display: block; font-weight: 400; font-size: .72rem; color: #9fb0a5; }
+.sync-side-facts { display: grid; gap: 4px; margin: 0; font-size: .84rem; }
+.sync-side-facts > div { display: flex; justify-content: space-between; gap: 8px; }
+.sync-side-facts dt { color: #9fb0a5; }
+.sync-side-facts dd { margin: 0; color: #edf4e9; }
+.sync-side-over { margin: 0; font-size: .8rem; color: #ffb4a8; }
+.sync-side button { min-height: 44px; }
+
+@media (max-width: 560px) {
+  .sync-sides { grid-template-columns: 1fr; }
+  .sync-code-row { flex-direction: column; align-items: stretch; }
+  .sync-code-row button { width: 100%; }
+}

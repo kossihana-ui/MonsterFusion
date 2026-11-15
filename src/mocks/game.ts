@@ -15,7 +15,7 @@ import {
   stepTurn,
   createBasicPolicy,
   startArena, advanceArenaTurn, nextArenaEncounter,
-  serializeSaveFile, deserializeSaveFile, restoreSession, resumeSeededRandom,
+  createSaveFile, deserializeSaveFile, restoreSession, resumeSeededRandom,
   seasons, freeSeason, weeklySeason,
   claimArenaRewardInSession, previewCapture, captureArenaMonster, getConsumables,
   previewPartFusion, createGameSession, deployMonsters, ownedMonster,
@@ -25,7 +25,7 @@ import type {
   Monster as CoreMonster,
   BattleState as CoreBattleState,
   MoveLoadout,
-  ArenaRun, GameSession, SoulMakeSelection,
+  ArenaRun, GameSession, MonsterSaveFile, SoulMakeSelection,
 } from "@core/core/index.ts";
 import type { Monster, BattleState, GameAdapter } from "../shared/ui";
 import { battleLogLabel } from "../shared/battlePresentation";
@@ -256,23 +256,62 @@ session = createGameSession(initialMonsters.map(m => getCoreMonster(m.id)));
  * which stops a reload handing out ids that already exist, and which ladder
  * was chosen.
  *
- * This is also exactly what an account would hold, so the day there is a
- * server the payload is already the right shape.
+ * Both of those now ride inside the core file's `client` field, so the same
+ * bytes that go to localStorage are the ones that go to another device.
  */
 const SAVE_KEY = 'monsterfusion.save.v1';
+
+/**
+ * The game as a core save file: what localStorage holds, and what syncs.
+ *
+ * One function, so the two can never drift into saving different things.
+ */
+export function currentSaveFile(): MonsterSaveFile {
+  return createSaveFile([], {
+    session,
+    arena: arenaRun,
+    loadouts: [...loadouts.values()],
+    client: { rng: context.rng.state(), season: season.id },
+  });
+}
+
+/**
+ * Takes a save file as the game's current state.
+ *
+ * The same path a reload goes through, so a save that arrived from another
+ * device is restored exactly as one off this disk would be - including the
+ * repairs core makes on the way in.
+ */
+export function applySaveFile(file: MonsterSaveFile): boolean {
+  const restored = restoreSession(file);
+  if (restored.history.length === 0) return false;
+  const extras = file.client ?? {};
+  if (typeof extras.rng === 'number') context.rng = resumeSeededRandom(extras.rng);
+  records.clear();
+  for (const monster of restored.history) records.set(monster.id, monster);
+  loadouts.clear();
+  for (const loadout of file.loadouts) loadouts.set(loadout.monsterId, loadout);
+  arenaRun = file.arena;
+  arenaId = arenaRun ? crypto.randomUUID() : '';
+  const wanted = typeof extras.season === 'string' ? extras.season : undefined;
+  season = seasons().find(s => s.id === wanted)
+    ?? (wanted?.startsWith('free-') ? freeSeason(wanted.slice('free-'.length)) : undefined)
+    ?? seasons()[0];
+  applySession(restored);
+  saveGame();
+  return true;
+}
 
 export function saveGame(): boolean {
   try {
     localStorage.setItem(SAVE_KEY, JSON.stringify({
       version: 1,
       savedAt: Date.now(),
+      // Kept at the top level as well, so a save written by an older build
+      // still reads and one written now still loads in it.
       rng: context.rng.state(),
       season: season.id,
-      core: JSON.parse(serializeSaveFile([], {
-        session,
-        arena: arenaRun,
-        loadouts: [...loadouts.values()],
-      })),
+      core: currentSaveFile(),
     }));
     return true;
   } catch {
@@ -294,22 +333,12 @@ export function loadGame(): boolean {
   const loaded = deserializeSaveFile(JSON.stringify(payload.core));
   if (!loaded.ok) return false;
 
-  const restored = restoreSession(loaded.value);
-  if (restored.history.length === 0) return false;
-
-  // The stream resumes where it stopped, so new monsters get new ids.
-  if (typeof payload.rng === 'number') context.rng = resumeSeededRandom(payload.rng);
-  records.clear();
-  for (const monster of restored.history) records.set(monster.id, monster);
-  loadouts.clear();
-  for (const loadout of loaded.value.loadouts) loadouts.set(loadout.monsterId, loadout);
-  arenaRun = loaded.value.arena;
-  arenaId = arenaRun ? crypto.randomUUID() : '';
-  season = seasons().find(s => s.id === payload.season)
-    ?? (payload.season?.startsWith('free-') ? freeSeason(payload.season.slice('free-'.length)) : undefined)
-    ?? seasons()[0];
-  applySession(restored);
-  return true;
+  // A save written before the extras moved inside keeps them at the top
+  // level, so they stand in when the file itself carries none.
+  const file: MonsterSaveFile = loaded.value.client
+    ? loaded.value
+    : { ...loaded.value, client: { rng: payload.rng, season: payload.season } };
+  return applySaveFile(file);
 }
 
 export function hasSavedGame(): boolean {

@@ -217,6 +217,36 @@ try {
     assert.equal(parsed.secret, account.secret);
   }
 
+  // --- what actually travels ---------------------------------------------
+  // The seed stream's position and the chosen ladder are not part of any
+  // monster, but a save that lands on another device without them resumes a
+  // different stream - which hands out ids that already exist - and a
+  // different ladder.
+  {
+    const game = await server.ssrLoadModule('/src/mocks/game.ts');
+    const file = game.currentSaveFile();
+    assert.ok(file.client, 'the save carries the client extras');
+    assert.equal(typeof file.client.rng, 'number', 'the seed stream position travels');
+    assert.equal(typeof file.client.season, 'string', 'the ladder travels');
+    assert.ok(file.monsters.length > 0, 'and the monsters, obviously');
+
+    // It has to survive the trip: an envelope is JSON on the wire.
+    const envelope = core.createEnvelope(account.id, 'phone', file);
+    const landed = JSON.parse(JSON.stringify(envelope));
+    assert.deepEqual(landed.save.client, file.client);
+
+    // And come back in through the same door a reload uses.
+    assert.equal(game.applySaveFile(landed.save), true, 'a save that arrived is restorable');
+    const after = game.currentSaveFile();
+    assert.equal(after.client.rng, file.client.rng, 'the stream resumes where it stopped');
+    assert.equal(after.client.season, file.client.season);
+    assert.equal(after.monsters.length, file.monsters.length);
+
+    // A save with nothing in it is refused rather than wiping the game.
+    assert.equal(game.applySaveFile({ ...file, monsters: [], session: null }), false);
+    assert.ok(game.currentSaveFile().monsters.length > 0, 'and the game is untouched');
+  }
+
   console.log('セーブ同期 OK');
 } finally {
   await server.close();
