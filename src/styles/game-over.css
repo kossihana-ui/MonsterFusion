@@ -12,3 +12,7 @@
 @keyframes game-over-fade { from { opacity: 0; } to { opacity: 1; } }
 @keyframes game-over-words { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: none; } }
 @media (prefers-reduced-motion: reduce) { .game-over-black { animation-duration: .15s; } .game-over-content { animation: game-over-fade .15s .15s both; } }
+
+.game-over-best { color: #ffe69a; margin-bottom: 0; }
+.game-over-content .share-streak { justify-items: center; }
+.game-over-content .share-buttons { justify-content: center; }

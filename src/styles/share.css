@@ -1,0 +1,11 @@
+.share-streak { display: grid; gap: 8px; margin: 12px 0; }
+.share-buttons { display: flex; flex-wrap: wrap; gap: 8px; align-items: stretch; }
+.share-buttons button { min-height: 44px; padding: 0 16px; }
+.share-post {
+  display: inline-flex; align-items: center; min-height: 44px; padding: 0 16px;
+  border: 1px solid #6f8a74; border-radius: 6px; color: #dfe9e1;
+  text-decoration: none; font-size: .9rem;
+}
+.share-post:hover, .share-post:focus-visible { background: #1d2a22; color: #fff; }
+.share-said { margin: 0; font-size: .82rem; color: #c6d3cb; min-height: 1.2em; }
+.share-text { width: 100%; font: inherit; font-size: .82rem; padding: 8px; border-radius: 6px; background: #101c18; color: #edf4e9; border: 1px solid #44544c; }

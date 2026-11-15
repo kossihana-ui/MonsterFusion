@@ -16,6 +16,8 @@ import { BattleEffect } from "../components/BattleEffect";
 import { MultiplierEffect, multiplierPresentation, orchestraHit } from "../components/MultiplierEffect";
 import type { MultiplierPresentation } from "../components/MultiplierEffect";
 import { BattleResult } from "../components/BattleResult";
+import { ShareStreak } from "../components/ShareStreak";
+import type { RunRecord } from "../shared/record";
 import { BattleHpBar } from "../components/BattleHpBar";
 import { battleSound } from "../components/battleSound";
 import { LootReveal, PartIcon, TreasureChestIcon } from "../components/LootReveal";
@@ -49,6 +51,8 @@ function BattleSession({
   /** A move that wants five seconds of the player's thumbs before it lands. */
   const [charging, setCharging] = useState<{ id: string; name: string; seconds: number; perPress: number } | null>(null);
   const [retiring, setRetiring] = useState(false);
+  /** The run as it was filed, once this challenge is over. */
+  const [endedRun, setEndedRun] = useState<RunRecord | null>(null);
   const [rewardMessage, setRewardMessage] = useState("");
   const [loot, setLoot] = useState<readonly GenePart[]>([]);
   const [muted, setMuted] = useState(false);
@@ -235,8 +239,10 @@ function BattleSession({
         }
       }
       if (!controller.signal.aborted) {
-        if (next.status === 'lost') recordArenaEnding('defeated');
-        else if (next.arenaRun?.phase === 'cleared') recordArenaEnding('cleared');
+        // The filed run is kept, because the result screen is the one moment
+        // the player has something to say about it.
+        if (next.status === 'lost') setEndedRun(recordArenaEnding('defeated')?.run ?? null);
+        else if (next.arenaRun?.phase === 'cleared') setEndedRun(recordArenaEnding('cleared')?.run ?? null);
         setState(next);
         if (next.status === 'lost' && getGameSession().status === 'gameOver') {
           // Let zero HP and the delayed red trail paint before beginning the fade.
@@ -432,6 +438,7 @@ function BattleSession({
                 ? "頂上へ — 冥蒼竜が待つ100戦目"
                 : "全回復して次の戦いへ"}</button>}
           </>}
+          {endedRun && <ShareStreak run={endedRun} label={endedRun.ending === 'cleared' ? "制覇を共有" : `${endedRun.wins}連勝を共有`} />}
           {(claimed || state.status !== "won") && <button disabled={loot.length > 0} className="text-button" onClick={onLeave}>入口へ戻る（今回の挑戦を終了）</button>}
         </div>
       </BattleResult>}

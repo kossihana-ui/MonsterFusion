@@ -1,6 +1,11 @@
 import { useEffect, useRef, useState } from 'react';
+import { getRecord } from '../shared/record';
+import { ShareStreak } from './ShareStreak';
 import '../styles/game-over.css';
 export function GameOverScreen({ muted, onRestart }: { muted: boolean; onRestart: () => void }) {
+  // Read once: restarting clears the session, and this screen should keep
+  // showing the streak the player just finished.
+  const [best] = useState(() => getRecord().best);
   const dialog = useRef<HTMLDialogElement>(null);
   const [silent, setSilent] = useState(muted);
   const [blocked, setBlocked] = useState(false);
@@ -35,6 +40,12 @@ export function GameOverScreen({ muted, onRestart }: { muted: boolean; onRestart
       <p className="game-over-message">手持ちのモンスターがいなくなった…</p>
       <button className="primary" onClick={onRestart}>もう一度はじめる</button>
       <p>最初から始めると、今回集めたパーツもリセットされます。</p>
+      {/* The monsters are gone, but the streak happened. It is the only
+          thing on this screen worth handing to somebody else. */}
+      {best && <>
+        <p className="game-over-best">自己ベスト：{best.wins}連勝（{best.monster}）</p>
+        <ShareStreak run={best} label="自己ベストを共有" />
+      </>}
       {/* Browsers refuse sound a page has not earned. The toggle is the way
           back in, so when that happens it says so rather than staying quiet. */}
       <button className="text-button" data-custom-sound aria-pressed={!silent}

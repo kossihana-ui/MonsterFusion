@@ -32,9 +32,19 @@ const description = html.match(meta('name', 'description'))[1];
 assert.ok(description.length >= 60, 'the description is too short to say anything');
 assert.ok(description.length <= 200, `the description is ${description.length} characters and will be cut`);
 
-// The image has to exist, be an image, and be the shape a large card wants.
+// A crawler never runs the page, so both addresses have to be absolute, and
+// the image has to sit under the address the card points at.
+const site = html.match(meta('property', 'og:url'))[1];
 const src = html.match(meta('property', 'og:image'))[1];
-const path = `dist${src.startsWith('/') ? '' : '/'}${src.replace(/^https?:\/\/[^/]+/, '')}`;
+for (const [name, value] of [['og:url', site], ['og:image', src]]) {
+  assert.ok(/^https:\/\//.test(value), `${name} is "${value}" - a crawler needs the host`);
+}
+assert.ok(site.endsWith('/'), `og:url is "${site}" - it should end at the site root`);
+assert.ok(src.startsWith(site), `og:image "${src}" is not under og:url "${site}"`);
+
+// The image has to exist in the build, be an image, and be the shape a large
+// card wants. The build is what is served AT og:url, so the path is relative.
+const path = `dist/${src.slice(site.length)}`;
 const info = await stat(path).catch(() => null);
 assert.ok(info, `${path} is not in the build`);
 assert.ok(info.size > 10_000, `${path} is only ${info.size} bytes - did it render?`);

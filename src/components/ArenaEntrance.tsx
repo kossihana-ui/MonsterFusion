@@ -3,6 +3,7 @@ import type { ReactNode } from "react";
 import type { Monster } from "../shared/ui";
 import { Portrait } from "./MonsterView";
 import { MoveLoadoutEditor } from "./MoveLoadoutEditor";
+import { ShareStreak } from "./ShareStreak";
 import { arenaRules, MAX_MOVE_SLOTS } from "@core/core/index.ts";
 import { getMoveLoadout, arenaSeasons } from "../mocks/game";
 import { getRecord, setPlayerName, bestBySeason } from "../shared/record";
@@ -136,6 +137,7 @@ export function ArenaEntrance({ monsters, onEnter }: { monsters: Monster[]; onEn
               ? <><strong>{record.best.wins}</strong>連勝<small>（{record.best.monster}・{record.best.ending === 'retired' ? 'リタイア' : record.best.ending === 'cleared' ? '完全制覇' : '敗北'}）</small></>
               : <small>まだ記録がありません。</small>}
           </p>
+          {record.best && <ShareStreak run={record.best} label="自己ベストを共有" />}
           {board.length > 0 && <ol className="arena-board">
             {board.slice(0, 2).map(run => <li key={run.at}>
               <RecordFace run={run} />
