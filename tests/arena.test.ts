@@ -4,7 +4,9 @@ import { test } from 'node:test';
 import {
   advanceArenaTurn,
   arenaRules,
+  arenaStrengthAt,
   BOSS_TEMPLATE,
+  finalBossIndex,
   claimArenaReward,
   createArenaEnemy,
   FINAL_BOSS_NAME,
@@ -711,4 +713,36 @@ test('an ordinary run is untouched by any of this', () => {
     statTotal(run.encounter.enemy.stats),
     statTotal(createArenaEnemy('ordinary', 0, me, testContext(9)).enemy.stats),
   );
+});
+
+test('the ladder never gets easier than a fight already survived', () => {
+  const config = DEFAULT_GAME_CONFIG.arena;
+  const last = finalBossIndex(config);
+  for (const practice of [false, true]) {
+    for (let index = 1; index <= last; index++) {
+      const before = arenaStrengthAt(index - 1, config, practice);
+      const now = arenaStrengthAt(index, config, practice);
+      assert.ok(
+        now >= before - 1e-9,
+        `${index + 1}戦目 ${now.toFixed(2)} is weaker than ${index}戦目 ${before.toFixed(2)}`,
+      );
+    }
+  }
+});
+
+test('the fight after the first boss is no easier than the boss', () => {
+  const config = DEFAULT_GAME_CONFIG.arena;
+  // Measured 2026-11-15: this used to drop from 1.35 to 1.11 and take until
+  // the 40th fight to recover, which on the practice ladder was thirty
+  // fights nobody could lose.
+  const boss = arenaStrengthAt(config.normalWins, config);
+  assert.ok(arenaStrengthAt(config.normalWins + 1, config) >= boss);
+});
+
+test('practice is the same ladder, only softer', () => {
+  const config = DEFAULT_GAME_CONFIG.arena;
+  for (const index of [0, 3, config.normalWins, 20, 60, finalBossIndex(config)]) {
+    const ratio = arenaStrengthAt(index, config, true) / arenaStrengthAt(index, config);
+    assert.ok(Math.abs(ratio - config.practiceStrength) < 1e-9, `${index}: ${ratio}`);
+  }
 });

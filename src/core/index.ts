@@ -286,6 +286,7 @@ export type {
 export {
   advanceArenaTurn,
   arenaRules,
+  arenaStrengthAt,
   BOSS_TEMPLATE,
   FINAL_BOSS_NAME,
   FINAL_BOSS_TEMPLATE,

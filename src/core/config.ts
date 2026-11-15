@@ -589,6 +589,19 @@ export interface ArenaConfig {
    * something while there is further to go.
    */
   readonly finalBossFight: number;
+  /**
+   * Where the long climb restarts, the fight after the first boss.
+   *
+   * Measured 2026-11-15: with this set to `lastStrength` the ladder went
+   * backwards. The boss stood at 1.35, the fight after it at 1.11, and the
+   * curve did not reach the boss's level again until the 40th fight - so
+   * beating the boss bought thirty-odd fights that were easier than the five
+   * before it. On the practice ladder that read as 0.83x for thirty fights,
+   * which is simply unloseable; 「全然勝てます」 was the report, and it was
+   * right. Starting the climb where the boss left off keeps the ladder
+   * monotone: it never gets easier than something already survived.
+   */
+  readonly postBossStrength: number;
   /** How strong the last ordinary fight before the dragon is. */
   readonly finalStrength: number;
   readonly finalBossStrength: number;
@@ -637,6 +650,7 @@ export const DEFAULT_ARENA_CONFIG: ArenaConfig = {
   // first boss stays gentle enough that a well-bred monster can get deep,
   // while nobody walks to 100.
   finalBossFight: 100,
+  postBossStrength: 1.35,
   finalStrength: 1.8,
   finalBossStrength: 2.2,
   finalBossTier: 3,

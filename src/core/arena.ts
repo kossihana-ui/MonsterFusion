@@ -117,6 +117,21 @@ function encounterRandom(runId: string, index: number): Random {
  * The opening fight sits a little below the player and the boss well above,
  * so a run reads as a climb rather than a flat wall.
  */
+/**
+ * How strong the fight at `index` is, as a share of the player's own total.
+ *
+ * Public because it is the one number that says whether the ladder climbs,
+ * and a shape nobody can see is a shape nobody checks. The curve must never
+ * step down: a fight already survived should not come back easier later.
+ */
+export function arenaStrengthAt(
+  index: number,
+  config: ArenaConfig,
+  practice = false,
+): number {
+  return strengthFor(index, config, practice);
+}
+
 function strengthFor(index: number, config: ArenaConfig, practice = false): number {
   const scale = practice ? config.practiceStrength : 1;
   return scale * rawStrengthFor(index, config);
@@ -126,11 +141,13 @@ function rawStrengthFor(index: number, config: ArenaConfig): number {
   if (index === finalBossIndex(config)) return config.finalBossStrength;
   if (index === config.normalWins) return config.bossStrength;
   if (index > config.normalWins) {
-    // The long climb from the first boss to the dragon. Deliberately gentler
-    // than the opening five: this stretch is 93 fights, not four.
-    const span = config.finalStrength - config.lastStrength;
+    // The long climb from the first boss to the dragon. Gentler than the
+    // opening five - this stretch is 93 fights, not four - but it starts
+    // where the boss left off, so the ladder never hands back ground the
+    // player has already taken.
+    const span = config.finalStrength - config.postBossStrength;
     const steps = Math.max(1, finalBossIndex(config) - config.normalWins - 1);
-    return config.lastStrength + (span * (index - config.normalWins)) / steps;
+    return config.postBossStrength + (span * (index - config.normalWins)) / steps;
   }
   const span = config.lastStrength - config.firstStrength;
   const steps = Math.max(1, config.normalWins - 1);
