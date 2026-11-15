@@ -217,6 +217,29 @@ try {
     assert.equal(parsed.secret, account.secret);
   }
 
+  // --- a device that pulled can still push afterwards ---------------------
+  // Found by playing it on the live site: the stored envelope is what was
+  // last synced, not what the game holds now, and comparing the two made
+  // every later sync say 'same'. A device could pull once and then never
+  // send its own progress again.
+  {
+    const held = core.createEnvelope(account.id, 'phone', saveOf(starters, 1000));
+    const transport = core.createMemoryTransport({ envelope: held, secret: account.secret });
+
+    // Untouched: still nothing to do, and nothing is written.
+    const quiet = await syncOnce(input(transport, held, { ...held.save, savedAt: 5000 }, 'laptop'));
+    assert.equal(quiet.kind, 'same', `an untouched game should do nothing, not ${quiet.kind}`);
+    assert.equal(transport.stored().revision, 1);
+
+    // Played since: that is a new revision on top of what was pulled.
+    const grown = saveOf([...starters, phoneChild], 6000, [phoneChild.id]);
+    const out = await syncOnce(input(transport, held, grown, 'laptop'));
+    assert.equal(out.kind, 'pushed', `a device that pulled must still be able to push, not ${out.kind}`);
+    assert.equal(out.envelope.revision, 2);
+    assert.equal(out.envelope.basedOn, 1);
+    assert.equal(transport.stored().save.monsters.length, starters.length + 1);
+  }
+
   // --- what actually travels ---------------------------------------------
   // The seed stream's position and the chosen ladder are not part of any
   // monster, but a save that lands on another device without them resumes a

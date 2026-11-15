@@ -68,10 +68,15 @@ export async function syncOnce(input: SyncInput): Promise<SyncOutcome> {
     };
   }
 
-  // Nothing local to compare with: a browser that has an account but has
-  // never pushed. Its save still counts, so it is offered as the first one.
-  const local = input.local
-    ?? (remote ? null : createEnvelope(input.accountId, input.deviceId, input.save));
+  // What this browser last synced is not what it holds now, in general: the
+  // player has been playing since. Without this the stored envelope is
+  // compared against the far side, they match, and a device that has pulled
+  // once can never push its own progress again.
+  const moved = input.local !== null && changed(input.local.save, input.save);
+  const local = moved
+    ? createEnvelope(input.accountId, input.deviceId, input.save, input.local)
+    : input.local
+      ?? (remote ? null : createEnvelope(input.accountId, input.deviceId, input.save));
 
   const verdict = compareEnvelopes(local, remote);
   if (verdict === "mismatch") {
@@ -95,6 +100,21 @@ export async function syncOnce(input: SyncInput): Promise<SyncOutcome> {
   // local-ahead: send it.
   const sending = local ?? createEnvelope(input.accountId, input.deviceId, input.save);
   return push(input, sending);
+}
+
+/**
+ * Whether the game has moved since a save was written.
+ *
+ * `savedAt` is left out: every call to build a save file stamps it with the
+ * clock, so comparing it would call an untouched game changed, and every
+ * sync would push.
+ */
+function changed(before: MonsterSaveFile, now: MonsterSaveFile): boolean {
+  const bare = (file: MonsterSaveFile) => {
+    const { savedAt: _ignored, ...rest } = file;
+    return JSON.stringify(rest);
+  };
+  return bare(before) !== bare(now);
 }
 
 async function push(input: SyncInput, envelope: SyncEnvelope): Promise<SyncOutcome> {
