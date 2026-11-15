@@ -1,0 +1,54 @@
+/*
+ * The window does not scroll.
+ *
+ * Measured before this file existed, at 1280x800 and at 375x812, as pixels of
+ * page past the bottom of the screen:
+ *
+ *            desktop   phone
+ *   図鑑         225     864
+ *   融合         775    1123
+ *   ソウルメイク   306    1110
+ *   アリーナ入口    15     555
+ *   登録            0       0
+ *   引き継ぎ      120     416
+ *
+ * Every one of those was the whole page moving: the navigation slid away, the
+ * title slid away, and finding a button meant losing sight of what it acts
+ * on. That is the thing this file ends.
+ *
+ * The shell is now a fixed frame exactly one screen tall. The navigation and
+ * the top bar never move, and only the content area can scroll - which is the
+ * floor, not the goal. Each screen fitting inside that area is per-screen
+ * work; this is what makes it possible to measure and to finish.
+ */
+
+html, body { height: 100%; }
+
+/* The page itself can never scroll, whatever a screen puts inside it. */
+body { overflow: hidden; }
+
+.app { height: 100dvh; min-height: 0; }
+
+.main-shell {
+  height: 100dvh;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+}
+
+/* `min-height: 0` is what lets a flex child be smaller than its content;
+   without it this grows to fit and the window scrolls again. */
+main {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+}
+
+/* On a phone the sidebar is a row at the top rather than a column at the
+   side, so the frame stacks instead. */
+@media (max-width: 700px) {
+  .app { display: flex; flex-direction: column; }
+  .sidebar { flex: 0 0 auto; }
+  .main-shell { height: auto; flex: 1 1 auto; }
+}
