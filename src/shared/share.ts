@@ -67,8 +67,24 @@ export function streakShare(run: RunRecord, url: string): StreakShare {
   return { title, text, url, full: `${text}\n${url}` };
 }
 
-/** The compose window, for the one case where a share sheet is not offered. */
+/**
+ * The compose window on X, filled in but not sent.
+ *
+ * A link, not a request: the game opens the box with the text already in it
+ * and the player presses post, or does not.
+ */
 export function postIntentUrl(share: StreakShare): string {
   const query = new URLSearchParams({ text: share.text, url: share.url });
   return `https://x.com/intent/post?${query.toString()}`;
+}
+
+/**
+ * The same, for LINE.
+ *
+ * Worth its own button here: most of the people this game is written for
+ * send things to each other on LINE rather than posting them in public.
+ */
+export function lineShareUrl(share: StreakShare): string {
+  const query = new URLSearchParams({ url: share.url, text: share.text });
+  return `https://social-plugins.line.me/lineit/share?${query.toString()}`;
 }

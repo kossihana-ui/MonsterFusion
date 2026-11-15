@@ -10,7 +10,7 @@ import { createServer } from 'vite';
 const server = await createServer({ server: { middlewareMode: true }, appType: 'custom' });
 try {
   const core = await server.ssrLoadModule('@core/core/index.ts');
-  const { streakShare, postIntentUrl, siteUrl, worthSharing, PUBLISHED_URL } = await server.ssrLoadModule('/src/shared/share.ts');
+  const { streakShare, postIntentUrl, lineShareUrl, siteUrl, worthSharing, PUBLISHED_URL } = await server.ssrLoadModule('/src/shared/share.ts');
 
   // Outside a browser there is no address to read, so the published one
   // stands in - as it does on a local copy, where a localhost link would
@@ -63,10 +63,17 @@ try {
   assert.equal(worthSharing(run(practice, { practice: true })), true, 'a practice streak still counts as something done');
   assert.equal(worthSharing(run(weekly, { wins: 0, ending: 'cleared' })), true, 'except a clear, which is never nothing');
 
+  // Both destinations open a compose window carrying exactly the text the
+  // player was shown. Nothing is posted by the game, so nothing is added.
   const intent = new URL(postIntentUrl(week));
   assert.equal(intent.host, 'x.com');
   assert.equal(intent.searchParams.get('url'), url);
   assert.equal(intent.searchParams.get('text'), week.text, 'posted as written, nothing added');
+
+  const line = new URL(lineShareUrl(week));
+  assert.equal(line.host, 'social-plugins.line.me');
+  assert.equal(line.searchParams.get('url'), url);
+  assert.equal(line.searchParams.get('text'), week.text);
 
   console.log('共有ボタン OK');
   console.log(week.full);

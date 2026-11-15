@@ -1,6 +1,6 @@
 import { useState } from "react";
 import type { RunRecord } from "../shared/record";
-import { postIntentUrl, siteUrl, streakShare, worthSharing } from "../shared/share";
+import { lineShareUrl, postIntentUrl, siteUrl, streakShare, worthSharing } from "../shared/share";
 import { playUiSound } from "./uiSound";
 import "../styles/share.css";
 
@@ -42,10 +42,17 @@ export function ShareStreak({ run, label = "この記録を共有" }: { run: Run
   }
   if (!offer) return null;
   return <div className="share-streak">
+    <p className="share-lead">{label}</p>
     <div className="share-buttons">
-      <button type="button" onClick={() => void hand()}>↗ {label}</button>
-      <a className="share-post" href={postIntentUrl(share)} target="_blank" rel="noopener noreferrer"
-        onClick={() => playUiSound()}>Xに投稿</a>
+      {/* Named destinations first. "共有" is an abstraction; "Xでポスト" is
+          a place, and a player who wants to post should not have to guess
+          that the copy button is how they get there. Both open a compose
+          window with the text already in it - nothing is sent by the game. */}
+      <a className="share-post is-x" href={postIntentUrl(share)} target="_blank" rel="noopener noreferrer"
+        onClick={() => playUiSound()}><b aria-hidden="true">X</b>Xでポスト</a>
+      <a className="share-post is-line" href={lineShareUrl(share)} target="_blank" rel="noopener noreferrer"
+        onClick={() => playUiSound()}><b aria-hidden="true">L</b>LINEで送る</a>
+      <button type="button" className="share-copy" onClick={() => void hand()}>↗ ほかの方法で共有</button>
     </div>
     <p className="share-said" role="status">{said}</p>
     {fallback && <textarea className="share-text" readOnly rows={4} value={share.full}

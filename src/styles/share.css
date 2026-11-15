@@ -1,11 +1,30 @@
 .share-streak { display: grid; gap: 8px; margin: 12px 0; }
+.share-lead { margin: 0; font-size: .86rem; color: #dfe9e1; }
 .share-buttons { display: flex; flex-wrap: wrap; gap: 8px; align-items: stretch; }
-.share-buttons button { min-height: 44px; padding: 0 16px; }
+
+/* A named destination, drawn as a button and opened in a new tab. The mark
+   is a letter, not a logo: nothing here should pass for the real brand. */
 .share-post {
-  display: inline-flex; align-items: center; min-height: 44px; padding: 0 16px;
-  border: 1px solid #6f8a74; border-radius: 6px; color: #dfe9e1;
-  text-decoration: none; font-size: .9rem;
+  display: inline-flex; align-items: center; gap: 8px;
+  min-height: 44px; padding: 0 16px;
+  border: 1px solid #6f8a74; border-radius: 6px; background: #16211c;
+  color: #edf4e9; text-decoration: none; font-size: .9rem;
 }
+.share-post b {
+  display: grid; place-items: center; width: 22px; height: 22px;
+  border-radius: 4px; font-size: .78rem; font-weight: 700;
+}
+.share-post.is-x b { background: #e8ece5; color: #10151a; }
+.share-post.is-line { border-color: #06c755; }
+.share-post.is-line b { background: #06c755; color: #0b1a10; }
 .share-post:hover, .share-post:focus-visible { background: #1d2a22; color: #fff; }
+
+.share-copy { min-height: 44px; padding: 0 16px; }
 .share-said { margin: 0; font-size: .82rem; color: #c6d3cb; min-height: 1.2em; }
 .share-text { width: 100%; font: inherit; font-size: .82rem; padding: 8px; border-radius: 6px; background: #101c18; color: #edf4e9; border: 1px solid #44544c; }
+
+@media (max-width: 520px) {
+  .share-buttons { display: grid; grid-template-columns: 1fr 1fr; }
+  .share-copy { grid-column: 1 / -1; }
+  .share-post { justify-content: center; padding: 0 8px; }
+}
