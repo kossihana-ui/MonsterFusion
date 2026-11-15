@@ -48,6 +48,13 @@ jobs:
         env:
           # Pages serves the site from /<repository>/, not from the root.
           MONSTERFUSION_BASE: /MonsterFusion/
+          # Save sync. Absent until the repository has these secrets, and the
+          # game plays exactly as before while they are: see
+          # src/shared/supabaseSave.ts. The anon key is a public key by
+          # design, but it is still a secret here so it can be rotated
+          # without a commit.
+          VITE_SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          VITE_SUPABASE_ANON_KEY: ${{ secrets.SUPABASE_ANON_KEY }}
       - uses: actions/upload-pages-artifact@v3
         with:
           path: MonsterFusion-UI/dist
