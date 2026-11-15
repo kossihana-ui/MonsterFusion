@@ -10,9 +10,13 @@ import { MoveWorkshop } from "./pages/MoveWorkshop";
 import { gameAdapter, getGameSession, subscribeSession, presentSessionMonster, restartGame } from "./mocks/game";
 import { playUiSound } from "./components/uiSound";
 import { GameGuide } from "./components/GameGuide";
+import { workshopHere } from "./shared/workshop";
 import type { GameAdapter, Monster } from "./shared/ui";
 type Page = "collection" | "fusion" | "battle" | "register" | "detail" | "sound" | "moves" | "soul";
-const tabs: { id: Page; label: string; icon: string; english: string }[] = [
+// `workshop` marks a room that belongs to whoever is building the game, not
+// to the people playing it. Those doors are only drawn for them - see
+// shared/workshop.ts for how one says so.
+const tabs: { id: Page; label: string; icon: string; english: string; workshop?: true }[] = [
   {
     id: "collection",
     label: "モンスター図鑑",
@@ -23,8 +27,8 @@ const tabs: { id: Page; label: string; icon: string; english: string }[] = [
   { id: "soul", label: "ソウルメイク", icon: "◇", english: "SOUL MAKE" },
   { id: "battle", label: "バトルアリーナ", icon: "⚔", english: "BATTLE" },
   { id: "register", label: "モンスター登録", icon: "＋", english: "REGISTER" },
-  { id: "sound", label: "音の試聴室", icon: "♪", english: "SOUND WORKSHOP" },
-  { id: "moves", label: "技の編集室", icon: "✎", english: "MOVE WORKSHOP" },
+  { id: "sound", label: "音の試聴室", icon: "♪", english: "SOUND WORKSHOP", workshop: true },
+  { id: "moves", label: "技の編集室", icon: "✎", english: "MOVE WORKSHOP", workshop: true },
 ];
 export default function App({
   adapter = gameAdapter,
@@ -32,6 +36,10 @@ export default function App({
   adapter?: GameAdapter;
 }) {
   const [page, setPage] = useState<Page>("collection");
+  // Read once, at the door: the sidebar should not rearrange itself halfway
+  // through a session because the address changed.
+  const [workshop] = useState(workshopHere);
+  const doors = tabs.filter((tab) => !tab.workshop || workshop);
   const session = useSyncExternalStore(subscribeSession, getGameSession);
   const monsters = session.owned.map(presentSessionMonster);
   const [selected, setSelected] = useState<Monster | null>(null);
@@ -73,7 +81,7 @@ export default function App({
         </a>
         <div className="sidebar-label">WORKSPACE</div>
         <nav aria-label="メインナビゲーション">
-          {tabs.map((tab) => (
+          {doors.map((tab) => (
             <button
               key={tab.id}
               disabled={gameOver || (inBattle && tab.id !== "battle")}
@@ -143,8 +151,10 @@ export default function App({
           )}
           {page === "register" && <section className="panel"><h1>モンスター登録</h1><p>仲間の数を管理するルールに合わせ、画像からの無料追加は休止しています。</p><button onClick={() => setPage("soul")}>ソウルメイクへ</button></section>}
           {page === "soul" && <SoulMake />}
-          {page === "sound" && <SoundLab />}
-          {page === "moves" && <MoveWorkshop />}
+          {/* Guarded as well as hidden, so no stray link can open a room the
+              player was never meant to find. */}
+          {page === "sound" && workshop && <SoundLab />}
+          {page === "moves" && workshop && <MoveWorkshop />}
 
           {gameOver && !battleReplaying && <GameOverScreen muted={gameOverMuted} onRestart={() => { restartGame(); setSelected(null); setPage('collection'); }} />}
           <footer>
