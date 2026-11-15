@@ -13,6 +13,7 @@ import {
   validateMonster,
 } from '../src/core/storage.ts';
 import { ancestorIds, createRootMonster, fuse } from '../src/core/fusion.ts';
+import { createStarterMonsters } from '../src/core/starters.ts';
 import { SCHEMA_VERSION } from '../src/shared/types.ts';
 import { fusionChain, testContext } from './helpers.ts';
 
@@ -223,4 +224,37 @@ test('a cyclic save cannot hang the ancestry walk', () => {
   ]);
   const walked = ancestorIds(child, (id) => index.get(id), 16);
   assert.ok(walked.length <= 16 * 4);
+});
+
+test('a save carries the client’s own extras, and survives without them', () => {
+  // The seed stream's position and the ladder being played are not part of
+  // any monster, but a save that reaches another device without them resumes
+  // a different stream and a different ladder.
+  const monsters = createStarterMonsters(testContext(3));
+  const file = createSaveFile(monsters, {
+    now: () => 10,
+    client: { rng: 987654, season: 'season-week-2026-W46' },
+  });
+  assert.deepEqual(file.client, { rng: 987654, season: 'season-week-2026-W46' });
+
+  const back = deserializeSaveFile(serializeSaveFile(monsters, {
+    now: () => 10,
+    client: { rng: 987654, season: 'season-week-2026-W46' },
+  }));
+  assert.ok(back.ok, back.ok ? '' : back.errors.join(', '));
+  assert.deepEqual(back.value.client, { rng: 987654, season: 'season-week-2026-W46' });
+
+  // Written before this existed, and still a perfectly good save.
+  const plain = deserializeSaveFile(serializeSaveFile(monsters, { now: () => 10 }));
+  assert.ok(plain.ok, plain.ok ? '' : plain.errors.join(', '));
+  assert.equal(plain.value.client, undefined);
+  assert.equal(plain.value.monsters.length, monsters.length);
+
+  // Not an object, so not carried: core keeps this JSON and nothing more.
+  const junk = deserializeSaveFile(JSON.stringify({
+    ...JSON.parse(serializeSaveFile(monsters, { now: () => 10 })),
+    client: 'nonsense',
+  }));
+  assert.ok(junk.ok, junk.ok ? '' : junk.errors.join(', '));
+  assert.equal(junk.value.client, undefined);
 });

@@ -68,6 +68,19 @@ export interface MonsterSaveFile {
    * run in which everything saved is still owned, which is what it was.
    */
   readonly session: SessionSave | null;
+  /**
+   * Whatever the client needs to carry that the rules do not define.
+   *
+   * The seed stream's position and which ladder is being played live here:
+   * neither is part of a monster, but a save that crosses to another device
+   * without them resumes a different random stream and a different ladder.
+   *
+   * Deliberately opaque - core neither reads nor validates what is in it,
+   * beyond keeping it JSON - because the moment this file starts caring, it
+   * stops being the client's and starts being another schema to migrate.
+   * Absent in a save written before it existed.
+   */
+  readonly client?: Readonly<Record<string, unknown>>;
 }
 
 /** The ownership half of a session. The monsters themselves are in `monsters`. */
@@ -97,6 +110,8 @@ export interface SerializeOptions {
    * used, so a caller does not have to take a session apart to save it.
    */
   readonly session?: GameSession;
+  /** Client-side extras to carry along. See `MonsterSaveFile.client`. */
+  readonly client?: Readonly<Record<string, unknown>>;
 }
 
 export function createSaveFile(
@@ -129,6 +144,7 @@ export function createSaveFile(
     items: options.items ?? session?.items ?? createItemInventory(),
     arena: options.arena ?? null,
     session: session ? sessionSaveOf(session) : null,
+    ...(options.client ? { client: options.client } : {}),
   };
 }
 
@@ -549,6 +565,7 @@ export function deserializeSaveFile(json: string): ValidationResult<MonsterSaveF
       items: readItems(migrated.items),
       arena: readArena(migrated.arena),
       session: readSession(migrated.session, monsters),
+      ...(isRecord(migrated.client) ? { client: migrated.client } : {}),
     },
   };
 }
