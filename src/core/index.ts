@@ -451,3 +451,34 @@ export {
   settleBattleLoss,
   soulMakeInSession,
 } from './session.ts';
+
+// An account nobody signs up for, and the rules for carrying a save to
+// another device. No server is assumed by either: see sync.ts.
+export type { AnonymousAccount, CodeResult, Entropy } from './account.ts';
+export {
+  accountCode,
+  CODE_PREFIX,
+  codeMatches,
+  createAccount,
+  createCryptoEntropy,
+  entropyFromRandom,
+  ID_LENGTH,
+  parseAccountCode,
+  SECRET_LENGTH,
+  shortAccountId,
+} from './account.ts';
+export type {
+  ConflictChoice,
+  PushResult,
+  SaveTransport,
+  SyncEnvelope,
+  SyncVerdict,
+} from './sync.ts';
+export {
+  compareEnvelopes,
+  createEnvelope,
+  createMemoryTransport,
+  describeChoice,
+  mergeLineage,
+  resolveSave,
+} from './sync.ts';
