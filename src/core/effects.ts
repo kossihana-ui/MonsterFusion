@@ -424,10 +424,10 @@ const T = DEFAULT_BATTLE_CONFIG.statusTurns;
 const P = DEFAULT_BATTLE_CONFIG.powerSteps;
 const FLINCH = DEFAULT_BATTLE_CONFIG.flinchChance;
 
-/** The spec's 「バインド確率60%」. */
-const BIND_CHANCE = 0.6;
-/** 「2ターン継続確率20%」: of the binds that land, one in five holds on. */
-const BIND_EXTEND_CHANCE = 0.2;
+/** The spec's 「バインド確率60%」, from config so it stays adjustable. */
+const BIND_CHANCE = DEFAULT_BATTLE_CONFIG.bindChance;
+/** 「2ターン継続確率20%」: of the binds that land, this share holds on. */
+const BIND_EXTEND_CHANCE = DEFAULT_BATTLE_CONFIG.bindExtendChance;
 
 /**
  * How each of the thirty moves behaves.

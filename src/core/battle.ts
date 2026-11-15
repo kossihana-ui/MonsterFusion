@@ -893,14 +893,18 @@ export function stepTurn(
         );
 
         // A guard that reflects throws the hit back instead of taking it.
+        // How much comes back is `reflectShare` - the whole hit by default,
+        // and the dial to turn if a reflected turn proves worth more than an
+        // attacking one.
         if (hasStatus(target.statuses, 'reflect')) {
-          actor.hp = clamp(actor.hp - result.damage, 0, actor.maxHp);
+          const thrown = Math.round(result.damage * config.reflectShare);
+          actor.hp = clamp(actor.hp - thrown, 0, actor.maxHp);
           effects.push({
             type: 'damage',
             actorId: target.id,
             targetId: actor.id,
             ...(logSkillId ? { skillId: logSkillId } : {}),
-            amount: result.damage,
+            amount: thrown,
             critical: result.critical,
             elementMultiplier: result.elementMultiplier,
             mitigated: 0,

@@ -1179,3 +1179,58 @@ test('only what hands could manage counts, however much is sent', () => {
     assert.equal(hit(absurd), most, `${absurd} presses bought more than the ceiling`);
   }
 });
+
+test('how much of a reflected hit comes back is a setting', () => {
+  // Measured 2026-11-15: in a mirror match アクア kept 76% of its wins
+  // against itself-without-跳ね返し-and-bind. The whole hit coming back is
+  // the default, but it has to be adjustable to be answerable.
+  const { moss } = pair(211);
+  const sweeper = createMonsterFromAnalysis(
+    { tail: 'long', confidence: 1 },
+    testContext(211),
+    { name: 'sweeper', id: 'sweeper' },
+  );
+
+  function thrownBack(reflectShare: number): number {
+    const config = { ...DEFAULT_BATTLE_CONFIG, reflectShare };
+    const state = createDuelWithLoadouts(
+      sweeper,
+      moss,
+      [{ monsterId: sweeper.id, skillIds: ['tail-sweep'] }],
+      config,
+    );
+    const next = stepTurn(
+      state,
+      [
+        createScriptedPolicy([{ kind: 'skill', skillId: 'tail-sweep' }]),
+        createScriptedPolicy([{ kind: 'attack' }]),
+      ],
+      createSeededRandom(4),
+      config,
+    );
+    const attacker = next.combatants.find((c) => c.monsterId === moss.id);
+    assert.ok(attacker);
+    return attacker.maxHp - attacker.hp;
+  }
+
+  const whole = thrownBack(1);
+  assert.ok(whole > 0, 'the whole hit comes back by default');
+  assert.equal(thrownBack(0), 0, 'and none of it when the share is nothing');
+  const half = thrownBack(0.5);
+  assert.ok(half > 0 && half < whole, `half should be between: ${half} of ${whole}`);
+});
+
+test('the bind numbers come from config, not from the move table', () => {
+  // 「確率はハードコードせず」: these two were literals beside the moves until
+  // 2026-11-15. They are read once, when the table is built, so changing them
+  // means changing the default - but they are in one findable place now.
+  assert.equal(DEFAULT_BATTLE_CONFIG.bindChance, 0.6);
+  assert.equal(DEFAULT_BATTLE_CONFIG.bindExtendChance, 0.2);
+  const bind = getMoveBehavior('bind-whip').applies.filter((a) => a.status === 'bind');
+  assert.equal(bind.length, 2, 'one for the turn, one for the second turn');
+  assert.equal(bind[0]?.chance, DEFAULT_BATTLE_CONFIG.bindChance);
+  assert.ok(
+    Math.abs((bind[1]?.chance ?? 0)
+      - DEFAULT_BATTLE_CONFIG.bindChance * DEFAULT_BATTLE_CONFIG.bindExtendChance) < 1e-9,
+  );
+});

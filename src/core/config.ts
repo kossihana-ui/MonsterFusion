@@ -437,6 +437,26 @@ export interface BattleConfig {
   /** Chance a move that can stun the target does so. */
   readonly flinchChance: number;
   /**
+   * 「バインド確率60%」 and 「2ターン継続確率20%」, from the 2026-10-27 spec.
+   *
+   * Here rather than beside the move table because these are the two numbers
+   * play keeps coming back to. Measured 2026-11-15 in a mirror match - the
+   * same monster on both sides, one of them without its binds and its
+   * reflect - アクア won 76%. A turn the opponent cannot take is the strongest
+   * thing a move can hand out, and these are the dials for it.
+   */
+  readonly bindChance: number;
+  /** Of the binds that land, the share that holds for a second turn. */
+  readonly bindExtendChance: number;
+  /**
+   * How much of a reflected hit comes back, as a share of the damage.
+   *
+   * 1 is the whole hit, which is what 跳ね返し has always done. The house AI
+   * walks into it every time, so this is the dial if that turns out to be
+   * worth more than a turn of attacking.
+   */
+  readonly reflectShare: number;
+  /**
    * What a seeded target is worth to the monster that seeded it.
    *
    * Only the planter's own follow-up triggers this, and it fires once: the
@@ -483,6 +503,9 @@ export const DEFAULT_BATTLE_CONFIG: BattleConfig = {
   statusTurns: { poison: 3, blind: 2, bind: 1, bindExtended: 2, seed: 1, flinch: 1 },
   powerSteps: { one: 70, two: 110, three: 160, heavy: 180 },
   flinchChance: 0.3,
+  bindChance: 0.6,
+  bindExtendChance: 0.2,
+  reflectShare: 1,
   seedPayoff: { boostElement: 'fire', boostFactor: 1.5, bindElement: 'water' },
   elementChart: {
     fire: { water: 0.8, wind: 1.25, earth: 1.0 },
