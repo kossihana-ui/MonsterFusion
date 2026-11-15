@@ -49,22 +49,29 @@
 /* The MP reminder is for the first fight, not the fiftieth. */
 .battle-screen.is-fighting .battle-command-panel > .battle-help { display: none; }
 
-/* Wide screens have the room to simply put the two side by side, which beats
-   shrinking anything. Below this the column stays, packed down. */
+/*
+ * Wide screens have the room to simply put the two side by side, which beats
+ * shrinking anything. Below this the column stays, packed down.
+ *
+ * Done on the wrapper rather than with floats: `main` is a flex column (so a
+ * list that grows can be given the leftover height), and a flex child cannot
+ * float - which silently collapsed this into one column the moment the frame
+ * landed.
+ */
 @media (min-width: 1180px) {
-  .battle-screen.is-fighting .battle-field {
-    width: 58%;
-    float: left;
-    margin-right: 2%;
+  .battle-screen.is-fighting {
+    display: grid;
+    grid-template-columns: minmax(0, 1.45fr) minmax(330px, 1fr);
+    align-items: start;
+    column-gap: 16px;
+    row-gap: 6px;
   }
-  .battle-screen.is-fighting .battle-command-panel {
-    width: 40%;
-    float: left;
-    margin-top: 0;
-  }
-  /* Everything after the pair starts a fresh line again. */
-  .battle-screen.is-fighting .battle-log { clear: both; }
-  .battle-screen.is-fighting .battle-portrait-stage { height: clamp(150px, 30vh, 300px); }
+  /* Everything that is not one of the two sits across both columns, in the
+     order it already had. */
+  .battle-screen.is-fighting > * { grid-column: 1 / -1; }
+  .battle-screen.is-fighting > .battle-field { grid-column: 1; grid-row: 3 / span 3; }
+  .battle-screen.is-fighting > .battle-command-panel { grid-column: 2; grid-row: 3 / span 3; margin-top: 0; }
+  .battle-screen.is-fighting .battle-portrait-stage { height: clamp(116px, 20vh, 215px); }
 }
 
 /* A phone has no width to spare, so the portraits take the cut instead. */
@@ -120,4 +127,21 @@
   /* One line each, rather than a label row and a value row. */
   body[data-fighting] .battle-field .hp-label { margin: 0; }
   body[data-fighting] .battle-field .battle-resources { font-size: .72rem; }
+}
+
+/*
+ * The log grows by a line every turn, so it is the other thing with no
+ * ceiling. It keeps its place and scrolls inside, which is the same deal the
+ * 図鑑 list gets: the page holds still, the list moves.
+ */
+@media (min-width: 1180px) {
+  .battle-screen.is-fighting > .battle-log {
+    max-height: clamp(52px, 7.5vh, 100px);
+    overflow-y: auto;
+    overscroll-behavior: contain;
+    padding-top: 8px;
+  }
+  .battle-screen.is-fighting > .battle-log h2 { margin: 0 0 4px; font-size: .9rem; }
+  /* The sound toggle is a whole row for one word. */
+  .battle-screen.is-fighting > .text-button[aria-pressed] { font-size: .76rem; padding: 0; }
 }

@@ -3,6 +3,7 @@ import type { FusionResult, GameAdapter, Monster } from "../shared/ui";
 import { Portrait } from "../components/MonsterView";
 import { FusionReveal } from "../components/FusionReveal";
 import { getPartInventory, previewMaterial, getGameSession, suggestMonsterName } from "../mocks/game";
+import "../styles/fusion-fit.css";
 export function Fusion({
   monsters,
   adapter,
@@ -61,7 +62,9 @@ export function Fusion({
     }
   }
   return (
-    <>
+    // One screen: the parents on the left, everything you press on the right.
+    // See styles/fusion-fit.css.
+    <div className="fusion-page">
       <div className="hero">
         <div>
           <div className="eyebrow">FUSION ATELIER</div>
@@ -152,6 +155,6 @@ export function Fusion({
         <h2>新しい出会いを待っています</h2>
         <p>親となる2体を選んで融合しましょう。</p>
       </section>}
-    </>
+    </div>
   );
 }

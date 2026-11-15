@@ -43,7 +43,13 @@ main {
   min-height: 0;
   overflow-y: auto;
   overscroll-behavior: contain;
+  /* A column, so a screen can hand one of its parts the leftover height -
+     which is how a list that grows without limit gets a bounded area of its
+     own instead of pushing the page past the bottom. */
+  display: flex;
+  flex-direction: column;
 }
+main > * { flex: 0 0 auto; }
 
 /* On a phone the sidebar is a row at the top rather than a column at the
    side, so the frame stacks instead. */

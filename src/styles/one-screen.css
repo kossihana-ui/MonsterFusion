@@ -1,0 +1,54 @@
+/*
+ * Fitting each screen into 1280x800.
+ *
+ * The target was chosen on 2026-11-16 (docs/ONE_SCREEN.md). The shell already
+ * cannot scroll; this is the per-screen half, and it only has three moves:
+ * drop what the screen does not need, tighten what it does, and give a list
+ * that grows without limit its own bounded area so the page around it holds
+ * still.
+ *
+ * Measured before, as pixels of content past the bottom of the content area
+ * at a true 1280x800: 図鑑 135, 融合 35, ソウルメイク 210, 引き継ぎ 38.
+ */
+
+@media (min-width: 1100px) {
+  /* --- the title block, everywhere -------------------------------------- */
+  /*
+   * 100px of every screen said its own name, directly under a navigation
+   * that also says it and a breadcrumb that says it again. One line.
+   */
+  main > .hero { padding: 0; margin-bottom: 10px; }
+  main > .hero h1 { margin: 0; font-size: 1.35rem; }
+  main > .hero .eyebrow { font-size: .6rem; }
+  main > .hero > div > p { display: none; }
+
+  /* Decoration, on screens that must not scroll. */
+  main > footer { display: none; }
+  main > .tip { display: none; }
+
+  /* --- モンスター図鑑 ----------------------------------------------------- */
+  /*
+   * The one list in the game with no ceiling: fifty fusions means fifty
+   * cards, and no amount of tightening fits that. It gets the leftover
+   * height and scrolls inside, so the heading, the counts and the buttons
+   * around it never move.
+   */
+  .monster-grid {
+    flex: 1 1 auto;
+    min-height: 0;
+    overflow-y: auto;
+    overscroll-behavior: contain;
+    padding-right: 4px;
+  }
+  main > .overview { padding: 10px 0; }
+  main > .overview .stat { padding: 10px 12px; }
+
+  /* --- ソウルメイク -------------------------------------------------------- */
+  .soul-layout { flex: 1 1 auto; min-height: 0; overflow-y: auto; overscroll-behavior: contain; }
+  main > .panel.soul-intro { padding: 10px 14px; }
+
+  /* --- セーブの引き継ぎ ----------------------------------------------------- */
+  .sync-page { gap: 10px; }
+  .sync-block { padding: 10px 14px; gap: 6px; }
+  .sync-page .hero { margin-bottom: 4px; }
+}
