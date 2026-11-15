@@ -21,8 +21,20 @@ export interface StreakShare {
   readonly full: string;
 }
 
-/** The published address, used when the page is not being served from one. */
-export const PUBLISHED_URL = 'https://kossihana-ui.github.io/MonsterFusion/';
+/**
+ * The published address, used when the page is not being served from one.
+ *
+ * Set at build time from `MONSTERFUSION_SITE` (see vite.config.ts), so moving
+ * the site is one value in one place rather than a string to find in four.
+ * The fallback is for anything that loads this module outside a Vite build,
+ * such as a check script.
+ */
+declare const __MONSTERFUSION_SITE__: string | undefined;
+
+export const PUBLISHED_URL: string =
+  typeof __MONSTERFUSION_SITE__ === 'string' && __MONSTERFUSION_SITE__ !== ''
+    ? __MONSTERFUSION_SITE__
+    : 'https://kossihana-ui.github.io/MonsterFusion/';
 
 /**
  * The address to put in a shared message.

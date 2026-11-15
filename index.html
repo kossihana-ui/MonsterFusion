@@ -14,8 +14,12 @@
       The share card. Absolute URLs on purpose: most clients resolve a relative
       og:image, but some fetch it as given and show nothing without the host.
       They are written out rather than built, because a <meta> tag is read by a
-      crawler that never runs the page's JavaScript. Moving the site means
-      changing these three lines.
+      crawler that never runs the page's JavaScript.
+
+      The address below is the published one, and the build swaps it for
+      wherever that build is going - set MONSTERFUSION_SITE, not these lines
+      (see vite.config.ts). Written out in full, with no placeholder, so the
+      file served straight off disk is still a correct page.
     -->
     <meta property="og:url" content="https://kossihana-ui.github.io/MonsterFusion/" />
     <meta property="og:type" content="website" />

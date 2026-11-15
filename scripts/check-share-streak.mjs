@@ -18,7 +18,9 @@ try {
   assert.equal(siteUrl(), PUBLISHED_URL);
   assert.ok(PUBLISHED_URL.endsWith('/'), 'the address ends at the site root');
 
-  const url = 'https://kossihana-ui.github.io/MonsterFusion/';
+  // Whatever this build was made for, so the fixtures follow the real
+  // address instead of pinning a second copy of it here.
+  const url = PUBLISHED_URL;
   const weekly = core.weeklySeason();
   const allTime = core.allTimeSeason();
   const practice = core.practiceSeason();

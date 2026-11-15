@@ -46,8 +46,10 @@ jobs:
       - run: npm run build
         working-directory: MonsterFusion-UI
         env:
-          # Pages serves the site from /<repository>/, not from the root.
-          MONSTERFUSION_BASE: /MonsterFusion/
+          # The one place the site's address is written. The asset prefix and
+          # the share card's absolute URLs are both derived from it, so moving
+          # to a domain of its own is this line and a CNAME file.
+          MONSTERFUSION_SITE: https://kossihana-ui.github.io/MonsterFusion/
           # Save sync. Absent until the repository has these secrets, and the
           # game plays exactly as before while they are: see
           # src/shared/supabaseSave.ts. The anon key is a public key by

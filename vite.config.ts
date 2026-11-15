@@ -1,19 +1,76 @@
-import { defineConfig } from 'vite';
+import { defineConfig, type Plugin } from 'vite';
 import { fileURLToPath } from 'node:url';
 
 const ROOT = fileURLToPath(new URL('.', import.meta.url));
 const CORE = fileURLToPath(new URL('../MonsterFusion-Core/src', import.meta.url));
 
-/*
- * GitHub Pages serves this at /MonsterFusion/, not at the root, so every asset
- * URL has to carry that prefix. It is an environment variable and not a
- * constant because the same build runs at the root locally (scripts/local-app-
- * server.mjs) and would 404 on every asset if the prefix were baked in.
+/**
+ * Where this build will live, as one value.
+ *
+ * The address used to be written out in four places - the base path, two
+ * `og:` tags, the text of a shared streak - and moving the site meant finding
+ * all four. It is one environment variable now and everything else is derived
+ * from it, so a new domain is one line in the workflow.
+ *
+ * `MONSTERFUSION_SITE` is the whole address, trailing slash and all:
+ *
+ *   https://kossihana-ui.github.io/MonsterFusion/   (GitHub Pages, in a path)
+ *   https://monsterfusion.example/                  (a domain of its own)
+ *
+ * Absent, it falls back to the published address, so a plain `vite build`
+ * still produces a page whose share card points somewhere real.
  */
-const base = process.env.MONSTERFUSION_BASE || '/';
+export const PUBLISHED_SITE = 'https://kossihana-ui.github.io/MonsterFusion/';
+
+export function siteFromEnv(env: NodeJS.ProcessEnv = process.env): URL {
+  const given = env.MONSTERFUSION_SITE?.trim();
+  if (!given) return new URL(PUBLISHED_SITE);
+  // A site is a directory, not a file: without the slash, `new URL('og.jpg',
+  // site)` resolves against its parent and loses the last segment.
+  return new URL(given.endsWith('/') ? given : `${given}/`);
+}
+
+/**
+ * The prefix every asset URL carries.
+ *
+ * Taken from the site address, because the two cannot be allowed to disagree:
+ * a page served from /MonsterFusion/ but built for / 404s on every file it
+ * asks for. `MONSTERFUSION_BASE` still wins where it is set, because the
+ * local dist server serves that same build from the root.
+ */
+export function baseFromEnv(env: NodeJS.ProcessEnv = process.env): string {
+  return env.MONSTERFUSION_BASE || siteFromEnv(env).pathname;
+}
+
+/**
+ * Rewrites the share card's absolute URLs at build time.
+ *
+ * They have to be absolute and they have to be in the HTML, because a crawler
+ * reads the tags without running any of the page's JavaScript. Writing them
+ * out by hand is what put the address in four places; the file keeps the
+ * published address as its default, and this swaps it for wherever this
+ * particular build is going.
+ */
+function shareCardSite(site: URL): Plugin {
+  return {
+    name: 'monsterfusion-share-card-site',
+    transformIndexHtml(html) {
+      if (site.href === PUBLISHED_SITE) return html;
+      return html.split(PUBLISHED_SITE).join(site.href);
+    },
+  };
+}
+
+const site = siteFromEnv();
 
 export default defineConfig({
-  base,
+  base: baseFromEnv(),
+  plugins: [shareCardSite(site)],
+  define: {
+    // Read by src/shared/share.ts, so a shared streak carries the address
+    // this build was made for rather than one written into the source.
+    __MONSTERFUSION_SITE__: JSON.stringify(site.href),
+  },
   resolve: { alias: { '@core': CORE } },
   server: { fs: { allow: [ROOT, CORE] } },
 });
