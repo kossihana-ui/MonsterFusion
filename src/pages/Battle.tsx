@@ -5,6 +5,7 @@ import { moveHelp, highlightPart, partNames } from "../shared/moveHelp";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { ArenaEntrance } from "../components/ArenaEntrance";
 import { StreakBanner } from "../components/StreakBanner";
+import { BossEntrance } from "../components/BossEntrance";
 import { STATUS_LABELS, animationDuration, DEFAULT_ARENA_CONFIG, DEFAULT_BATTLE_CONFIG, elementMultiplier, getLearnableMoves } from "@core/core/index.ts";
 import { matchupLabel, skillLabel } from "../shared/battlePresentation";
 import { MoveBadges } from "../components/MoveBadges";
@@ -100,6 +101,30 @@ function BattleSession({
    * record: 「自己ベスト更新」 has to compare against what they walked in with.
    */
   const bestBeforeRun = useRef<number | null>(getRecord().best?.wins ?? null);
+  /**
+   * The boss's arrival, played once per encounter.
+   *
+   * Keyed on the encounter index rather than a boolean, so leaving the screen
+   * and coming back to the same boss does not replay it, and so the dragon at
+   * the hundredth fight still gets its own.
+   */
+  const bossShown = useRef<number | null>(null);
+  const [bossArrival, setBossArrival] = useState<
+    { index: number; name: string; fight: number; final: boolean } | null
+  >(null);
+
+  useEffect(() => {
+    const encounter = run?.encounter;
+    if (!encounter?.isBoss) return;
+    if (bossShown.current === encounter.index) return;
+    bossShown.current = encounter.index;
+    setBossArrival({
+      index: encounter.index,
+      name: encounter.enemy.name,
+      fight: encounter.index + 1,
+      final: encounter.isFinalBoss === true,
+    });
+  }, [run?.encounter]);
   const active = useRef<AbortController | null>(null);
   const arena = useRef<HTMLDivElement>(null);
   const serial = useRef(0);
@@ -366,6 +391,13 @@ function BattleSession({
         onClick={busy ? skipReplay : undefined}
         {...(hit?.weight === 'heavy' ? { 'data-quake': hit.sequence } : {})}
       >
+        {bossArrival && <BossEntrance
+          key={bossArrival.index}
+          name={bossArrival.name}
+          fight={bossArrival.fight}
+          final={bossArrival.final}
+          onSound={() => { stopSound.current = battleSound('giant-press', mutedRef.current); }}
+        />}
         {effectNotice && <div className="battle-effect-notice" role="status">{effectNotice}</div>}
         {multiplier && <MultiplierEffect value={multiplier} />}
         {cue && <BattleEffect key={cue.sequence} cue={cue} />}
