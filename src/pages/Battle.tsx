@@ -11,6 +11,7 @@ import { matchupLabel, skillLabel } from "../shared/battlePresentation";
 import { MoveBadges } from "../components/MoveBadges";
 import "../styles/battle.css";
 import "../styles/battle-impact.css";
+import "../styles/battle-fit.css";
 import type { SpriteMotion } from "../components/MonsterSprite";
 import type { BattleAction, BattleState, GameAdapter, Monster } from "../shared/ui";
 import { createBattle, getCoreMonster, enterArena, resumeArena, receiveArenaReward, continueArena, leaveArena, getPartInventory, getGameSession, captureEnemy, getItems, retireArena, recordArenaEnding, arenaWins } from "../mocks/game";
@@ -101,6 +102,20 @@ function BattleSession({
    * record: 「自己ベスト更新」 has to compare against what they walked in with.
    */
   const bestBeforeRun = useRef<number | null>(getRecord().best?.wins ?? null);
+
+  /**
+   * Says "a fight is on" to the whole page, not just this screen.
+   *
+   * On a phone the chrome above the field - the brand, the breadcrumb, the
+   * 「戦闘中」 notice - measured 357px, which is most of why nothing fitted.
+   * None of it is usable mid-fight anyway: the navigation is disabled until
+   * the fight ends.
+   */
+  useEffect(() => {
+    const fighting = state.status === "active" && !captured;
+    document.body.toggleAttribute("data-fighting", fighting);
+    return () => document.body.removeAttribute("data-fighting");
+  });
   /**
    * The boss's arrival, played once per encounter.
    *
@@ -332,7 +347,10 @@ function BattleSession({
     }
   }
   return (
-    <>
+    // `display: contents`, so this changes no layout on its own - it exists
+    // only to say "a fight is happening", which is what lets the screen pack
+    // itself down to one viewport. See styles/battle-fit.css.
+    <div className={`battle-screen ${state.status === "active" && !captured ? "is-fighting" : ""}`}>
       <div className="hero">
         <div>
           <div className="eyebrow">TRAINING GROUNDS</div>
@@ -603,6 +621,6 @@ function BattleSession({
       >
         ↻ バトルをリセット
       </button>}
-    </>
+    </div>
   );
 }

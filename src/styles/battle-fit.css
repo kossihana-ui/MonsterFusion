@@ -1,0 +1,123 @@
+/*
+ * Getting a fight onto one screen.
+ *
+ * Measured at 1280x800 before this file existed: the page was 1808px tall and
+ * the command buttons started 245px below the fold. You could see the
+ * monsters or you could see the buttons you press, never both, so every turn
+ * cost a scroll up and a scroll back down - which is also why the hit
+ * reactions were easy to miss.
+ *
+ * Everything here applies only while a fight is actually running
+ * (`.is-fighting`). The entrance, the result screen and the reward all keep
+ * their room, because none of them is a thing you operate every few seconds.
+ */
+
+.battle-screen { display: contents; }
+
+/* The title block is the easiest 100px in the page, and during a fight it
+   says nothing the field does not. */
+.battle-screen.is-fighting > .hero { display: none; }
+
+/* The creatures, the part that scales. A portrait is the first thing to give
+   up height, because it is still perfectly readable smaller - the numbers and
+   the buttons are not. */
+.battle-screen.is-fighting .battle-portrait-stage {
+  height: clamp(132px, 26vh, 270px);
+  display: grid; place-items: center;
+}
+.battle-screen.is-fighting .battle-portrait-stage > .portrait,
+.battle-screen.is-fighting .battle-portrait-stage canvas {
+  max-height: 100%; width: auto;
+}
+
+/* The rows under each creature: name, element, HP, MP, status. Each is one
+   line of text and each had the spacing of a paragraph. */
+.battle-screen.is-fighting .battle-field h2 { margin: 2px 0 0; font-size: 1.02rem; }
+.battle-screen.is-fighting .battle-field .eyebrow { font-size: .62rem; }
+.battle-screen.is-fighting .battle-resources { margin: 0; font-size: .78rem; }
+.battle-screen.is-fighting .hp-label { font-size: .76rem; }
+.battle-screen.is-fighting .battle-field > section { gap: 2px; }
+
+/* The commands. Two columns of tall buttons with a paragraph above them. */
+.battle-screen.is-fighting .battle-command-panel { margin: 10px 0 0; padding: 12px 14px; }
+.battle-screen.is-fighting .battle-command-panel > h2 { margin: 0 0 6px; font-size: .96rem; }
+.battle-screen.is-fighting .battle-command-panel > p { margin: 0 0 8px; font-size: .78rem; }
+.battle-screen.is-fighting .battle-command-grid { gap: 8px; }
+.battle-screen.is-fighting .battle-command-grid button { padding: 10px 12px; gap: 4px; }
+.battle-screen.is-fighting .battle-command-grid strong { font-size: .92rem; }
+.battle-screen.is-fighting .battle-command-grid span { font-size: .74rem; line-height: 1.4; }
+/* The MP reminder is for the first fight, not the fiftieth. */
+.battle-screen.is-fighting .battle-command-panel > .battle-help { display: none; }
+
+/* Wide screens have the room to simply put the two side by side, which beats
+   shrinking anything. Below this the column stays, packed down. */
+@media (min-width: 1180px) {
+  .battle-screen.is-fighting .battle-field {
+    width: 58%;
+    float: left;
+    margin-right: 2%;
+  }
+  .battle-screen.is-fighting .battle-command-panel {
+    width: 40%;
+    float: left;
+    margin-top: 0;
+  }
+  /* Everything after the pair starts a fresh line again. */
+  .battle-screen.is-fighting .battle-log { clear: both; }
+  .battle-screen.is-fighting .battle-portrait-stage { height: clamp(150px, 30vh, 300px); }
+}
+
+/* A phone has no width to spare, so the portraits take the cut instead. */
+@media (max-width: 560px) {
+  .battle-screen.is-fighting .battle-portrait-stage { height: clamp(104px, 17vh, 190px); }
+  .battle-screen.is-fighting .battle-command-grid button { padding: 8px 10px; }
+}
+
+/* --- the chrome around the fight ----------------------------------------- */
+
+/*
+ * Measured on a 375x812 phone: 357px of header sat above the field - the
+ * brand, the navigation, the breadcrumb, a 「戦闘中」 notice that repeats what
+ * the greyed-out navigation already shows. None of it can be used during a
+ * fight, and together it was most of the reason nothing fitted.
+ */
+@media (max-width: 760px) {
+  body[data-fighting] .brand,
+  body[data-fighting] .sidebar-label,
+  body[data-fighting] .sidebar-bottom,
+  body[data-fighting] .demo-pill { display: none; }
+
+  body[data-fighting] .sidebar-locked {
+    margin: 4px 0; padding: 6px 10px; font-size: .76rem;
+  }
+  body[data-fighting] .sidebar-locked small { display: none; }
+
+  /* The breadcrumb is "WORKSPACE / バトルアリーナ", on the screen that says
+     バトルアリーナ at the top of it. With that and the pill and the manual
+     all gone, the bar itself is an empty 80px band. */
+  body[data-fighting] .topbar { display: none; }
+
+  body[data-fighting] .battle-screen.is-fighting .text-button[aria-pressed] {
+    font-size: .76rem; padding: 2px 0;
+  }
+}
+
+/*
+ * The navigation stays visible during a fight - every button in it is
+ * disabled, and hiding the way out of a screen you cannot leave reads as a
+ * trap - but it does not need its labels. Icons hold the row at a third of
+ * the height.
+ */
+@media (max-width: 760px) {
+  body[data-fighting] .sidebar nav button { padding: 6px 8px; }
+  body[data-fighting] .sidebar nav button > span:not(.nav-icon),
+  body[data-fighting] .sidebar nav button > b { display: none; }
+
+  /* The manual is for before the fight, not during one. */
+  body[data-fighting] .guide-trigger { display: none; }
+  body[data-fighting] .sidebar nav .nav-icon { font-size: 1.1rem; }
+
+  /* One line each, rather than a label row and a value row. */
+  body[data-fighting] .battle-field .hp-label { margin: 0; }
+  body[data-fighting] .battle-field .battle-resources { font-size: .72rem; }
+}
