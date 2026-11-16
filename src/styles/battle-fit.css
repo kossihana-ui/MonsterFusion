@@ -40,12 +40,34 @@
    up height, because it is still perfectly readable smaller - the numbers and
    the buttons are not. */
 .battle-screen.is-fighting .battle-portrait-stage {
-  height: clamp(132px, 26vh, 270px);
+  --stage: clamp(132px, 26vh, 270px);
+  height: var(--stage);
   display: grid; place-items: center;
 }
+/*
+ * The creature scales with its box.
+ *
+ * `.portrait` is a fixed 151px and `.monster-sprite` a fixed 128/192/256
+ * square, so a shorter stage used to leave both at full size and the art
+ * simply drew over the name and the HP line below it. `width: auto` was not
+ * the fix either: a canvas with no CSS width falls back to its attribute
+ * width, which is 64 for the pixel-art path and 256 for the illustration one
+ * - the same rule produced two different sizes.
+ *
+ * Driving the height and letting the width follow works for both, because
+ * both canvases are square.
+ */
 .battle-screen.is-fighting .battle-portrait-stage > .portrait,
-.battle-screen.is-fighting .battle-portrait-stage canvas {
-  max-height: 100%; width: auto;
+.battle-screen.is-fighting .battle-portrait-stage .monster-sprite {
+  /* The same value, not a percentage of it: `height: 100%` did not resolve
+     against the stage here and the portrait kept coming out at its own
+     width, which is how the art ended up over the HP line. One custom
+     property, so the box and what is drawn in it cannot disagree. */
+  height: var(--stage);
+}
+.battle-screen.is-fighting .battle-portrait-stage .monster-sprite {
+  width: auto;
+  max-width: 100%;
 }
 
 /* The rows under each creature: name, element, HP, MP, status. Each is one
@@ -89,12 +111,12 @@
   .battle-screen.is-fighting > * { grid-column: 1 / -1; }
   .battle-screen.is-fighting > .battle-field { grid-column: 1; grid-row: 3 / span 3; }
   .battle-screen.is-fighting > .battle-command-panel { grid-column: 2; grid-row: 3 / span 3; margin-top: 0; }
-  .battle-screen.is-fighting .battle-portrait-stage { height: clamp(116px, 20vh, 215px); }
+  .battle-screen.is-fighting .battle-portrait-stage { --stage: clamp(116px, 20vh, 215px); }
 }
 
 /* A phone has no width to spare, so the portraits take the cut instead. */
 @media (max-width: 560px) {
-  .battle-screen.is-fighting .battle-portrait-stage { height: clamp(104px, 17vh, 190px); }
+  .battle-screen.is-fighting .battle-portrait-stage { --stage: clamp(104px, 17vh, 190px); }
   .battle-screen.is-fighting .battle-command-grid button { padding: 8px 10px; }
 }
 
@@ -181,7 +203,7 @@
   .battle-screen.is-fighting .battle-field h2 { font-size: .92rem; }
   .battle-screen.is-fighting .battle-resources { font-size: .7rem; }
   .battle-screen.is-fighting .hp-label { font-size: .7rem; }
-  .battle-screen.is-fighting .battle-portrait-stage { height: clamp(96px, 15.5vh, 170px); }
+  .battle-screen.is-fighting .battle-portrait-stage { --stage: clamp(96px, 15.5vh, 170px); }
 
   /*
    * Each command carried a line of explanation - what the move does, in
@@ -220,14 +242,20 @@
  */
 @media (max-height: 700px) {
   .battle-screen.is-fighting > .text-button[aria-pressed] { display: none; }
+  /* The sprite follows the box now (see the rule near the top), so a short
+     screen can have a smaller creature without it drawing over the name. */
+  .battle-screen.is-fighting .battle-portrait-stage { --stage: clamp(70px, 11vh, 110px); }
+  .battle-screen.is-fighting > .text-button { font-size: .78rem; padding: 0; }
+  .battle-screen.is-fighting .battle-field .hp-label { font-size: .68rem; }
   /*
-   * The portrait keeps the height the 760px rules give it.
-   *
-   * Shrinking the box further did not shrink what is drawn in it - the two
-   * sprite paths size their canvases differently - so the creature drew over
-   * its own name and HP line. A screen this short ends up about 100px long
-   * during a fight, and overflowing is better than overlapping.
+   * A status chip is a card: name, what it does, how long. On a screen this
+   * short two of them is the difference between fitting and not, and the
+   * middle line is the one the ⓘ beside the move already explains.
    */
+  .battle-screen.is-fighting .status-chips { margin-top: 4px; }
+  .battle-screen.is-fighting .status-chip { display: flex; align-items: baseline; gap: 4px; }
+  .battle-screen.is-fighting .status-chip span { display: none; }
+  .battle-screen.is-fighting .status-blocked { margin: 2px 0; padding: 4px 6px; font-size: .7rem; }
   .battle-screen.is-fighting .battle-field { padding: 6px; }
   .battle-screen.is-fighting .battle-field h2 { font-size: .85rem; margin: 0; }
   .battle-screen.is-fighting .battle-field .eyebrow { display: none; }
@@ -235,4 +263,12 @@
   .battle-screen.is-fighting .status-chip { padding: 4px 6px; font-size: .68rem; }
   .battle-screen.is-fighting .battle-command-panel { padding: 8px 10px; }
   .battle-screen.is-fighting .battle-command-panel > h2 { font-size: .85rem; }
+  .battle-screen.is-fighting { gap: 2px; }
+  .battle-screen.is-fighting .battle-command-grid { gap: 4px; }
+  .battle-screen.is-fighting .battle-command-grid button { padding: 5px 7px; }
+  .battle-screen.is-fighting .battle-command-grid strong { font-size: .86rem; }
+  .battle-screen.is-fighting .move-info { font-size: .66rem; }
+  /* 「リタイアする（現在 n連勝）」 is a full row for a button nobody presses
+     mid-turn; it stays reachable, just not spaced like a heading. */
+  .battle-screen.is-fighting > .text-button { font-size: .74rem; }
 }

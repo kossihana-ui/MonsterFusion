@@ -20,7 +20,7 @@
   main > .hero { padding: 0; margin-bottom: 10px; }
   main > .hero h1 { margin: 0; font-size: 1.35rem; }
   main > .hero .eyebrow { font-size: .6rem; }
-  main > .hero > div > p { display: none; }
+  main > .hero p { display: none; }
 
   /* Decoration, on screens that must not scroll. */
   main > footer { display: none; }
@@ -80,7 +80,7 @@
   main > .hero { margin-bottom: 6px; padding: 0; }
   main > .hero h1 { margin: 0; font-size: 1.15rem; }
   main > .hero .eyebrow { font-size: .55rem; }
-  main > .hero > div > p { display: none; }
+  main > .hero p { display: none; }
   main > .hero .badge { display: none; }
   main > footer, main > .tip { display: none; }
   main > .panel { padding: 10px 12px; }
@@ -106,7 +106,21 @@
   /* The parents are already side by side; what overflowed was everything
      under them, each panel carrying a paragraph of explanation. */
   .fusion-page { flex: 1 1 auto; min-height: 0; display: flex; flex-direction: column; gap: 8px; }
-  .fusion-page > .fusion-grid { flex: 0 0 auto; }
+  /*
+   * The two parents stay side by side however narrow it gets: the whole
+   * screen is a comparison, and stacking them turned a 445px column out of
+   * what should be half that - which then squeezed the controls below to
+   * nothing at all.
+   */
+  .fusion-page > .fusion-grid {
+    flex: 0 1 auto;
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 8px;
+  }
+  /* And the controls can never be squeezed away; they are what the screen is
+     for. */
+  .fusion-page > .fusion-action { min-height: 160px; }
   .fusion-page .parent { padding: 8px; }
   .fusion-page .parent .portrait { max-height: clamp(78px, 12.5vh, 118px); }
   .fusion-page .parent .portrait canvas { max-height: 100%; width: auto; }
