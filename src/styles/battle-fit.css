@@ -1,326 +1,69 @@
 /*
- * Getting a fight onto one screen.
+ * The battle screen's layout.
  *
- * Measured at 1280x800 before this file existed: the page was 1808px tall and
- * the command buttons started 245px below the fold. You could see the
- * monsters or you could see the buttons you press, never both, so every turn
- * cost a scroll up and a scroll back down - which is also why the hit
- * reactions were easy to miss.
+ * This started as "get the fight onto one screen", which was the right
+ * complaint: at 1280x800 the command buttons began 245px below the fold, so
+ * you could see the monsters or the buttons you press, never both, and every
+ * turn cost a scroll down and back.
  *
- * Everything here applies only while a fight is actually running
- * (`.is-fighting`). The entrance, the result screen and the reward all keep
- * their room, because none of them is a thing you operate every few seconds.
+ * It then grew into packing every screen in the game down to fit, and that
+ * went too far - smaller type, hidden explanations, shrunken creatures. The
+ * player's verdict was that the older, roomier version was easier to play
+ * and easier to read, so the packing is gone and this is what is left: the
+ * two columns that solved the actual problem, and the rules that keep the
+ * screen honest when a fight ends.
  */
 
 /*
  * A real box, never `display: contents`.
  *
- * `main` is a flex column, and a `contents` wrapper hands its children
- * straight to it as flex items - which the `main > *` rule cannot reach, so
- * they kept `flex-shrink: 1`. Anything in here that clips its own overflow
- * then has an automatic minimum height of zero, and gets squashed.
- *
- * It cost two real bugs before this was understood. The field clips for the
- * screen-shake, so on a phone a fight rendered as PLAYER / VS / ENEMY with no
- * creatures at all. The victory panel clips too, so it was crushed from six
- * hundred pixels to a hundred and fifteen - which cut off the treasure chest
- * and 「全回復して次の戦いへ」 entirely, and left no way to continue a run.
+ * It cost two bugs to learn why. A `contents` wrapper hands its children
+ * straight to whatever lays out its parent, out of reach of any rule written
+ * for them - and both the field and the victory panel clip their own
+ * overflow, so each could be squashed to nothing. The field rendered as
+ * PLAYER / VS / ENEMY with no creatures; the victory panel was crushed from
+ * 1087px to 115px, cutting off the treasure chest and 「全回復して次の戦いへ」
+ * and leaving no way to continue a run.
  */
 .battle-screen {
   display: flex;
   flex-direction: column;
-  min-height: 0;
-  gap: 6px;
+  gap: 10px;
 }
 .battle-screen > * { flex: 0 0 auto; }
 
-/* The title block is the easiest 100px in the page, and during a fight it
-   says nothing the field does not. */
+/* The title block says nothing the field does not, during a fight. */
 .battle-screen.is-fighting > .hero { display: none; }
 
-/* The creatures, the part that scales. A portrait is the first thing to give
-   up height, because it is still perfectly readable smaller - the numbers and
-   the buttons are not. */
-.battle-screen.is-fighting .battle-portrait-stage {
-  --stage: clamp(132px, 26vh, 270px);
-  height: var(--stage);
-  display: grid; place-items: center;
-}
 /*
- * The creature scales with its box.
+ * Wide screens have the room to put the two side by side, which beats
+ * shrinking anything. Below this the column stays as it was.
  *
- * `.portrait` is a fixed 151px and `.monster-sprite` a fixed 128/192/256
- * square, so a shorter stage used to leave both at full size and the art
- * simply drew over the name and the HP line below it. `width: auto` was not
- * the fix either: a canvas with no CSS width falls back to its attribute
- * width, which is 64 for the pixel-art path and 256 for the illustration one
- * - the same rule produced two different sizes.
- *
- * Driving the height and letting the width follow works for both, because
- * both canvases are square.
- */
-.battle-screen.is-fighting .battle-portrait-stage > .portrait,
-.battle-screen.is-fighting .battle-portrait-stage .monster-sprite {
-  /* The same value, not a percentage of it: `height: 100%` did not resolve
-     against the stage here and the portrait kept coming out at its own
-     width, which is how the art ended up over the HP line. One custom
-     property, so the box and what is drawn in it cannot disagree. */
-  height: var(--stage);
-}
-.battle-screen.is-fighting .battle-portrait-stage .monster-sprite {
-  width: auto;
-  max-width: 100%;
-}
-
-/* The rows under each creature: name, element, HP, MP, status. Each is one
-   line of text and each had the spacing of a paragraph. */
-.battle-screen.is-fighting .battle-field h2 { margin: 2px 0 0; font-size: 1.02rem; }
-.battle-screen.is-fighting .battle-field .eyebrow { font-size: .62rem; }
-.battle-screen.is-fighting .battle-resources { margin: 0; font-size: .78rem; }
-.battle-screen.is-fighting .hp-label { font-size: .76rem; }
-.battle-screen.is-fighting .battle-field > section { gap: 2px; }
-
-/* The commands. Two columns of tall buttons with a paragraph above them. */
-.battle-screen.is-fighting .battle-command-panel { margin: 10px 0 0; padding: 12px 14px; }
-.battle-screen.is-fighting .battle-command-panel > h2 { margin: 0 0 6px; font-size: .96rem; }
-.battle-screen.is-fighting .battle-command-panel > p { margin: 0 0 8px; font-size: .78rem; }
-.battle-screen.is-fighting .battle-command-grid { gap: 8px; }
-.battle-screen.is-fighting .battle-command-grid button { padding: 10px 12px; gap: 4px; }
-.battle-screen.is-fighting .battle-command-grid strong { font-size: .92rem; }
-.battle-screen.is-fighting .battle-command-grid span { font-size: .74rem; line-height: 1.4; }
-/* The MP reminder is for the first fight, not the fiftieth. */
-.battle-screen.is-fighting .battle-command-panel > .battle-help { display: none; }
-
-/*
- * Wide screens have the room to simply put the two side by side, which beats
- * shrinking anything. Below this the column stays, packed down.
- *
- * Done on the wrapper rather than with floats: `main` is a flex column (so a
- * list that grows can be given the leftover height), and a flex child cannot
- * float - which silently collapsed this into one column the moment the frame
- * landed.
+ * On the wrapper rather than with floats: a flex child cannot float, which
+ * silently collapsed this into one column once the wrapper became a box.
  */
 @media (min-width: 1180px) {
   .battle-screen.is-fighting {
     display: grid;
-    grid-template-columns: minmax(0, 1.45fr) minmax(330px, 1fr);
+    grid-template-columns: minmax(0, 1.45fr) minmax(340px, 1fr);
     align-items: start;
-    column-gap: 16px;
-    row-gap: 6px;
+    column-gap: 18px;
+    row-gap: 8px;
   }
-  /* Everything that is not one of the two sits across both columns, in the
-     order it already had. */
   .battle-screen.is-fighting > * { grid-column: 1 / -1; }
   .battle-screen.is-fighting > .battle-field { grid-column: 1; grid-row: 3 / span 3; }
-  .battle-screen.is-fighting > .battle-command-panel { grid-column: 2; grid-row: 3 / span 3; margin-top: 0; }
-  .battle-screen.is-fighting .battle-portrait-stage { --stage: clamp(116px, 20vh, 215px); }
-}
-
-/* A phone has no width to spare, so the portraits take the cut instead. */
-@media (max-width: 560px) {
-  .battle-screen.is-fighting .battle-portrait-stage { --stage: clamp(104px, 17vh, 190px); }
-  .battle-screen.is-fighting .battle-command-grid button { padding: 8px 10px; }
-}
-
-/* --- the chrome around the fight ----------------------------------------- */
-
-/*
- * Measured on a 375x812 phone: 357px of header sat above the field - the
- * brand, the navigation, the breadcrumb, a 「戦闘中」 notice that repeats what
- * the greyed-out navigation already shows. None of it can be used during a
- * fight, and together it was most of the reason nothing fitted.
- */
-@media (max-width: 760px) {
-  body[data-fighting] .brand,
-  body[data-fighting] .sidebar-label,
-  body[data-fighting] .sidebar-bottom,
-  body[data-fighting] .demo-pill { display: none; }
-
-  body[data-fighting] .sidebar-locked {
-    margin: 4px 0; padding: 6px 10px; font-size: .76rem;
+  .battle-screen.is-fighting > .battle-command-panel {
+    grid-column: 2; grid-row: 3 / span 3; margin-top: 0;
   }
-  body[data-fighting] .sidebar-locked small { display: none; }
-
-  /* The breadcrumb is "WORKSPACE / バトルアリーナ", on the screen that says
-     バトルアリーナ at the top of it. With that and the pill and the manual
-     all gone, the bar itself is an empty 80px band. */
-  body[data-fighting] .topbar { display: none; }
-
-  body[data-fighting] .battle-screen.is-fighting .text-button[aria-pressed] {
-    font-size: .76rem; padding: 2px 0;
-  }
-}
-
-/*
- * The navigation stays visible during a fight - every button in it is
- * disabled, and hiding the way out of a screen you cannot leave reads as a
- * trap - but it does not need its labels. Icons hold the row at a third of
- * the height.
- */
-@media (max-width: 760px) {
-  body[data-fighting] .sidebar nav button { padding: 6px 8px; }
-  body[data-fighting] .sidebar nav button > span:not(.nav-icon),
-  body[data-fighting] .sidebar nav button > b { display: none; }
-
-  /* The manual is for before the fight, not during one. */
-  body[data-fighting] .guide-trigger { display: none; }
-  body[data-fighting] .sidebar nav .nav-icon { font-size: 1.1rem; }
-
-  /* One line each, rather than a label row and a value row. */
-  body[data-fighting] .battle-field .hp-label { margin: 0; }
-  body[data-fighting] .battle-field .battle-resources { font-size: .72rem; }
-}
-
-/*
- * The log grows by a line every turn, so it is the other thing with no
- * ceiling. It keeps its place and scrolls inside, which is the same deal the
- * 図鑑 list gets: the page holds still, the list moves.
- */
-@media (min-width: 1180px) {
-  .battle-screen.is-fighting > .battle-log {
-    max-height: clamp(52px, 7.5vh, 100px);
-    overflow-y: auto;
-    overscroll-behavior: contain;
-    padding-top: 8px;
-  }
-  .battle-screen.is-fighting > .battle-log h2 { margin: 0 0 4px; font-size: .9rem; }
-  /* The sound toggle is a whole row for one word. */
-  .battle-screen.is-fighting > .text-button[aria-pressed] { font-size: .76rem; padding: 0; }
-}
-
-/* ===========================================================================
- * The fight, on a phone.
- *
- * 375x812 leaves 759px once the shell is packed down, and the fight wanted
- * 1346 of it. The field is 359 of that and is the thing worth looking at, so
- * the cuts come from everything else.
- * ======================================================================== */
-
-@media (max-width: 760px) {
-  .battle-screen.is-fighting { flex: 1 1 auto; gap: 4px; }
-
-  /* The creatures keep their size; the five rows of text under them do not
-     need the spacing of paragraphs. */
-  .battle-screen.is-fighting .battle-field { padding: 8px; }
-  .battle-screen.is-fighting .battle-field h2 { font-size: .92rem; }
-  .battle-screen.is-fighting .battle-resources { font-size: .7rem; }
-  .battle-screen.is-fighting .hp-label { font-size: .7rem; }
-  .battle-screen.is-fighting .battle-portrait-stage { --stage: clamp(96px, 15.5vh, 170px); }
-
-  /*
-   * Each command carried a line of explanation - what the move does, in
-   * prose, under its name. Four of those is most of a phone screen, and the
-   * ⓘ beside every one of them opens the full text including the numbers.
-   * The name, the element and the MP stay.
-   */
-  /* The description is the span before the MP line, in both the two fixed
-     commands and the skills. (`:not([class])` missed it: React writes an
-     empty class attribute, which still counts as having one.) */
-  .battle-screen.is-fighting .battle-command-grid button > span:nth-last-child(2) { display: none; }
-
-  /* Two columns. Four full-width buttons is most of a phone on its own, and
-     the grid drops to one below 560px by default. */
-  .battle-screen.is-fighting .battle-command-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
-  .battle-screen.is-fighting .battle-command-panel > p { display: none; }
-  .battle-screen.is-fighting .battle-command-panel > h2 { margin: 0 0 4px; }
-  .battle-screen.is-fighting .battle-command-grid { gap: 6px; }
-  .battle-screen.is-fighting .battle-command-grid button { padding: 7px 9px; gap: 2px; }
-  .battle-screen.is-fighting .move-info { font-size: .7rem; padding: 2px 0; }
-
-  /* The log keeps its place and moves inside it, as on the desktop. */
-  .battle-screen.is-fighting > .battle-log {
-    flex: 1 1 auto; min-height: 0;
-    overflow-y: auto; overscroll-behavior: contain;
-  }
-  .battle-screen.is-fighting > .battle-log h2 { margin: 0 0 2px; font-size: .85rem; }
-}
-
-/*
- * Short screens (an older phone, or one with a lot of browser chrome).
- *
- * At 360x640 the fight still ran about 200px long once a status effect was
- * on the board, because the chips are a card each and the rows under the
- * creatures are five lines of text.
- */
-@media (max-height: 700px) {
-  .battle-screen.is-fighting > .text-button[aria-pressed] { display: none; }
-  /* The sprite follows the box now (see the rule near the top), so a short
-     screen can have a smaller creature without it drawing over the name. */
-  .battle-screen.is-fighting .battle-portrait-stage { --stage: clamp(70px, 11vh, 110px); }
-  .battle-screen.is-fighting > .text-button { font-size: .78rem; padding: 0; }
-  .battle-screen.is-fighting .battle-field .hp-label { font-size: .68rem; }
-  /*
-   * A status chip is a card: name, what it does, how long. On a screen this
-   * short two of them is the difference between fitting and not, and the
-   * middle line is the one the ⓘ beside the move already explains.
-   */
-  .battle-screen.is-fighting .status-chips { margin-top: 4px; }
-  .battle-screen.is-fighting .status-chip { display: flex; align-items: baseline; gap: 4px; }
-  .battle-screen.is-fighting .status-chip span { display: none; }
-  .battle-screen.is-fighting .status-blocked { margin: 2px 0; padding: 4px 6px; font-size: .7rem; }
-  .battle-screen.is-fighting .battle-field { padding: 6px; }
-  .battle-screen.is-fighting .battle-field h2 { font-size: .85rem; margin: 0; }
-  .battle-screen.is-fighting .battle-field .eyebrow { display: none; }
-  .battle-screen.is-fighting .battle-resources { display: none; }
-  .battle-screen.is-fighting .status-chip { padding: 4px 6px; font-size: .68rem; }
-  .battle-screen.is-fighting .battle-command-panel { padding: 8px 10px; }
-  .battle-screen.is-fighting .battle-command-panel > h2 { font-size: .85rem; }
-  .battle-screen.is-fighting { gap: 2px; }
-  .battle-screen.is-fighting .battle-command-grid { gap: 4px; }
-  .battle-screen.is-fighting .battle-command-grid button { padding: 5px 7px; }
-  .battle-screen.is-fighting .battle-command-grid strong { font-size: .86rem; }
-  .battle-screen.is-fighting .move-info { font-size: .66rem; }
-  /* 「リタイアする（現在 n連勝）」 is a full row for a button nobody presses
-     mid-turn; it stays reachable, just not spaced like a heading. */
-  .battle-screen.is-fighting > .text-button { font-size: .74rem; }
-}
-
-/* ===========================================================================
- * The victory screen, on one screen.
- *
- * 1087px of content in a 767px area: a 106px headline, a 230px portrait of
- * the winner, and 460px of reward - the streak, the chest, the message, the
- * button to the next fight, the share buttons, the way out. All of it is
- * worth keeping; none of it is worth scrolling for.
- * ======================================================================== */
-
-@media (min-width: 1100px) {
-  .battle-result .result-content {
-    display: grid;
-    grid-template-columns: minmax(0, 1fr) minmax(340px, 420px);
-    column-gap: 20px;
-    align-items: start;
-    text-align: left;
-  }
-  /* Left: who won. Right: what happens next. */
-  .battle-result .result-content > .victory-reward,
-  .battle-result .result-content > .battle-help { grid-column: 2; }
-  .battle-result .result-content > :not(.victory-reward):not(.battle-help) { grid-column: 1; }
-
-  .battle-result .result-content h2 { margin: 2px 0; font-size: 2.1rem; line-height: 1.1; }
-  .battle-result .result-message { margin: 0 0 6px; }
-  .battle-result .result-turns { margin: 2px 0; }
-  .battle-result .result-winner { margin: 0; }
-  .battle-result.result-won .result-winner .portrait.large,
-  .battle-result .result-winner .portrait.large { height: clamp(120px, 20vh, 180px); }
-  .battle-result .result-winner .monster-sprite { height: 100%; width: auto; max-width: 100%; }
-  .battle-result .victory-reward { margin: 0; gap: 6px; }
-  .battle-result .victory-chest { padding: 8px 12px; }
-  /* The panel itself: 24px of margin and 32px of padding, top and bottom. */
-  .battle-result { margin: 6px 0; padding: 14px 18px; }
-  .battle-result .result-eyebrow { font-size: .7rem; }
-  .battle-result .result-message { font-size: .95rem; }
-  .battle-result .streak-banner { margin: 2px auto; padding: 4px 12px; }
-  .battle-result .share-streak { margin: 4px 0; gap: 4px; }
 }
 
 /*
  * Once a fight is decided, the result is the screen.
  *
  * It used to be appended under the arena that produced it, so the player had
- * the finished field, the whole log and then - a thousand pixels down - the
- * treasure chest and 「全回復して次の戦いへ」. The panel scrolls itself into
- * view, which is why it was visible at all; the button to carry on was not.
+ * the finished field, the whole log, and then - a thousand pixels down - the
+ * chest and the button to carry on. The panel scrolls itself into view,
+ * which is why it was visible at all; the way forward was not.
  */
 .battle-screen.is-result > .battle-field,
 .battle-screen.is-result > .battle-log,
@@ -328,4 +71,56 @@
 .battle-screen.is-result > .text-button,
 .battle-screen.is-result > .hero { display: none; }
 
-.battle-screen.is-result > .battle-result { flex: 1 1 auto; min-height: 0; }
+/*
+ * The creature scales with its box.
+ *
+ * `.portrait` is a fixed 151px and `.monster-sprite` a fixed 128/192/256
+ * square, so any stage shorter than that left the art at full size and the
+ * creature drew over its own name and HP line. `height: 100%` did not
+ * resolve against the stage, and `width: auto` was worse - a canvas with no
+ * CSS width falls back to its attribute width, 64 on the pixel-art path and
+ * 256 on the illustration one, so one rule produced two sizes.
+ *
+ * One custom property for the box and for what is drawn in it, so they
+ * cannot disagree. The value is generous: this exists to stop the art
+ * overlapping the text, not to make the creatures small.
+ */
+.battle-screen.is-fighting .battle-portrait-stage {
+  --stage: clamp(190px, 30vh, 300px);
+  height: var(--stage);
+  display: grid;
+  place-items: center;
+}
+.battle-screen.is-fighting .battle-portrait-stage > .portrait,
+.battle-screen.is-fighting .battle-portrait-stage > .portrait.large,
+.battle-screen.is-fighting .battle-portrait-stage .monster-sprite {
+  height: var(--stage);
+}
+.battle-screen.is-fighting .battle-portrait-stage .monster-sprite {
+  width: auto;
+  max-width: 100%;
+}
+
+@media (max-width: 760px) {
+  .battle-screen.is-fighting .battle-portrait-stage { --stage: clamp(150px, 24vh, 240px); }
+}
+@media (max-height: 700px) {
+  .battle-screen.is-fighting .battle-portrait-stage { --stage: clamp(130px, 22vh, 200px); }
+}
+
+/* The victory panel's own two columns: who won on the left, what happens
+   next on the right. Nothing in it is made smaller. */
+@media (min-width: 1100px) {
+  .battle-result .result-content {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(360px, 440px);
+    column-gap: 24px;
+    align-items: start;
+    text-align: left;
+  }
+  .battle-result .result-content > .victory-reward,
+  .battle-result .result-content > .battle-help { grid-column: 2; }
+  .battle-result .result-content > :not(.victory-reward):not(.battle-help) { grid-column: 1; }
+  .battle-result .result-winner { margin: 0; }
+  .battle-result .victory-reward { margin: 0; }
+}

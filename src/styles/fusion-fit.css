@@ -1,84 +1,18 @@
 /*
- * 融合のアトリエ, on one screen.
+ * 融合のアトリエ.
  *
- * Measured at 1280x800 before this: the content was 1491px tall in a 732px
- * area - 759px past the bottom. The parts, in order: a 94px title, the two
- * parents at 459, everything you actually press at 550, the result at 159.
+ * What is left here is the one thing that was never about size: while the
+ * reveal is playing, it is the only thing on the screen.
  *
- * The page is wide and the content is tall, which is the whole problem. So
- * the parents take the left and the controls take the right, and nothing has
- * to shrink much to fit.
+ * This file used to pack the whole page into a 1280x800 frame - small
+ * portraits, hidden explanations, two tight columns. It fitted, and it read
+ * worse, which is the player's verdict and the right one. Fitting is not
+ * worth illegibility.
  */
 
-.fusion-page { display: grid; gap: 10px; }
-
-/* Narrow screens keep the original single column; this is a 1280x800 target
-   (docs/ONE_SCREEN.md), and a phone is a separate piece of work. */
-@media (min-width: 1100px) {
-  .fusion-page {
-    grid-template-columns: minmax(0, 1fr) minmax(330px, 400px);
-    grid-template-rows: auto 1fr;
-    align-items: start;
-    column-gap: 18px;
-  }
-  .fusion-page > .hero { grid-column: 1 / -1; }
-  .fusion-page > .fusion-grid { grid-column: 1; }
-  .fusion-page > .fusion-action,
-  .fusion-page > .panel.result,
-  .fusion-page > .fusion-reveal,
-  .fusion-page > p[role="alert"] { grid-column: 2; }
-
-  /* The title is three lines of furniture on a screen that says 融合 in the
-     navigation, on the badge and on the button. One line is enough. */
-  .fusion-page > .hero { padding: 0; }
-  .fusion-page > .hero h1 { margin: 0; font-size: 1.3rem; }
-  .fusion-page > .hero p { display: none; }
-
-  /* The controls column: the two panels stack, and their explanatory
-     paragraphs are what pushed this past the fold. */
-  .fusion-page .fusion-action { display: grid; gap: 10px; }
-  .fusion-page .fusion-action .panel { padding: 12px 14px; }
-  .fusion-page .fusion-action .panel h2 { margin: 0 0 6px; font-size: .95rem; }
-  .fusion-page .fusion-action .panel p { margin: 6px 0 0; font-size: .76rem; line-height: 1.5; }
-  .fusion-page .fusion-action > span { display: none; }
-
-  /* The parents are the thing worth looking at, so they keep their size and
-     give up only what the frame cannot hold. */
-  .fusion-page .parent .portrait { max-height: clamp(110px, 18vh, 165px); }
-  .fusion-page .parent .portrait canvas { max-height: 100%; width: auto; }
-
-  .fusion-page .panel.result { padding: 10px 14px; }
-  .fusion-page .panel.result p { margin: 2px 0 0; font-size: .78rem; }
-  .fusion-page .parent { padding: 10px; }
-  .fusion-page .parent h2 { margin: 2px 0; font-size: .95rem; }
-  .fusion-page .fusion-grid { gap: 10px; }
-  .fusion-page .panel.result h2 { margin: 4px 0; font-size: 1rem; }
-}
-
-/* The footer is decoration on a screen that must not scroll. */
-@media (min-width: 1100px) {
-  .fusion-page ~ footer, main > footer { display: none; }
-}
-
 /*
- * The last 35px.
- *
- * The idle result panel - "FUSION RESULT / 新しい出会いを待っています" - is three
- * lines telling the player that nothing has happened yet, which the empty
- * panel already says.
- */
-@media (min-width: 1100px) {
-  .fusion-page > .panel.result > .eyebrow { display: none; }
-  .fusion-page > .panel.result > p { display: none; }
-  .fusion-page .fusion-action { gap: 8px; }
-  .fusion-page .fusion-action > .primary { padding: 12px 16px; }
-}
-
-/*
- * While the reveal is playing, it is the only thing on the screen.
- *
- * The child joins the collection the moment the core returns it, which is
- * before the animation starts - so the two parent pickers re-listed it, the
+ * The child joins the collection the moment core returns it, which is before
+ * the animation starts - so the two parent pickers re-listed it, the
  * selection fell through to the newcomer, and the portraits under them drew
  * the monster the reveal was about to introduce. The answer was on screen
  * before the question finished.
