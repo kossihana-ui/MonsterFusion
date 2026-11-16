@@ -64,7 +64,10 @@ export function Fusion({
   return (
     // One screen: the parents on the left, everything you press on the right.
     // See styles/fusion-fit.css.
-    <div className="fusion-page">
+    // `is-revealing`: the new monster is already in the collection by the time
+    // the reveal starts, so the parent pickers below would name it and draw
+    // it - telling the player what was born before the reveal does.
+    <div className={`fusion-page ${animating ? "is-revealing" : ""}`}>
       <div className="hero">
         <div>
           <div className="eyebrow">FUSION ATELIER</div>

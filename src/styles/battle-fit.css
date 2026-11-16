@@ -12,25 +12,27 @@
  * their room, because none of them is a thing you operate every few seconds.
  */
 
-.battle-screen { display: contents; }
-
 /*
- * While a fight is on, this is a real box rather than `display: contents`.
+ * A real box, never `display: contents`.
  *
  * `main` is a flex column, and a `contents` wrapper hands its children
  * straight to it as flex items - which the `main > *` rule cannot reach, so
- * they kept `flex-shrink: 1`. The field clips its own overflow for the
- * screen-shake, so its automatic minimum height is zero, and it duly shrank
- * to nothing: on a phone the fight rendered as PLAYER / VS / ENEMY with no
- * creatures at all.
+ * they kept `flex-shrink: 1`. Anything in here that clips its own overflow
+ * then has an automatic minimum height of zero, and gets squashed.
+ *
+ * It cost two real bugs before this was understood. The field clips for the
+ * screen-shake, so on a phone a fight rendered as PLAYER / VS / ENEMY with no
+ * creatures at all. The victory panel clips too, so it was crushed from six
+ * hundred pixels to a hundred and fifteen - which cut off the treasure chest
+ * and 「全回復して次の戦いへ」 entirely, and left no way to continue a run.
  */
-.battle-screen.is-fighting {
+.battle-screen {
   display: flex;
   flex-direction: column;
   min-height: 0;
   gap: 6px;
 }
-.battle-screen.is-fighting > * { flex: 0 0 auto; }
+.battle-screen > * { flex: 0 0 auto; }
 
 /* The title block is the easiest 100px in the page, and during a fight it
    says nothing the field does not. */
@@ -272,3 +274,58 @@
      mid-turn; it stays reachable, just not spaced like a heading. */
   .battle-screen.is-fighting > .text-button { font-size: .74rem; }
 }
+
+/* ===========================================================================
+ * The victory screen, on one screen.
+ *
+ * 1087px of content in a 767px area: a 106px headline, a 230px portrait of
+ * the winner, and 460px of reward - the streak, the chest, the message, the
+ * button to the next fight, the share buttons, the way out. All of it is
+ * worth keeping; none of it is worth scrolling for.
+ * ======================================================================== */
+
+@media (min-width: 1100px) {
+  .battle-result .result-content {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(340px, 420px);
+    column-gap: 20px;
+    align-items: start;
+    text-align: left;
+  }
+  /* Left: who won. Right: what happens next. */
+  .battle-result .result-content > .victory-reward,
+  .battle-result .result-content > .battle-help { grid-column: 2; }
+  .battle-result .result-content > :not(.victory-reward):not(.battle-help) { grid-column: 1; }
+
+  .battle-result .result-content h2 { margin: 2px 0; font-size: 2.1rem; line-height: 1.1; }
+  .battle-result .result-message { margin: 0 0 6px; }
+  .battle-result .result-turns { margin: 2px 0; }
+  .battle-result .result-winner { margin: 0; }
+  .battle-result.result-won .result-winner .portrait.large,
+  .battle-result .result-winner .portrait.large { height: clamp(120px, 20vh, 180px); }
+  .battle-result .result-winner .monster-sprite { height: 100%; width: auto; max-width: 100%; }
+  .battle-result .victory-reward { margin: 0; gap: 6px; }
+  .battle-result .victory-chest { padding: 8px 12px; }
+  /* The panel itself: 24px of margin and 32px of padding, top and bottom. */
+  .battle-result { margin: 6px 0; padding: 14px 18px; }
+  .battle-result .result-eyebrow { font-size: .7rem; }
+  .battle-result .result-message { font-size: .95rem; }
+  .battle-result .streak-banner { margin: 2px auto; padding: 4px 12px; }
+  .battle-result .share-streak { margin: 4px 0; gap: 4px; }
+}
+
+/*
+ * Once a fight is decided, the result is the screen.
+ *
+ * It used to be appended under the arena that produced it, so the player had
+ * the finished field, the whole log and then - a thousand pixels down - the
+ * treasure chest and 「全回復して次の戦いへ」. The panel scrolls itself into
+ * view, which is why it was visible at all; the button to carry on was not.
+ */
+.battle-screen.is-result > .battle-field,
+.battle-screen.is-result > .battle-log,
+.battle-screen.is-result > .battle-command-panel,
+.battle-screen.is-result > .text-button,
+.battle-screen.is-result > .hero { display: none; }
+
+.battle-screen.is-result > .battle-result { flex: 1 1 auto; min-height: 0; }

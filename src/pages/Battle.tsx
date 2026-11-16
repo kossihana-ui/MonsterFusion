@@ -350,7 +350,7 @@ function BattleSession({
     // `display: contents`, so this changes no layout on its own - it exists
     // only to say "a fight is happening", which is what lets the screen pack
     // itself down to one viewport. See styles/battle-fit.css.
-    <div className={`battle-screen ${state.status === "active" && !captured ? "is-fighting" : ""}`}>
+    <div className={`battle-screen ${state.status === "active" && !captured ? "is-fighting" : ""} ${state.status !== "active" && getGameSession().status !== "gameOver" && !captured ? "is-result" : ""}`}>
       <div className="hero">
         <div>
           <div className="eyebrow">TRAINING GROUNDS</div>

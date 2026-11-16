@@ -73,3 +73,16 @@
   .fusion-page .fusion-action { gap: 8px; }
   .fusion-page .fusion-action > .primary { padding: 12px 16px; }
 }
+
+/*
+ * While the reveal is playing, it is the only thing on the screen.
+ *
+ * The child joins the collection the moment the core returns it, which is
+ * before the animation starts - so the two parent pickers re-listed it, the
+ * selection fell through to the newcomer, and the portraits under them drew
+ * the monster the reveal was about to introduce. The answer was on screen
+ * before the question finished.
+ */
+.fusion-page.is-revealing > .hero,
+.fusion-page.is-revealing > .fusion-grid,
+.fusion-page.is-revealing > .fusion-action { display: none; }
