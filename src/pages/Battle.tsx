@@ -72,6 +72,8 @@ function BattleSession({
   const rewardChest = useRef<HTMLDivElement>(null);
   const run = state.arenaRun;
   const claimed = !!run?.claimed.includes(run.encounter.index);
+  /** The practice ladder pays nothing, by design. See docs/PRACTICE_LADDER.md. */
+  const practice = run?.practice === true;
   const [inspectedSkill, setInspectedSkill] = useState<string | null>(null);
   const [helpSkill, setHelpSkill] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
@@ -111,6 +113,26 @@ function BattleSession({
    * None of it is usable mid-fight anyway: the navigation is disabled until
    * the fight ends.
    */
+  /*
+   * On the practice ladder the chest is claimed for the player.
+   *
+   * Nothing is in it - that ladder pays nothing on purpose - but the next
+   * fight and the way out both wait on the reward being taken. Drawing a
+   * treasure chest, inviting a press and then answering 「何も入っていません」
+   * is the one order never to do it in, so the box is not drawn at all and
+   * the claim happens quietly.
+   */
+  useEffect(() => {
+    if (!practice || !run || run.phase !== "reward" || claimed) return;
+    try {
+      receiveArenaReward();
+      const resumed = resumeArena();
+      if (resumed) setState(resumed);
+    } catch {
+      setError("報酬の処理に失敗しました。もう一度お試しください。");
+    }
+  }, [practice, run, claimed]);
+
   useEffect(() => {
     const fighting = state.status === "active" && !captured;
     document.body.toggleAttribute("data-fighting", fighting);
@@ -515,6 +537,12 @@ function BattleSession({
               practice: run.practice === true,
             }} />
             {run.phase === "cleared" && <h3>アリーナ制覇！</h3>}
+            {practice ? <div className="practice-invite">
+              <p className="practice-invite-lead">ここでは素材は手に入りません。</p>
+              <p>本番のラダーなら、<strong>倒した相手が持っていた特徴が素材になります。</strong>融合に使えば、次の挑戦はもっと遠くまで行けます。</p>
+              <p className="practice-invite-risk">そのかわり、<strong>負けると出場した仲間を失います。</strong>それが連勝に意味を持たせています。</p>
+              <button type="button" className="primary" disabled={loot.length > 0} onClick={onLeave}>本番に挑む</button>
+            </div> : <>
             <div ref={rewardChest} className="victory-chest-anchor">
               <button type="button" className={`victory-chest ${claimed ? 'is-open' : ''} ${loot.length ? 'is-revealing' : ''}`}
                 disabled={claimed || loot.length > 0} aria-label={claimed ? "宝箱は開封済みです" : "宝箱を開けて報酬を受け取る"}
@@ -537,6 +565,7 @@ function BattleSession({
             </div>
             <p role="status">{rewardMessage || (claimed ? "この戦いの報酬は確認済みです。" : "まだ宝箱を開けていません。")}</p>
             {claimed && <p className="battle-help">獲得したパーツはアイテムボックスへ。融合画面で使えます。</p>}
+            </>}
             {run.phase === "reward" && <button disabled={!claimed || loot.length > 0} onClick={() => {
               setRewardMessage(""); setError(""); setState(continueArena()); arena.current?.scrollIntoView({ block: "center" });
             }}>{run.wins === DEFAULT_ARENA_CONFIG.normalWins
