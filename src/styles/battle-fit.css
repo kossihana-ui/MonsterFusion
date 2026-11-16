@@ -108,19 +108,13 @@
   .battle-screen.is-fighting .battle-portrait-stage { --stage: clamp(130px, 22vh, 200px); }
 }
 
-/* The victory panel's own two columns: who won on the left, what happens
-   next on the right. Nothing in it is made smaller. */
-@media (min-width: 1100px) {
-  .battle-result .result-content {
-    display: grid;
-    grid-template-columns: minmax(0, 1fr) minmax(360px, 440px);
-    column-gap: 24px;
-    align-items: start;
-    text-align: left;
-  }
-  .battle-result .result-content > .victory-reward,
-  .battle-result .result-content > .battle-help { grid-column: 2; }
-  .battle-result .result-content > :not(.victory-reward):not(.battle-help) { grid-column: 1; }
-  .battle-result .result-winner { margin: 0; }
-  .battle-result .victory-reward { margin: 0; }
-}
+/*
+ * The victory panel keeps its own centred layout.
+ *
+ * It was briefly a two-column grid here - the winner on the left, the reward
+ * on the right - and it was wrong. Only the columns were assigned, so the
+ * right-hand items auto-placed into rows *after* the six on the left, and
+ * the reward began halfway down a screen with a hole in the middle of it.
+ * The centred design was never the problem; burying it under the finished
+ * arena was, and that is what `is-result` above fixes.
+ */
