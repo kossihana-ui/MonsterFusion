@@ -14,6 +14,24 @@
 
 .battle-screen { display: contents; }
 
+/*
+ * While a fight is on, this is a real box rather than `display: contents`.
+ *
+ * `main` is a flex column, and a `contents` wrapper hands its children
+ * straight to it as flex items - which the `main > *` rule cannot reach, so
+ * they kept `flex-shrink: 1`. The field clips its own overflow for the
+ * screen-shake, so its automatic minimum height is zero, and it duly shrank
+ * to nothing: on a phone the fight rendered as PLAYER / VS / ENEMY with no
+ * creatures at all.
+ */
+.battle-screen.is-fighting {
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  gap: 6px;
+}
+.battle-screen.is-fighting > * { flex: 0 0 auto; }
+
 /* The title block is the easiest 100px in the page, and during a fight it
    says nothing the field does not. */
 .battle-screen.is-fighting > .hero { display: none; }
@@ -144,4 +162,77 @@
   .battle-screen.is-fighting > .battle-log h2 { margin: 0 0 4px; font-size: .9rem; }
   /* The sound toggle is a whole row for one word. */
   .battle-screen.is-fighting > .text-button[aria-pressed] { font-size: .76rem; padding: 0; }
+}
+
+/* ===========================================================================
+ * The fight, on a phone.
+ *
+ * 375x812 leaves 759px once the shell is packed down, and the fight wanted
+ * 1346 of it. The field is 359 of that and is the thing worth looking at, so
+ * the cuts come from everything else.
+ * ======================================================================== */
+
+@media (max-width: 760px) {
+  .battle-screen.is-fighting { flex: 1 1 auto; gap: 4px; }
+
+  /* The creatures keep their size; the five rows of text under them do not
+     need the spacing of paragraphs. */
+  .battle-screen.is-fighting .battle-field { padding: 8px; }
+  .battle-screen.is-fighting .battle-field h2 { font-size: .92rem; }
+  .battle-screen.is-fighting .battle-resources { font-size: .7rem; }
+  .battle-screen.is-fighting .hp-label { font-size: .7rem; }
+  .battle-screen.is-fighting .battle-portrait-stage { height: clamp(96px, 15.5vh, 170px); }
+
+  /*
+   * Each command carried a line of explanation - what the move does, in
+   * prose, under its name. Four of those is most of a phone screen, and the
+   * ⓘ beside every one of them opens the full text including the numbers.
+   * The name, the element and the MP stay.
+   */
+  /* The description is the span before the MP line, in both the two fixed
+     commands and the skills. (`:not([class])` missed it: React writes an
+     empty class attribute, which still counts as having one.) */
+  .battle-screen.is-fighting .battle-command-grid button > span:nth-last-child(2) { display: none; }
+
+  /* Two columns. Four full-width buttons is most of a phone on its own, and
+     the grid drops to one below 560px by default. */
+  .battle-screen.is-fighting .battle-command-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .battle-screen.is-fighting .battle-command-panel > p { display: none; }
+  .battle-screen.is-fighting .battle-command-panel > h2 { margin: 0 0 4px; }
+  .battle-screen.is-fighting .battle-command-grid { gap: 6px; }
+  .battle-screen.is-fighting .battle-command-grid button { padding: 7px 9px; gap: 2px; }
+  .battle-screen.is-fighting .move-info { font-size: .7rem; padding: 2px 0; }
+
+  /* The log keeps its place and moves inside it, as on the desktop. */
+  .battle-screen.is-fighting > .battle-log {
+    flex: 1 1 auto; min-height: 0;
+    overflow-y: auto; overscroll-behavior: contain;
+  }
+  .battle-screen.is-fighting > .battle-log h2 { margin: 0 0 2px; font-size: .85rem; }
+}
+
+/*
+ * Short screens (an older phone, or one with a lot of browser chrome).
+ *
+ * At 360x640 the fight still ran about 200px long once a status effect was
+ * on the board, because the chips are a card each and the rows under the
+ * creatures are five lines of text.
+ */
+@media (max-height: 700px) {
+  .battle-screen.is-fighting > .text-button[aria-pressed] { display: none; }
+  /*
+   * The portrait keeps the height the 760px rules give it.
+   *
+   * Shrinking the box further did not shrink what is drawn in it - the two
+   * sprite paths size their canvases differently - so the creature drew over
+   * its own name and HP line. A screen this short ends up about 100px long
+   * during a fight, and overflowing is better than overlapping.
+   */
+  .battle-screen.is-fighting .battle-field { padding: 6px; }
+  .battle-screen.is-fighting .battle-field h2 { font-size: .85rem; margin: 0; }
+  .battle-screen.is-fighting .battle-field .eyebrow { display: none; }
+  .battle-screen.is-fighting .battle-resources { display: none; }
+  .battle-screen.is-fighting .status-chip { padding: 4px 6px; font-size: .68rem; }
+  .battle-screen.is-fighting .battle-command-panel { padding: 8px 10px; }
+  .battle-screen.is-fighting .battle-command-panel > h2 { font-size: .85rem; }
 }
