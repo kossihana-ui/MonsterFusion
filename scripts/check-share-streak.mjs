@@ -12,11 +12,25 @@ try {
   const core = await server.ssrLoadModule('@core/core/index.ts');
   const { streakShare, postIntentUrl, lineShareUrl, siteUrl, worthSharing, PUBLISHED_URL } = await server.ssrLoadModule('/src/shared/share.ts');
 
-  // Outside a browser there is no address to read, so the published one
-  // stands in - as it does on a local copy, where a localhost link would
-  // make the whole message useless to whoever receives it.
+  // The address is decided at build time, not read off the page being
+  // served. On itch.io the page being served is an iframe on a CDN, under an
+  // id that changes on every upload, so a streak shared from there used to
+  // hand out something nobody could sensibly open.
   assert.equal(siteUrl(), PUBLISHED_URL);
-  assert.ok(PUBLISHED_URL.endsWith('/'), 'the address ends at the site root');
+  assert.ok(/^https:\/\/[^/]+\//.test(PUBLISHED_URL),
+    `the shared address is "${PUBLISHED_URL}" - whoever receives it needs the host`);
+
+  // And it is the front door when one was named: the page with the
+  // description and the comments on it, not the files. Compared exactly,
+  // because a trailing slash itch.io answers with a 301 is a bounce in
+  // somebody else's browser.
+  const home = process.env.MONSTERFUSION_HOME?.trim();
+  if (home) {
+    assert.equal(siteUrl(), home,
+      'the share button hands out somewhere other than MONSTERFUSION_HOME');
+  } else {
+    assert.ok(PUBLISHED_URL.endsWith('/'), 'the address ends at the site root');
+  }
 
   // Whatever this build was made for, so the fixtures follow the real
   // address instead of pinning a second copy of it here.

@@ -156,8 +156,12 @@ dir entries: 9 | files: 79
 
 ```bash
 cd C:/Dev/MonsterFusion-UI
-MONSTERFUSION_BASE=./ npm run build    # 相対パスで作る（これを忘れると真っ白）
+MONSTERFUSION_BASE=./ MONSTERFUSION_HOME=https://kureating544.itch.io/monsterfusion npm run build
 ```
+
+`MONSTERFUSION_BASE=./` は相対パスで作る指定です（忘れると真っ白）。
+`MONSTERFUSION_HOME` は**共有ボタンが出すURL**です（忘れると
+`html-classic.itch.zone/html/...` という誰も開けないURLが配られます）。
 
 そのあと `docs/RELEASE_ITCH.md` のこの節にあるとおり、ディレクトリエントリ付きで
 固める。`Compress-Archive` は使わないでください。
@@ -183,3 +187,32 @@ monsters/bosses/arena-100-dragon-concept.png 200  (2,329,600 bytes)
 **これはあなたが決めることなので、こちらでは触りません。**
 
 アクセス数の見かたは `docs/ANALYTICS.md` に書きました。
+
+
+---
+
+## 2026-11-18 追記：共有ボタンのURLを、itch.ioのページに向けました
+
+連勝を共有したときに出るURLを、`https://kureating544.itch.io/monsterfusion`
+にしました。GitHub Pages版から共有しても、同じURLが出ます。
+
+**なぜわざわざ指定が要るか。** 共有ボタンは「いま自分が配信されている住所」を
+出していました。itch.ioではゲームがiframeの中で動いていて、その住所は
+
+```
+https://html-classic.itch.zone/html/20615342/
+```
+
+です。**ページでもなければ、説明もコメントも何もありません。** しかも数字の
+部分はアップロードし直すたびに変わります。これを配っていました。
+
+直し方は、**配信されている場所（`MONSTERFUSION_SITE`）と、人を送る場所
+（`MONSTERFUSION_HOME`）を別の値にした**ことです。前者はファイルの置き場所、
+後者は玄関です。`MONSTERFUSION_HOME` を指定しなければ今までどおり同じ値に
+なります。
+
+**末尾のスラッシュは付けません。** itch.ioは `/monsterfusion/` に301を返して
+`/monsterfusion` へ飛ばすので、付けると1回余計に跳ねます。
+
+**zipは作り直してあります**（`monsterfusion-itch.zip`）。いまitch.ioに
+上がっているものは古い住所を配るので、**公開する前に差し替えてください。**

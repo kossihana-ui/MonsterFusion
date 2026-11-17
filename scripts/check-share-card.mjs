@@ -71,6 +71,23 @@ if (going) {
   assert.equal(site, new URL(going.endsWith('/') ? going : `${going}/`).href, 'og:url follows the build');
 }
 
+// The address a player hands to somebody else has to survive into the build.
+// It is a `define`, so a typo in its name does not fail anything - it simply
+// leaves the fallback in place, and every shared streak quietly points at the
+// old site.
+const going_home = process.env.MONSTERFUSION_HOME?.trim();
+if (going_home) {
+  const want = going_home;
+  // `dist/` is the root of what gets served, so the asset's own prefix - the
+  // path the site sits under - has to come off before it names a file.
+  const prefix = going ? new URL(going.endsWith('/') ? going : `${going}/`).pathname : '/';
+  const file = `dist/${asset.replace(/^\.\//, '').replace(prefix, '')}`;
+  const bundle = await readFile(file, 'utf8').catch(() => null);
+  assert.ok(bundle, `${file} is missing`);
+  assert.ok(bundle.includes(want),
+    `the build was made for ${want} but no shared streak will carry it`);
+}
+
 // The image has to exist in the build, be an image, and be the shape a large
 // card wants. The build is what is served AT og:url, so the path is relative.
 const path = `dist/${src.slice(site.length)}`;

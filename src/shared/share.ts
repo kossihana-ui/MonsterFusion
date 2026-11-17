@@ -22,36 +22,33 @@ export interface StreakShare {
 }
 
 /**
- * The published address, used when the page is not being served from one.
+ * The front door: the page a player can send somebody else to.
  *
- * Set at build time from `MONSTERFUSION_SITE` (see vite.config.ts), so moving
- * the site is one value in one place rather than a string to find in four.
- * The fallback is for anything that loads this module outside a Vite build,
- * such as a check script.
+ * Set at build time from `MONSTERFUSION_HOME`, falling back to
+ * `MONSTERFUSION_SITE` (see vite.config.ts), so moving house is one value in
+ * one place rather than a string to find in four. The fallback below is for
+ * anything that loads this module outside a Vite build, such as a check
+ * script.
  */
-declare const __MONSTERFUSION_SITE__: string | undefined;
+declare const __MONSTERFUSION_HOME__: string | undefined;
 
 export const PUBLISHED_URL: string =
-  typeof __MONSTERFUSION_SITE__ === 'string' && __MONSTERFUSION_SITE__ !== ''
-    ? __MONSTERFUSION_SITE__
+  typeof __MONSTERFUSION_HOME__ === 'string' && __MONSTERFUSION_HOME__ !== ''
+    ? __MONSTERFUSION_HOME__
     : 'https://kossihana-ui.github.io/MonsterFusion/';
 
 /**
  * The address to put in a shared message.
  *
- * Wherever the page is actually served from, so moving the site needs no code
- * change - except from a local copy, where the address nobody else can open
- * would make the whole message useless.
+ * This used to be wherever the page was actually being served from, on the
+ * reasoning that moving the site should need no code change. itch.io broke
+ * that: the game runs in an iframe on `html-classic.itch.zone/html/<id>/`,
+ * so a streak shared from there handed out a bare build with no page around
+ * it, under an id that changes on every upload. What a player wants to pass
+ * on is the page, and the build is told at build time which page that is.
  */
 export function siteUrl(): string {
-  try {
-    const here = new URL(import.meta.env.BASE_URL, location.origin);
-    const local = here.protocol === 'file:'
-      || /^(localhost|127\.0\.0\.1|\[::1\]|.*\.localhost)$/.test(here.hostname);
-    return local ? PUBLISHED_URL : here.href;
-  } catch {
-    return PUBLISHED_URL;
-  }
+  return PUBLISHED_URL;
 }
 
 /**

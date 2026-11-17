@@ -31,6 +31,31 @@ export function siteFromEnv(env: NodeJS.ProcessEnv = process.env): URL {
 }
 
 /**
+ * Where people are sent, which is not always where this build is served.
+ *
+ * It was the same value until the game went up on itch.io, and there the two
+ * come apart: the page a player opens is
+ * `https://kureating544.itch.io/monsterfusion`, but the files run inside an
+ * iframe on `https://html-classic.itch.zone/html/<id>/`. A shared streak that
+ * carried the address it was served from would hand out that second one - a
+ * bare game with no page around it, and an id that changes on every upload.
+ *
+ * So `MONSTERFUSION_HOME` is the front door: the address a player gives to
+ * somebody else. `MONSTERFUSION_SITE` stays what it was - where this
+ * particular build's files live - and with no home set they are the same
+ * thing, as they are for GitHub Pages on its own.
+ */
+export function homeFromEnv(env: NodeJS.ProcessEnv = process.env): URL {
+  const given = env.MONSTERFUSION_HOME?.trim();
+  if (!given) return siteFromEnv(env);
+  // Left exactly as given, unlike a site: nothing is resolved against this,
+  // and a page is not a directory. itch.io answers
+  // `/monsterfusion/` with a 301 to `/monsterfusion`, and there is no reason
+  // to hand somebody an address that bounces.
+  return new URL(given);
+}
+
+/**
  * The prefix every asset URL carries.
  *
  * Taken from the site address when one was given, because the two cannot be
@@ -67,14 +92,17 @@ function shareCardSite(site: URL): Plugin {
 }
 
 const site = siteFromEnv();
+const home = homeFromEnv();
 
 export default defineConfig({
   base: baseFromEnv(),
   plugins: [shareCardSite(site)],
   define: {
-    // Read by src/shared/share.ts, so a shared streak carries the address
-    // this build was made for rather than one written into the source.
-    __MONSTERFUSION_SITE__: JSON.stringify(site.href),
+    // Read by src/shared/share.ts, so a shared streak carries the page a
+    // player can open rather than one written into the source - and rather
+    // than the address this build happens to be served from, which on
+    // itch.io is an iframe on a CDN.
+    __MONSTERFUSION_HOME__: JSON.stringify(home.href),
   },
   resolve: { alias: { '@core': CORE } },
   server: { fs: { allow: [ROOT, CORE] } },

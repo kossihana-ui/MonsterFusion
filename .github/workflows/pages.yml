@@ -50,6 +50,12 @@ jobs:
           # the share card's absolute URLs are both derived from it, so moving
           # to a domain of its own is this line and a CNAME file.
           MONSTERFUSION_SITE: https://kossihana-ui.github.io/MonsterFusion/
+          # Where players are sent, which is no longer where this build is
+          # served. The game is on itch.io now, and that is the page worth
+          # handing to somebody: it has the description, the comments and
+          # the view count. This copy stays up and stays playable; it just
+          # stops advertising its own address.
+          MONSTERFUSION_HOME: https://kureating544.itch.io/monsterfusion
           # Save sync. Absent until the repository has these secrets, and the
           # game plays exactly as before while they are: see
           # src/shared/supabaseSave.ts. The anon key is a public key by
