@@ -7,3 +7,6 @@ dist/
 .env.*
 !.env.example
 local-server*.log
+
+# The upload package, rebuilt on demand.
+monsterfusion-itch.zip
