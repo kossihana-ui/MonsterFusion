@@ -161,3 +161,25 @@ MONSTERFUSION_BASE=./ npm run build    # 相対パスで作る（これを忘れ
 
 そのあと `docs/RELEASE_ITCH.md` のこの節にあるとおり、ディレクトリエントリ付きで
 固める。`Compress-Archive` は使わないでください。
+
+### 作り直したzipで、動くのを確認しました（2026-11-18）
+
+itch.io上で「Run game」を押して、図鑑画面とモンスター3体の絵が出るところまで
+見ています。配信されているファイルも直接叩いて確かめました。
+
+```
+index.html                                   200
+assets/index-....js                          200  (477,753 bytes)
+assets/index-....css                         200  ( 70,149 bytes)
+audio/battle/attack.wav                      200  ( 43,564 bytes)
+monsters/bosses/arena-100-dragon-concept.png 200  (2,329,600 bytes)
+```
+
+**前回404だったフォルダの中身が、全部返ってきています。**
+
+**ただし、ページはまだ Draft です。** あなた以外には404が返ります（確認済み）。
+公開は `https://itch.io/game/edit/5388842#published` の
+**Visibility & access** を `Draft` → `Public` にするだけです。
+**これはあなたが決めることなので、こちらでは触りません。**
+
+アクセス数の見かたは `docs/ANALYTICS.md` に書きました。
