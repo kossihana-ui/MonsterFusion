@@ -798,8 +798,11 @@ progress::-webkit-progress-value {
  * Sideways is also exactly when a column down the left is the wrong shape:
  * height is the scarce thing and width is not. The row across the top is the
  * layout this already had for phones, and it fits.
+ *
+ * 768px rather than 700px, so the switch happens where the rest of the
+ * stylesheets already fold their columns.
  */
-@media (max-width: 700px), (max-height: 500px) {
+@media (max-width: 768px), (max-height: 500px) {
   .sidebar {
     position: static;
     width: 100%;
@@ -1024,5 +1027,49 @@ progress::-webkit-progress-value {
   *::after {
     animation: none !important;
     transition: none !important;
+  }
+}
+
+
+/*
+ * What a finger needs.
+ *
+ * Measured at 360px before writing any of this: no screen scrolls sideways,
+ * every row that should fold already folds, and the shell above handles the
+ * menu. Two things were genuinely wrong, and only these two are touched.
+ *
+ * The controls were built for a mouse. At 360px the search field was 39px
+ * tall, 「おまかせで決める」 39px, 「＋ モンスターを登録」 36px, the manual button
+ * 29px and 「ソウルメイクへ」 25px. A fingertip covers about 44px, so these were
+ * things you aim at rather than press. `min-height` only grows what is
+ * short - the menu row and the battle commands already cleared 44px and are
+ * untouched.
+ *
+ * And every input and select was 11px, which iOS answers by zooming the page
+ * in when the field takes focus, leaving the player scrolled sideways in a
+ * layout that fitted perfectly well a moment earlier. 16px is the threshold
+ * where it stops doing that.
+ *
+ * Nothing here applies above 768px: on a desktop the pointer is precise and
+ * the 11px fields are part of the look.
+ */
+@media (max-width: 768px) {
+  input,
+  select,
+  textarea {
+    font-size: 16px;
+  }
+  button,
+  input,
+  select,
+  textarea,
+  .primary,
+  .text-button,
+  .guide-trigger {
+    min-height: 44px;
+  }
+  .text-button {
+    padding-top: 12px;
+    padding-bottom: 12px;
   }
 }

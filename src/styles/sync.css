@@ -29,6 +29,11 @@
   font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: .92rem;
 }
 
+/* The transfer code is typed on a phone more than anywhere else, and iOS
+   zooms the page in on any field under 16px - which leaves the player
+   scrolled sideways, mid-code, in a layout that fitted a moment earlier. */
+@media (max-width: 768px) { .sync-input { font-size: 16px; } }
+
 .sync-code-row button { min-height: 44px; padding: 0 16px; }
 
 .sync-code-lead strong, .sync-code-warning strong { color: #ffd9a8; }
