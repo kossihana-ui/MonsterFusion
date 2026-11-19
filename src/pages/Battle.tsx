@@ -8,7 +8,6 @@ import { StreakBanner } from "../components/StreakBanner";
 import { BossEntrance } from "../components/BossEntrance";
 import { STATUS_LABELS, animationDuration, DEFAULT_ARENA_CONFIG, DEFAULT_BATTLE_CONFIG, elementMultiplier, getLearnableMoves } from "@core/core/index.ts";
 import { matchupLabel, skillLabel } from "../shared/battlePresentation";
-import { MoveBadges } from "../components/MoveBadges";
 import "../styles/battle.css";
 import "../styles/battle-impact.css";
 import "../styles/battle-fit.css";
@@ -614,8 +613,11 @@ function BattleSession({
               void act({ kind: "skill", skillId: skill.id });
             }}>
               <strong>{skillLabel(skill)} {finishers.has(skill.id) && <span className="finisher-badge">大技</span>}</strong>
-              <MoveBadges element={skill.element} scaling={skill.scaling} />
-              <span>{moveHelp(skill,getCoreMonster(state.player.id)).summary}</span>
+              {/* The name, and nothing about what the move does. Printing the
+                  effect here and again behind ⓘ said the same thing twice,
+                  and it was the taller of the two. What stays below is not
+                  the effect - it is what the move costs and why it cannot be
+                  pressed. */}
               <span className={blocked && !getMoveBehavior(skill.id).usableWhileBound ? "unusable-note" : ""}>MP {skill.cost} · {moveHelp(skill,getCoreMonster(state.player.id)).attacks && enemy ? matchupLabel(elementMultiplier(skill.element, enemy.element)) : "補助"}{availableMp < skill.cost ? " · MP不足" : ""}{blocked ? (getMoveBehavior(skill.id).usableWhileBound ? ` · ${STATUS_LABELS[blocked]}中でも使える` : ` · ${STATUS_LABELS[blocked]}中は出せない`) : ""}</span>
             </button>
             <button className="move-info" aria-label={`${skillLabel(skill)}の効果を確認`} aria-expanded={helpSkill === skill.id} aria-controls="battle-move-help" onClick={() => { setInspectedSkill(skill.id); setHelpSkill(helpSkill === skill.id ? null : skill.id); }}>

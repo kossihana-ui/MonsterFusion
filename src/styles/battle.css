@@ -53,7 +53,6 @@
 .move-list-row { display: flex; align-items: stretch; gap: 8px; }
 .move-pick { display: flex; flex: 1; min-width: 0; align-items: center; gap: 10px; padding: 6px; text-align: left; color: #f4f5f8; background: transparent; border: 1px solid transparent; cursor: grab; }
 .move-pick[aria-pressed="true"] { outline: 2px solid #fff; border-radius: 4px; }
-.move-summary { font-size: .78rem; color: #c6d3cb; overflow-wrap: anywhere; }
 .move-info-label { margin-left: 6px; }
 .move-info { flex: 0 0 auto; width: 36px; min-height: 36px; padding: 0; font-size: 22px; background: #10191d88; color: #fff; border: 1px solid var(--type-color); border-radius: 50%; align-self: center; }
 .move-description { border-top: 1px solid var(--type-color); padding-top: 8px; font-size: .85rem; line-height: 1.7; }

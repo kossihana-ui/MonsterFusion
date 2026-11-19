@@ -1,6 +1,6 @@
 import type { LearnableMove } from "@core/core/index.ts";
 import { MoveHelp } from "./MoveHelp";
-import { moveHelp, movePartArt } from "../shared/moveHelp";
+import { movePartArt } from "../shared/moveHelp";
 import { useState } from "react";
 import type { ReactNode } from "react";
 import { MAX_MOVE_SLOTS } from "@core/core/index.ts";
@@ -118,11 +118,11 @@ export function MoveLoadoutEditor({ monsterId, children, onInspect, onSaved }: {
                 {partArt(move, "✦")}
                 <span className="slot-copy">
                   <strong>{skillLabel(skill)}{category === "finisher" && <span className="finisher-badge">大技</span>}</strong>
+                  {/* Name and cost. The effect lives behind ⓘ, and saying it
+                      in both places made the list twice as tall for nothing. */}
                   <span className="slot-meta">
-                    <MoveBadges element={skill.element} scaling={skill.scaling} />
                     <small>MP {skill.cost}{slots.includes(skill.id) ? " · セット済み" : ""}</small>
                   </span>
-                  <span className="move-summary">{moveHelp(skill, monster).summary}</span>
                 </span>
               </button>
               <button type="button" className="move-info" aria-label={`${skillLabel(skill)}の説明`} aria-expanded={open} aria-controls={`move-info-${skill.id}`} onClick={() => {
