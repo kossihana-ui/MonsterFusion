@@ -54,12 +54,46 @@
 .move-pick { display: flex; flex: 1; min-width: 0; align-items: center; gap: 10px; padding: 6px; text-align: left; color: #f4f5f8; background: transparent; border: 1px solid transparent; cursor: grab; }
 .move-pick[aria-pressed="true"] { outline: 2px solid #fff; border-radius: 4px; }
 .move-summary { font-size: .78rem; color: #c6d3cb; overflow-wrap: anywhere; }
+.move-info-label { margin-left: 6px; }
 .move-info { flex: 0 0 auto; width: 36px; min-height: 36px; padding: 0; font-size: 22px; background: #10191d88; color: #fff; border: 1px solid var(--type-color); border-radius: 50%; align-self: center; }
 .move-description { border-top: 1px solid var(--type-color); padding-top: 8px; font-size: .85rem; line-height: 1.7; }
 .move-detail-grid { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); align-items: start; }
 .move-detail-grid > .details { grid-column: 1 / -1; }
 @media (max-width: 1000px) { .move-detail-grid { grid-template-columns: minmax(0, 1fr); } }
-@media (max-width: 560px) { .battle-command-grid { grid-template-columns: 1fr; } }
+/*
+ * The commands on a phone.
+ *
+ * They were 813px - a whole screen of buttons, with the fight itself above
+ * them, so playing a turn meant scrolling to the monsters, scrolling back to
+ * the moves, and pressing something you could no longer see the effect of.
+ * 「技の欄が大きすぎてプレイしにくい」, which was exactly right.
+ *
+ * Three cuts, none of them to the type size or to anything the button says:
+ *
+ * 攻撃 and 守る go side by side. They carry one short line each and were
+ * taking a full width apiece.
+ *
+ * ⓘ sits beside its move instead of under it, as a round 44px button, and
+ * drops the words 「効果・使う部位」 - the glyph and the aria-label say it. That
+ * row was costing 50px per move.
+ *
+ * The padding comes from 18px to 12px. The moves keep the whole width,
+ * because in two columns their text wrapped so hard that each card grew to
+ * 247px and the pair came out taller than the single column it replaced.
+ *
+ * 531px, from 813px.
+ */
+@media (max-width: 560px) {
+  .battle-command-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }
+  .battle-command-grid > .battle-move-option { grid-column: 1 / -1; }
+  .battle-command-grid button { padding: 12px; gap: 6px; }
+  .battle-move-option { display: grid; grid-template-columns: minmax(0, 1fr) 44px; gap: 6px; }
+  .battle-move-option .move-info {
+    width: 44px; min-height: 44px; font-size: 20px;
+    border-radius: 50%; align-self: center;
+  }
+  .battle-move-option .move-info-label { display: none; }
+}
 
 .battle-effect-notice {position:absolute;left:5%;right:5%;top:40%;z-index:15;padding:16px;background:#182622f5;border:1px solid #dfcc86;border-radius:8px;color:#fff0b8;text-align:center;pointer-events:none;}
 

@@ -618,7 +618,12 @@ function BattleSession({
               <span>{moveHelp(skill,getCoreMonster(state.player.id)).summary}</span>
               <span className={blocked && !getMoveBehavior(skill.id).usableWhileBound ? "unusable-note" : ""}>MP {skill.cost} · {moveHelp(skill,getCoreMonster(state.player.id)).attacks && enemy ? matchupLabel(elementMultiplier(skill.element, enemy.element)) : "補助"}{availableMp < skill.cost ? " · MP不足" : ""}{blocked ? (getMoveBehavior(skill.id).usableWhileBound ? ` · ${STATUS_LABELS[blocked]}中でも使える` : ` · ${STATUS_LABELS[blocked]}中は出せない`) : ""}</span>
             </button>
-            <button className="move-info" aria-label={`${skillLabel(skill)}の効果を確認`} aria-expanded={helpSkill === skill.id} aria-controls="battle-move-help" onClick={() => { setInspectedSkill(skill.id); setHelpSkill(helpSkill === skill.id ? null : skill.id); }}>ⓘ 効果・使う部位</button>
+            <button className="move-info" aria-label={`${skillLabel(skill)}の効果を確認`} aria-expanded={helpSkill === skill.id} aria-controls="battle-move-help" onClick={() => { setInspectedSkill(skill.id); setHelpSkill(helpSkill === skill.id ? null : skill.id); }}>
+              <span aria-hidden="true">ⓘ</span>
+              {/* Dropped on a phone, where the glyph and the aria-label carry
+                  it and the words cost a line the commands cannot spare. */}
+              <span className="move-info-label">効果・使う部位</span>
+            </button>
             </div>
           ))}
         </div>
