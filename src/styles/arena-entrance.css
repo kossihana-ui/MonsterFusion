@@ -47,6 +47,27 @@
 .is-opening .arena-door-right { transform: translateX(102%); }
 .arena-gate-status { position: absolute; bottom: 16px; left: 0; right: 0; text-align: center; font-size: .75rem; color: #daf2b5; background: #112127d9; padding: 8px; }
 @media (max-width: 800px) { .arena-entry-layout { grid-template-columns: 1fr; } }
+
+/*
+ * On a phone the steps are not a panel with its own scrollbar.
+ *
+ * `max-height: calc(100dvh - 190px)` plus `overflow-y: auto` inside each step
+ * is a desktop idea: hold the column to one screen so the gate button never
+ * falls below the fold. On a phone it builds a scroll area inside a page that
+ * already scrolls, and a finger dragging in it mostly moves the page instead.
+ *
+ * The ladder step is where that bit. Four ladders need 430px and the box gave
+ * them 367px, so 「腕試し」 was off the bottom of a box most players could not
+ * scroll - and the panel's clipped edge, with the gate directly under it, read
+ * as the ladders being buried by the door. Only 「はじめての挑戦」 could be
+ * picked, which is the one ladder that is not the real game.
+ *
+ * A phone scrolls. The steps can simply be as tall as they are.
+ */
+@media (max-width: 768px) {
+  .arena-steps-panel { max-height: none; }
+  .arena-step-body { overflow-y: visible; min-height: 0; }
+}
 @media (prefers-reduced-motion: reduce) { .arena-door { transition: none; } }
 
 /* The streak the player is trying to beat, and who they are. */
