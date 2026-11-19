@@ -786,7 +786,20 @@ progress::-webkit-progress-value {
     display: none;
   }
 }
-@media (max-width: 700px) {
+/*
+ * The compact shell: the menu becomes a row of icons across the top.
+ *
+ * Keyed to a short screen as well as a narrow one. A phone turned sideways is
+ * 812x375 - too wide for the 700px rule, so it got the desktop layout: a
+ * fixed 205px column holding a brand, six entries and a footer, 683px of it,
+ * inside 375px of screen. A fixed box does not scroll, so everything from
+ * ソウルメイク down was simply gone and バトルアリーナ could not be reached.
+ *
+ * Sideways is also exactly when a column down the left is the wrong shape:
+ * height is the scarce thing and width is not. The row across the top is the
+ * layout this already had for phones, and it fits.
+ */
+@media (max-width: 700px), (max-height: 500px) {
   .sidebar {
     position: static;
     width: 100%;
