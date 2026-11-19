@@ -20,3 +20,77 @@
 .fusion-page.is-revealing > .hero,
 .fusion-page.is-revealing > .fusion-grid,
 .fusion-page.is-revealing > .fusion-action { display: none; }
+
+/*
+ * The button has to be on the screen with the thing it acts on.
+ *
+ * A player reported it as missing, and on itch.io it genuinely was: the page
+ * is 1575px tall, 「✦ 融合する」 sits 452px below the fold at 1280x800, and the
+ * embed there is a fixed 1280x800 frame. Nothing below the fold could be
+ * reached at all.
+ *
+ * The fix is the one that worked for the battle screen and does not make
+ * anything smaller: the parents on the left, everything you press on the
+ * right. 1280px is wide and the content was stacked down a single column.
+ *
+ * Every child is given a column AND a row. Assigning only columns is what
+ * once left the victory screen with a hole in the middle, because the
+ * right-hand items auto-placed into rows after the left-hand ones.
+ */
+@media (min-width: 1180px) {
+  .fusion-page {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(340px, 390px);
+    column-gap: 20px;
+    align-items: start;
+  }
+  .fusion-page > * { grid-column: 1; }
+  .fusion-page > .hero { grid-column: 1 / -1; grid-row: 1; }
+  .fusion-page > .fusion-grid { grid-row: 2; }
+  .fusion-page > .fusion-action {
+    grid-column: 2;
+    grid-row: 2 / span 2;
+    margin: 0;
+  }
+  /* Whatever sits under the parents - the waiting panel, an error, the
+     reveal - shares their column and follows them down. */
+  .fusion-page > .panel.result,
+  .fusion-page > .fusion-reveal,
+  .fusion-page > p[role="alert"] { grid-row: 3; }
+
+  /*
+   * A grid column's default floor is min-content, not zero, and a parent
+   * panel's min-content is wide: a 175px portrait inside 28px of padding,
+   * plus a select listing 「イグニス · 第0世代」. So the two panels kept their
+   * full 314px inside a 493px column and overlapped the right-hand one.
+   */
+  .fusion-page > .fusion-grid {
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  }
+  .fusion-page .parent { min-width: 0; }
+  .fusion-page .parent select { max-width: 100%; }
+
+  /*
+   * The ✧ divider goes. In one column it separated the panels from the
+   * button; side by side there is nothing left for it to divide, and it is
+   * 40px of decoration standing between the player and the button in a frame
+   * that is exactly 800px tall. Nothing that says anything is removed.
+   */
+  .fusion-page > .fusion-action > span { display: none; }
+  /*
+   * With the ✧ gone, 「融合音」 and 「✦ 融合する」 are two inline-blocks in a
+   * centred box, so they ran onto the same line and sat shoulder to shoulder.
+   * They are separate decisions and each gets its own line.
+   */
+  .fusion-page > .fusion-action > .text-button,
+  .fusion-page > .fusion-action > .primary {
+    display: block;
+    margin-left: auto;
+    margin-right: auto;
+  }
+  .fusion-page > .fusion-action > .primary { margin-top: 6px; }
+
+  /* The reveal is the whole screen, so the two columns go away with
+     everything else it hides. */
+  .fusion-page.is-revealing { display: block; }
+}
