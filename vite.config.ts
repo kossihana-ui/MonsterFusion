@@ -81,14 +81,38 @@ export function baseFromEnv(env: NodeJS.ProcessEnv = process.env): string {
  * published address as its default, and this swaps it for wherever this
  * particular build is going.
  */
-function shareCardSite(site: URL): Plugin {
+function shareCardSite(site: URL, sharing: boolean): Plugin {
   return {
     name: 'monsterfusion-share-card-site',
     transformIndexHtml(html) {
+      // No card at all where the game may not point anywhere else. The tags
+      // do nothing on a host that serves the game inside its own page, and
+      // they would leave another site's address in the first file a
+      // reviewer opens.
+      if (!sharing) {
+        return html.replace(
+          new RegExp('[ \t]*<meta[^>]*(?:property="og:|name="twitter:)[^>]*>\n?', 'g'),
+          '',
+        );
+      }
       if (site.href === PUBLISHED_SITE) return html;
       return html.split(PUBLISHED_SITE).join(site.href);
     },
   };
+}
+
+/**
+ * Whether this build may hand a run to another website.
+ *
+ * ふりーむ！ does not allow a browser game to open one: 「WEBサイトへ
+ * ジャンプするもの」は掲載されません. The share buttons open X and LINE, so
+ * that build is made with MONSTERFUSION_SHARE=off and ships without them.
+ *
+ * A build-time constant rather than a runtime check, so the addresses are
+ * not merely unreachable - they are not in the file a reviewer opens.
+ */
+export function sharingFromEnv(env: NodeJS.ProcessEnv = process.env): boolean {
+  return env.MONSTERFUSION_SHARE?.trim().toLowerCase() !== 'off';
 }
 
 const site = siteFromEnv();
@@ -96,13 +120,16 @@ const home = homeFromEnv();
 
 export default defineConfig({
   base: baseFromEnv(),
-  plugins: [shareCardSite(site)],
+  plugins: [shareCardSite(site, sharingFromEnv())],
   define: {
     // Read by src/shared/share.ts, so a shared streak carries the page a
     // player can open rather than one written into the source - and rather
     // than the address this build happens to be served from, which on
     // itch.io is an iframe on a CDN.
     __MONSTERFUSION_HOME__: JSON.stringify(home.href),
+    // Read by src/components/ShareStreak.tsx. A literal, so the bundler can
+    // see the dead branch and drop the X and LINE addresses with it.
+    __MONSTERFUSION_SHARE__: JSON.stringify(sharingFromEnv()),
   },
   resolve: { alias: { '@core': CORE } },
   server: { fs: { allow: [ROOT, CORE] } },

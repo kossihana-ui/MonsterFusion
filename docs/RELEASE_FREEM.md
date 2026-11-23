@@ -162,10 +162,56 @@ itch.ioより細かい数字が見られます。
 
 ---
 
-## まだ無いもの
+## パッケージは出来ています
 
-**ふりーむ！用のzipは、まだ作っていません。** ①の共有ボタンを外した
-ビルドと、③のReadMeが要ります。言ってもらえれば作ります。
+```
+C:\Dev\MonsterFusion-UI\monsterfusion-freem.zip   （8.6MB）
+```
 
-itch.io版とGitHub Pages版は、**今のままで何も変わりません。**
-共有ボタンを外すのはふりーむ！用のビルドだけです。
+**itch.io版とGitHub Pages版は何も変わりません。** 共有ボタンを外すのは
+ふりーむ！用のビルドだけです。
+
+### 作り直すときのコマンド
+
+```bash
+cd C:/Dev/MonsterFusion-UI
+MONSTERFUSION_BASE=./ MONSTERFUSION_SHARE=off npm run build
+python -I scripts/pack-freem.py
+```
+
+`MONSTERFUSION_SHARE=off` が、共有ボタンと共有カードのmetaタグを落とします。
+**ビルド時の定数なので、押せなくなるのではなく、XとLINEのアドレスが
+ファイルの中に存在しなくなります。**
+
+### 確認したこと
+
+**zipを展開して、サーバーから配信して、実際に遊んで確かめています。**
+
+```
+外部への通信         0件（全リクエストが127.0.0.1）
+og/twitterタグ        0個
+共有ボタン            0個
+x.com / line.me       バンドル内に0件
+itch.io / github.io   バンドル内に0件
+```
+
+`pack-freem.py` は**固めるの前にこれを自分で検査し、1つでも見つかったら
+zipを作らずに止まります。**
+
+残っている外部アドレスは2つだけで、**どちらも通信しません。**
+
+```
+http://www.w3.org   SVGの名前空間（XMLの決まり文句）
+https://react.dev   Reactのエラーメッセージ本文
+```
+
+### ReadMe.txt
+
+zipの直下に入っています。**UTF-8（BOM付き）・CRLF**です。
+Windowsのメモ帳で開いても文字化けしません。
+
+中身：ゲーム名、制作者名（`Kureating544`）、遊び方、動作環境、
+セーブの扱い、**AIで絵を作ったこと**、**1フレームの点滅があること**。
+
+**制作者名はブランド登録と揃えてください。** 違う名前で登録するなら、
+`scripts/freem-readme.txt` を直して固め直します。

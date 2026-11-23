@@ -8,5 +8,6 @@ dist/
 !.env.example
 local-server*.log
 
-# The upload package, rebuilt on demand.
+# The upload packages, rebuilt on demand.
 monsterfusion-itch.zip
+monsterfusion-freem.zip

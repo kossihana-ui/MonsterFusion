@@ -12,7 +12,8 @@ palette, so the thumbnail and the page look like the same thing.
 
     python -I scripts/build-itch-cover.py
 
-Writes public/itch-cover.png. Pillow only; no network, nothing invented -
+Writes release/itch-cover.png - outside public/, because it is uploaded
+to itch.io rather than served with the game. Pillow only; no network, nothing invented -
 the creatures are the starter sprites the game itself draws.
 """
 import os
@@ -21,7 +22,7 @@ from PIL import Image, ImageDraw, ImageFont
 W, H = 630, 500
 HERE = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 ART = os.path.join(HERE, "src", "mocks", "assets", "starters")
-OUT = os.path.join(HERE, "public", "itch-cover.png")
+OUT = os.path.join(HERE, "release", "itch-cover.png")
 
 BOLD = r"C:\Windows\Fonts\YuGothB.ttc"
 MED = r"C:\Windows\Fonts\YuGothM.ttc"

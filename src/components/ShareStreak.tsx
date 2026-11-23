@@ -7,13 +7,26 @@ import "../styles/share.css";
 /**
  * The one way a run leaves this browser.
  *
+ * Absent entirely where the host forbids a game to open another site -
+ * ふりーむ！ does, so that build sets MONSTERFUSION_SHARE=off and this
+ * returns nothing. The flag is a build-time literal, so the branch below
+ * folds away and the X and LINE addresses never reach the file.
+ *
  * Three routes, because none of them works everywhere: a phone has a share
  * sheet, a desktop browser has a clipboard, and a browser that refuses both
  * (no permission, no secure context) still has a box the player can select
  * from by hand. The text is never posted by the game - every route ends with
  * the player deciding.
  */
+declare const __MONSTERFUSION_SHARE__: boolean | undefined;
+const SHARING = typeof __MONSTERFUSION_SHARE__ === "boolean" ? __MONSTERFUSION_SHARE__ : true;
+
 export function ShareStreak({ run, label = "この記録を共有" }: { run: RunRecord; label?: string }) {
+  if (!SHARING) return null;
+  return <Sharing run={run} label={label} />;
+}
+
+function Sharing({ run, label }: { run: RunRecord; label: string }) {
   const share = streakShare(run, siteUrl());
   const [said, setSaid] = useState("");
   const [fallback, setFallback] = useState(false);
